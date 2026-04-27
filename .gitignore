@@ -1,0 +1,11 @@
+# Ignore STM32CubeIDE build outputs
+STM32CubeIDE/Debug/
+STM32CubeIDE/Release/
+Actics_FW_Module.rar
+/STM32CubeIDE/Debug
+STM32CubeIDE/.settings/stm32cubeide.project.prefs
+/STM32CubeIDE/Debug
+STM32CubeIDE/.settings/language.settings.xml
+STM32CubeIDE/.settings/stm32cubeide.project.prefs
+/STM32CubeIDE/Debug
+*.rar
