@@ -32,6 +32,9 @@ If you need to understand the project quickly, read these files first:
 
 - `README.md`
 - `BleServoController.ioc`
+- `Core/agents.md`
+- `STM32CubeIDE/Application/User/Core/agents.md`
+- `STM32_WPAN/App/agents.md`
 - `STM32CubeIDE/Application/User/Core/config.h`
 - `Core/Src/app_freertos.c`
 - `Core/Src/app_entry.c`
@@ -276,6 +279,21 @@ Main files:
 - `STM32CubeIDE/Application/User/Core/comm/comm_interface.c`
 - `STM32CubeIDE/Application/User/Core/servo/servo_task.c`
 - `STM32CubeIDE/Application/User/Core/PCA9685/pca9685.c`
+
+### BLE Command to TOF Runtime Configuration
+
+Path:
+
+1. BLE client writes `TOF_SET_MIN_MAX <min_mm> <max_mm>` to NUS
+2. `comm_interface.c` validates the range
+3. `vl53l5cx_task.c` updates the runtime BLE encoding range
+4. later TOF notifications encode valid distances into `0x00..0xFE`
+
+Main files:
+
+- `STM32_WPAN/App/nus_app.c`
+- `STM32CubeIDE/Application/User/Core/comm/comm_interface.c`
+- `STM32CubeIDE/Application/User/Core/VL53L5CX/vl53l5cx_task.c`
 
 ### TOF Sensor to BLE Notification
 
