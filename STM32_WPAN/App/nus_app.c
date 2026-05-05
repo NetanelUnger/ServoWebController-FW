@@ -31,7 +31,7 @@
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
-
+#include <servo/servo_task.h>
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -66,6 +66,8 @@ typedef struct
 #define NUS_APP_INVALID_CONN_HANDLE 0xFFFFU
 #define NUS_APP_NOTIFICATION_RETRY_DELAY_MS 5
 #define NUS_APP_NOTIFICATION_RETRY_COUNT 10
+#define NUS_APP_ALL_CHANNEL_DC_VALUE_SIZE_BYTES 2U
+#define NUS_APP_ALL_CHANNEL_DC_PAYLOAD_LEN (SERVO_CHANNEL_COUNT * NUS_APP_ALL_CHANNEL_DC_VALUE_SIZE_BYTES)
 /* USER CODE END PD */
 
 /* External variables --------------------------------------------------------*/
@@ -92,6 +94,8 @@ static void NUS_Tx_SendNotification(void);
 static void NUS_Tx_SendIndication(void);
 
 /* USER CODE BEGIN PFP */
+static uint16_t NUS_APP_ReadLe16(const uint8_t *pData);
+static void NUS_APP_WriteLe16(uint8_t *pData, uint16_t value);
 
 /* USER CODE END PFP */
 
@@ -207,6 +211,7 @@ void NUS_APP_Init(void)
   NUS_APP_Context.Tx_Notification_Status = Tx_NOTIFICATION_OFF;
   NUS_APP_Context.Tx_Indication_Status = Tx_INDICATION_OFF;
   NUS_Init();
+  (void)NUS_APP_SyncAllChannelDcCharacteristic();
 
   /* USER CODE BEGIN Service2_APP_Init */
 
@@ -215,7 +220,48 @@ void NUS_APP_Init(void)
 }
 
 /* USER CODE BEGIN FD */
+tBleStatus NUS_APP_WriteAllChannelDcPayload(const uint8_t *pData, uint8_t length)
+{
+  uint8_t channel;
+  uint16_t values[SERVO_CHANNEL_COUNT];
 
+  if ((pData == NULL) || (length != NUS_APP_ALL_CHANNEL_DC_PAYLOAD_LEN))
+  {
+    return BLE_STATUS_INVALID_PARAMS;
+  }
+
+  for (channel = 0U; channel < SERVO_CHANNEL_COUNT; channel++)
+  {
+    values[channel] = NUS_APP_ReadLe16(&pData[channel * NUS_APP_ALL_CHANNEL_DC_VALUE_SIZE_BYTES]);
+  }
+
+  if (servo_SetAllServoImmediateValues(values) != HAL_OK)
+  {
+    return BLE_STATUS_FAILED;
+  }
+
+  return BLE_STATUS_SUCCESS;
+}
+
+tBleStatus NUS_APP_SyncAllChannelDcCharacteristic(void)
+{
+  uint8_t channel;
+  uint16_t values[SERVO_CHANNEL_COUNT];
+  uint8_t payload[NUS_APP_ALL_CHANNEL_DC_PAYLOAD_LEN];
+  NUS_Data_t data;
+
+  servo_GetAllServoImmediateValues(values);
+
+  for (channel = 0U; channel < SERVO_CHANNEL_COUNT; channel++)
+  {
+    NUS_APP_WriteLe16(&payload[channel * NUS_APP_ALL_CHANNEL_DC_VALUE_SIZE_BYTES], values[channel]);
+  }
+
+  data.p_Payload = payload;
+  data.Length = NUS_APP_ALL_CHANNEL_DC_PAYLOAD_LEN;
+
+  return NUS_UpdateValue(NUS_ALL_CHANNEL_DC, &data);
+}
 /* USER CODE END FD */
 
 /*************************************************************
@@ -272,6 +318,17 @@ __USED void NUS_Tx_SendIndication(void) /* Property Indication */
 }
 
 /* USER CODE BEGIN FD_LOCAL_FUNCTIONS */
+static uint16_t NUS_APP_ReadLe16(const uint8_t *pData)
+{
+  return (uint16_t)((uint16_t)pData[0] | ((uint16_t)pData[1] << 8));
+}
+
+static void NUS_APP_WriteLe16(uint8_t *pData, uint16_t value)
+{
+  pData[0] = (uint8_t)(value & 0xFFU);
+  pData[1] = (uint8_t)((value >> 8) & 0xFFU);
+}
+
 void NusTxTask(NUS_APP_QueueItem_t *item)
 {
 	  if ((NUS_APP_Context.ConnectionHandle == NUS_APP_INVALID_CONN_HANDLE) ||

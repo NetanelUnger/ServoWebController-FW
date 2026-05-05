@@ -85,6 +85,8 @@ void NUS_APP_EvtRx(NUS_APP_ConnHandleNotEvt_t *p_Notification);
 /* USER CODE BEGIN EFP */
 extern void NusTxTask(NUS_APP_QueueItem_t *item);
 extern void NusRxTask(NUS_APP_QueueItem_t *item);
+extern tBleStatus NUS_APP_WriteAllChannelDcPayload(const uint8_t *pData, uint8_t length);
+extern tBleStatus NUS_APP_SyncAllChannelDcCharacteristic(void);
 /* USER CODE END EFP */
 
 #ifdef __cplusplus

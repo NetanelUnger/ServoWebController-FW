@@ -40,6 +40,7 @@ Legacy aliases are still accepted for the older servo commands. Preserve aliases
 - Servo pulses are clamped through the PCA9685 limits: `500..2500` microseconds.
 - Shared `servos_controller` state is volatile and protected with critical sections around multi-field updates.
 - A direct move cancels the channel's active timed move.
+- All-channel direct writes use the same direct-move semantics: values are channel-indexed, clamped as pulse widths, and cancel active timed moves on every channel.
 
 ## TOF Notes
 

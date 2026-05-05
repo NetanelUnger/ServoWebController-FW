@@ -134,6 +134,64 @@ HAL_StatusTypeDef servo_SetServoImmediateValue(uint8_t channel, uint16_t value)
     return HAL_OK;
 }
 
+HAL_StatusTypeDef servo_SetAllServoImmediateValues(const uint16_t values[SERVO_CHANNEL_COUNT])
+{
+    uint8_t channel;
+    uint16_t clamped_values[SERVO_CHANNEL_COUNT];
+    volatile servo_state_t *servo;
+
+    if (values == NULL)
+    {
+        return HAL_ERROR;
+    }
+
+    for (channel = 0U; channel < SERVO_CHANNEL_COUNT; channel++)
+    {
+        clamped_values[channel] = servo_ClampPulseUs(values[channel]);
+    }
+
+    taskENTER_CRITICAL();
+    for (channel = 0U; channel < SERVO_CHANNEL_COUNT; channel++)
+    {
+        servo = &servos_controller.servo[channel];
+
+        servo->current_value = clamped_values[channel];
+        servo_StopTimedMove(servo);
+    }
+    taskEXIT_CRITICAL();
+
+    if (servos_controller.pca9685_ready != 0U)
+    {
+        for (channel = 0U; channel < SERVO_CHANNEL_COUNT; channel++)
+        {
+            if (pca9685_SetServoPulseUs(channel, clamped_values[channel], NULL) != HAL_OK)
+            {
+                servos_controller.pca9685_ready = 0U;
+                break;
+            }
+        }
+    }
+
+    return HAL_OK;
+}
+
+void servo_GetAllServoImmediateValues(uint16_t values[SERVO_CHANNEL_COUNT])
+{
+    uint8_t channel;
+
+    if (values == NULL)
+    {
+        return;
+    }
+
+    taskENTER_CRITICAL();
+    for (channel = 0U; channel < SERVO_CHANNEL_COUNT; channel++)
+    {
+        values[channel] = servos_controller.servo[channel].current_value;
+    }
+    taskEXIT_CRITICAL();
+}
+
 HAL_StatusTypeDef servo_StartTimedMove(uint8_t channel, uint16_t target_value, uint32_t duration_ms)
 {
     volatile servo_state_t *servo;

@@ -72,6 +72,19 @@ extern void servo_Task(void);
 extern HAL_StatusTypeDef servo_SetServoImmediateValue(uint8_t channel, uint16_t value);
 
 /**
+ * @brief Apply pulse widths to every servo channel and cancel all active timed moves.
+ * @param values Requested pulse widths in microseconds, indexed by channel `0..15`.
+ * @return `HAL_OK` on success, otherwise `HAL_ERROR`.
+ */
+extern HAL_StatusTypeDef servo_SetAllServoImmediateValues(const uint16_t values[SERVO_CHANNEL_COUNT]);
+
+/**
+ * @brief Copy the most recently commanded pulse widths for every servo channel.
+ * @param values Output array receiving channel values in microseconds.
+ */
+extern void servo_GetAllServoImmediateValues(uint16_t values[SERVO_CHANNEL_COUNT]);
+
+/**
  * @brief Start a linear move from the current position to a target pulse width.
  * @param channel Servo channel index in the range `0..15`.
  * @param target_value Requested final pulse width in microseconds.

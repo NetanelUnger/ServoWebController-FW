@@ -45,6 +45,7 @@ typedef enum
   NUS_TX,
   NUS_RX,
   /* USER CODE BEGIN Service2_CharOpcode_t */
+  NUS_ALL_CHANNEL_DC,
 
   /* USER CODE END Service2_CharOpcode_t */
   NUS_CHAROPCODE_LAST
