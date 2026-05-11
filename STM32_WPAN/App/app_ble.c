@@ -148,9 +148,9 @@ typedef struct
 #define FW_DATA3_FUOTA                 (0x01)
 #define BLE_GAP_DEVICE_NAME_LEN        (sizeof(ADV_NAME) - 1U)
 #define BLE_ADV_MAX_DATA_LEN           (31U)
+#define BLE_ADV_FLAGS_RECORD_LEN       (3U)
 #define BLE_ADV_UUID_RECORD_LEN        (18U)
-/* With the UUID record below kept in the packet, ADV_NAME can use at most 11 bytes. */
-#define BLE_ADV_NAME_MAX_LEN           (BLE_ADV_MAX_DATA_LEN - BLE_ADV_UUID_RECORD_LEN - 2U)
+#define BLE_ADV_NAME_MAX_LEN           (BLE_ADV_MAX_DATA_LEN - BLE_ADV_FLAGS_RECORD_LEN - BLE_ADV_UUID_RECORD_LEN - 2U)
 #define BLE_ADV_NAME_RECORD_LEN        (BLE_GAP_DEVICE_NAME_LEN + 2U)
 #define BLE_ADV_DATA_LEN               (BLE_ADV_NAME_RECORD_LEN + BLE_ADV_UUID_RECORD_LEN)
 /* Device Info Characteristic UUID */
@@ -188,7 +188,7 @@ DIS_APP_ConnHandleNotEvt_t DISHandleNotification;
 
 _Static_assert(BLE_GAP_DEVICE_NAME_LEN > 0U, "ADV_NAME must not be empty");
 _Static_assert(BLE_GAP_DEVICE_NAME_LEN <= BLE_ADV_NAME_MAX_LEN,
-               "ADV_NAME is too long for the current advertising payload");
+               "ADV_NAME is too long to advertise with the 128-bit NUS UUID");
 
 static const char a_GapDeviceName[] = ADV_NAME; /* Gap Device Name */
 
@@ -202,6 +202,8 @@ uint8_t a_AdvData[BLE_ADV_DATA_LEN] = {0};
 
 _Static_assert(BLE_ADV_DATA_LEN <= sizeof(sys_AdvData),
                "sys_AdvData buffer is too small for the advertising payload");
+_Static_assert((BLE_ADV_FLAGS_RECORD_LEN + BLE_ADV_DATA_LEN) <= BLE_ADV_MAX_DATA_LEN,
+               "advertising payload exceeds legacy BLE limit");
 
 /* Host stack init variables */
 static BleStack_init_t pInitParams;

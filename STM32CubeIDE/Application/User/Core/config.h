@@ -18,11 +18,10 @@
 /**
  * @brief BLE device name used for both the GAP device name and the advertised complete local name.
  *
- * Keep this string at 11 visible characters or fewer with the current advertising payload layout.
- * That 11-character limit comes from the 31-byte legacy advertising packet after reserving space
- * for the 128-bit service UUID record in `app_ble.c`.
+ * Keep this string at 8 visible characters or fewer. Legacy advertising has 31 bytes total,
+ * and the Flags AD structure plus the 128-bit NUS service UUID leave 8 bytes for the name.
  */
-#define ADV_NAME "BleServoCtl"
+#define ADV_NAME "BleServo"
 
 
 /** @name Debug Output Configuration

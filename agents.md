@@ -9,3 +9,5 @@ For quicker local context, use these scoped notes:
 - `STM32_WPAN/App/agents.md`: BLE services, NUS transport, TOF characteristic, advertising, and connection glue.
 
 Keep FW protocol changes synchronized with the Web app under `../ServoWebController-Web`.
+
+Do not build this firmware repo with generated makefiles during agent work. Unless explicitly asked to build, limit changes to source/code edits and report any build verification as not run.

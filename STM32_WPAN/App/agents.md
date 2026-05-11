@@ -19,7 +19,7 @@ This folder owns BLE service definitions and STM32 WPAN application glue. It mix
 - TOF service UUID: `91BAD492-B950-4226-AA2B-4EDE9FA42F59`.
 - TOF distance-map notify characteristic UUID: `91BAD493-B950-4226-AA2B-4EDE9FA42F59`.
 - TOF distance-map notifications must remain exactly 64 bytes unless Web decoding and docs are updated at the same time.
-- `ADV_NAME` comes from `config.h`; with the current advertising payload layout it must fit the static assertion in `app_ble.c`.
+- `ADV_NAME` comes from `config.h`; legacy advertising carries the complete name and the NUS UUID in the primary advertising payload only, so the name must fit the static assertion in `app_ble.c`.
 
 ## NUS Flow
 
