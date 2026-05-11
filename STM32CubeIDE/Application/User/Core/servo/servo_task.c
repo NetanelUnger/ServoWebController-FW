@@ -5,6 +5,8 @@
 
 #include <servo/servo_task.h>
 
+#include <stddef.h>
+
 #include "FreeRTOS.h"
 #include "task.h"
 #include "cmsis_os2.h"
@@ -15,6 +17,19 @@
 
 /** @brief Global runtime state for the servo controller. */
 volatile servos_controller_t servos_controller;
+
+/** @brief Optional observer called after commanded servo values change. */
+static servo_ChangeCallback_t servo_change_callback = NULL;
+
+static void servo_NotifyChange(void)
+{
+    servo_ChangeCallback_t callback = servo_change_callback;
+
+    if (callback != NULL)
+    {
+        callback();
+    }
+}
 
 /**
  * @brief Clamp a pulse width to the servo-safe range.
@@ -105,10 +120,18 @@ void servo_Init(void)
     }
 }
 
+void servo_RegisterChangeCallback(servo_ChangeCallback_t callback)
+{
+    taskENTER_CRITICAL();
+    servo_change_callback = callback;
+    taskEXIT_CRITICAL();
+}
+
 HAL_StatusTypeDef servo_SetServoImmediateValue(uint8_t channel, uint16_t value)
 {
     uint16_t clamped_value;
     volatile servo_state_t *servo;
+    uint8_t changed;
 
     if (channel >= SERVO_CHANNEL_COUNT)
     {
@@ -119,6 +142,7 @@ HAL_StatusTypeDef servo_SetServoImmediateValue(uint8_t channel, uint16_t value)
     servo = &servos_controller.servo[channel];
 
     taskENTER_CRITICAL();
+    changed = (servo->current_value != clamped_value) ? 1U : 0U;
     servo->current_value = clamped_value;
     servo_StopTimedMove(servo);
     taskEXIT_CRITICAL();
@@ -131,12 +155,18 @@ HAL_StatusTypeDef servo_SetServoImmediateValue(uint8_t channel, uint16_t value)
         }
     }
 
+    if (changed != 0U)
+    {
+        servo_NotifyChange();
+    }
+
     return HAL_OK;
 }
 
 HAL_StatusTypeDef servo_SetAllServoImmediateValues(const uint16_t values[SERVO_CHANNEL_COUNT])
 {
     uint8_t channel;
+    uint8_t changed = 0U;
     uint16_t clamped_values[SERVO_CHANNEL_COUNT];
     volatile servo_state_t *servo;
 
@@ -155,6 +185,10 @@ HAL_StatusTypeDef servo_SetAllServoImmediateValues(const uint16_t values[SERVO_C
     {
         servo = &servos_controller.servo[channel];
 
+        if (servo->current_value != clamped_values[channel])
+        {
+            changed = 1U;
+        }
         servo->current_value = clamped_values[channel];
         servo_StopTimedMove(servo);
     }
@@ -170,6 +204,11 @@ HAL_StatusTypeDef servo_SetAllServoImmediateValues(const uint16_t values[SERVO_C
                 break;
             }
         }
+    }
+
+    if (changed != 0U)
+    {
+        servo_NotifyChange();
     }
 
     return HAL_OK;
@@ -224,6 +263,8 @@ HAL_StatusTypeDef servo_StartTimedMove(uint8_t channel, uint16_t target_value, u
 void servo_Task(void)
 {
     uint8_t channel;
+    uint8_t changed;
+    uint8_t task_changed = 0U;
     uint16_t next_value;
     volatile servo_state_t *servo;
 
@@ -250,6 +291,7 @@ void servo_Task(void)
         if (pca9685_SetServoPulseUs(channel, next_value, NULL) == HAL_OK)
         {
             taskENTER_CRITICAL();
+            changed = (servo->current_value != next_value) ? 1U : 0U;
             servo->current_value = next_value;
             if (servo->move.active == 0U)
             {
@@ -257,11 +299,21 @@ void servo_Task(void)
                 servo->move.target_value = next_value;
             }
             taskEXIT_CRITICAL();
+
+            if (changed != 0U)
+            {
+                task_changed = 1U;
+            }
         }
         else
         {
             servos_controller.pca9685_ready = 0U;
             break;
         }
+    }
+
+    if (task_changed != 0U)
+    {
+        servo_NotifyChange();
     }
 }

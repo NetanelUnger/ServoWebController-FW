@@ -218,6 +218,26 @@ static SVCCTL_EvtAckStatus_t NUS_EventHandler(void *p_Event)
                 break;
             }
           }
+          else if(p_attribute_modified->Attr_Handle == (NUS_Context.AllChannelDcCharHdle + CHARACTERISTIC_DESCRIPTOR_ATTRIBUTE_OFFSET))
+          {
+            return_value = SVCCTL_EvtAckFlowEnable;
+
+            switch(p_attribute_modified->Attr_Data[0])
+            {
+              case (0x00):
+                notification.EvtOpcode = NUS_ALL_CHANNEL_DC_NOTIFY_DISABLED_EVT;
+                NUS_Notification(&notification);
+                break;
+
+              case GATT_CHAR_UPDATE_SEND_NOTIFICATION:
+                notification.EvtOpcode = NUS_ALL_CHANNEL_DC_NOTIFY_ENABLED_EVT;
+                NUS_Notification(&notification);
+                break;
+
+              default:
+                break;
+            }
+          }
 
           /* USER CODE BEGIN EVT_BLUE_GATT_ATTRIBUTE_MODIFIED_END */
 
@@ -407,11 +427,12 @@ void NUS_Init(void)
    *                                2 for RX +
    *                                2 for ALL_CHANNEL_DC +
    *                                1 for TX configuration descriptor +
-   *                              = 8
+   *                                1 for ALL_CHANNEL_DC configuration descriptor +
+   *                              = 9
    * This value doesn't take into account number of descriptors manually added
    * In case of descriptors added, please update the max_attr_record value accordingly in the next SVCCTL_InitService User Section
    */
-  max_attr_record = 8;
+  max_attr_record = 9;
 
   /* USER CODE BEGIN SVCCTL_InitService */
   /* max_attr_record to be updated if descriptors have been added */
@@ -501,9 +522,9 @@ void NUS_Init(void)
                           UUID_TYPE_128,
                           (Char_UUID_t *) &uuid,
                           SizeAllChannelDc,
-                          CHAR_PROP_READ | CHAR_PROP_WRITE,
+                          CHAR_PROP_READ | CHAR_PROP_WRITE | CHAR_PROP_NOTIFY,
                           ATTR_PERMISSION_NONE,
-                          GATT_NOTIFY_WRITE_REQ_AND_WAIT_FOR_APPL_RESP | GATT_NOTIFY_READ_REQ_AND_WAIT_FOR_APPL_RESP,
+                          GATT_NOTIFY_ATTRIBUTE_WRITE | GATT_NOTIFY_WRITE_REQ_AND_WAIT_FOR_APPL_RESP | GATT_NOTIFY_READ_REQ_AND_WAIT_FOR_APPL_RESP,
                           0x10,
                           CHAR_VALUE_LEN_CONSTANT,
                           &(NUS_Context.AllChannelDcCharHdle));

@@ -53,6 +53,9 @@ typedef struct
 /** @brief Global controller state for all servos. */
 extern volatile servos_controller_t servos_controller;
 
+/** @brief Callback invoked after one or more servo channel values change. */
+typedef void (*servo_ChangeCallback_t)(void);
+
 /**
  * @brief Initialize software-side servo state to neutral positions.
  */
@@ -62,6 +65,12 @@ extern void servo_Init(void);
  * @brief Periodic worker that initializes the driver and updates timed moves.
  */
 extern void servo_Task(void);
+
+/**
+ * @brief Register a callback that is invoked whenever commanded servo values change.
+ * @param callback Function to call after a servo value change, or NULL to unregister.
+ */
+extern void servo_RegisterChangeCallback(servo_ChangeCallback_t callback);
 
 /**
  * @brief Apply a servo pulse immediately and cancel any active timed move.

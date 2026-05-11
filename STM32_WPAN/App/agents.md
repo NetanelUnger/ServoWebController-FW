@@ -14,7 +14,7 @@ This folder owns BLE service definitions and STM32 WPAN application glue. It mix
 ## BLE Contract
 
 - Advertised NUS service UUID: `6E400001-B5A3-F393-E0A9-E50E24DCCA9E`.
-- NUS all-channel direct-control characteristic UUID: `6E400004-B5A3-F393-E0A9-E50E24DCCA9E`.
+- NUS all-channel direct-control characteristic UUID: `6E400004-B5A3-F393-E0A9-E50E24DCCA9E`; it is read/write/notify and mirrors servo channel value changes.
 - NUS all-channel direct-control payload is exactly 32 bytes: 16 little-endian `uint16` pulse values, indexed by channel `0..15`.
 - TOF service UUID: `91BAD492-B950-4226-AA2B-4EDE9FA42F59`.
 - TOF distance-map notify characteristic UUID: `91BAD493-B950-4226-AA2B-4EDE9FA42F59`.
