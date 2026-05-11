@@ -14,6 +14,8 @@ This folder owns BLE service definitions and STM32 WPAN application glue. It mix
 ## BLE Contract
 
 - Advertised NUS service UUID: `6E400001-B5A3-F393-E0A9-E50E24DCCA9E`.
+- NUS servo-data characteristic UUID: `6E400004-B5A3-F393-E0A9-E50E24DCCA9E`.
+- NUS servo-data payload is 16 little-endian `uint16` duty-cycle values, two bytes per servo channel, channel 0 first and channel 15 last.
 - TOF service UUID: `91BAD492-B950-4226-AA2B-4EDE9FA42F59`.
 - TOF distance-map notify characteristic UUID: `91BAD493-B950-4226-AA2B-4EDE9FA42F59`.
 - TOF distance-map notifications must remain exactly 64 bytes unless Web decoding and docs are updated at the same time.
