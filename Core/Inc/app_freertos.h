@@ -64,30 +64,26 @@ extern void WatchdogFlagClear(uint32_t flagMask);
 /* USER CODE BEGIN EM */
 extern osSemaphoreId_t FMWriteSemaphoreHandle;
 extern osSemaphoreId_t FMEraseSemaphoreHandle;
+extern osThreadId_t vl53l5cxTaskHandle;
+extern osMessageQueueId_t memoryQueueHandle;
 /* USER CODE END EM */
 extern osThreadId_t defaultTaskHandle;
 extern osThreadId_t commTaskHandle;
-extern osThreadId_t servoTaskHandle;
-extern osThreadId_t vl53l5cxTaskHandle;
 extern osMutexId_t i2cMutexHandle;
 extern osMessageQueueId_t commTxQueueHandle;
 extern osMessageQueueId_t commRxQueueHandle;
-extern osMessageQueueId_t memoryQueueHandle;
 extern osSemaphoreId_t FMEraseSemaphoreHandle;
 extern osSemaphoreId_t FMWriteSemaphoreHandle;
 extern osEventFlagsId_t commEventHandle;
 extern osEventFlagsId_t loggerOutEventsHandle;
-extern osEventFlagsId_t servoEventHandle;
 
 /* Exported function prototypes -----------------------------------------------*/
 /* USER CODE BEGIN FunctionPrototypes */
-
+void vl53l5cxTask_Entry(void *argument);
 /* USER CODE END FunctionPrototypes */
 
 void StartDefaultTask(void *argument);
 void commTask_Entry(void *argument);
-void servoTask_Entry(void *argument);
-void vl53l5cxTask_Entry(void *argument);
 
 void MX_FREERTOS_Init(void); /* (MISRA C 2004 rule 8.1) */
 

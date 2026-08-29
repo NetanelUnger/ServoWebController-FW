@@ -41,8 +41,6 @@
 #include "ota_app.h"
 #include "nus.h"
 #include "nus_app.h"
-#include "tof.h"
-#include "tof_app.h"
 #include "dis.h"
 #include "dis_app.h"
 /* Private includes ----------------------------------------------------------*/
@@ -183,25 +181,16 @@ static uint8_t a_BLE_CfgErValue[16];
 static BleApplicationContext_t bleAppContext;
 OTA_APP_ConnHandleNotEvt_t OTAHandleNotification;
 NUS_APP_ConnHandleNotEvt_t NUSHandleNotification;
-TOF_APP_ConnHandleNotEvt_t TOFHandleNotification;
 DIS_APP_ConnHandleNotEvt_t DISHandleNotification;
 
-_Static_assert(BLE_GAP_DEVICE_NAME_LEN > 0U, "ADV_NAME must not be empty");
-_Static_assert(BLE_GAP_DEVICE_NAME_LEN <= BLE_ADV_NAME_MAX_LEN,
-               "ADV_NAME is too long for the current advertising payload");
-
-static const char a_GapDeviceName[] = ADV_NAME; /* Gap Device Name */
-
-static const uint8_t a_AdvDataUuidField[BLE_ADV_UUID_RECORD_LEN] =
-{
-  17, AD_TYPE_128_BIT_SERV_UUID_CMPLT_LIST, 0x9E, 0xCA, 0xDC, 0x24, 0x0E, 0xE5, 0xA9, 0xE0, 0x93, 0xF3, 0xA3, 0xB5, 0x01, 0x00, 0x40, 0x6E,
-};
+static char a_GapDeviceName[] = {  'B', 'l', 'e', 'S', 'e', 'r', 'v', 'o', 'C', 'o', 'n', 't', 'r', 'o', 'l', 'l', 'e', 'r' }; /* Gap Device Name */
 
 /* Advertising Data */
-uint8_t a_AdvData[BLE_ADV_DATA_LEN] = {0};
-
-_Static_assert(BLE_ADV_DATA_LEN <= sizeof(sys_AdvData),
-               "sys_AdvData buffer is too small for the advertising payload");
+uint8_t a_AdvData[28] =
+{
+  9, AD_TYPE_COMPLETE_LOCAL_NAME, 'B', 'l', 'e', 'S', 'e', 'r', 'v', 'o', 'C', 'o', 'n', 't', 'r', 'o', 'l', 'l', 'e', 'r',  /* Complete name */
+  17, AD_TYPE_128_BIT_SERV_UUID_CMPLT_LIST, 0x9E, 0xCA, 0xDC, 0x24, 0x0E, 0xE5, 0xA9, 0xE0, 0x93, 0xF3, 0xA3, 0xB5, 0x01, 0x00, 0x40, 0x6E,
+};
 
 /* Host stack init variables */
 static BleStack_init_t pInitParams;
@@ -426,7 +415,6 @@ void APP_BLE_Init(void)
     LOG_INFO_APP("Services and Characteristics creation\n");
     OTA_APP_Init();
     NUS_APP_Init();
-    TOF_APP_Init();
     DIS_APP_Init();
     LOG_INFO_APP("End of Services and Characteristics creation\n");
     LOG_INFO_APP("\n");
@@ -608,15 +596,12 @@ SVCCTL_UserEvtFlowStatus_t SVCCTL_App_Notification(void *p_Pckt)
       /* USER CODE END EVT_DISCONN_COMPLETE_1 */
       OTAHandleNotification.EvtOpcode = OTA_DISCON_HANDLE_EVT;
       NUSHandleNotification.EvtOpcode = NUS_DISCON_HANDLE_EVT;
-      TOFHandleNotification.EvtOpcode = TOF_DISCON_HANDLE_EVT;
       DISHandleNotification.EvtOpcode = DIS_DISCON_HANDLE_EVT;
       OTAHandleNotification.ConnectionHandle = p_disconnection_complete_event->Connection_Handle;
       NUSHandleNotification.ConnectionHandle = p_disconnection_complete_event->Connection_Handle;
-      TOFHandleNotification.ConnectionHandle = p_disconnection_complete_event->Connection_Handle;
       DISHandleNotification.ConnectionHandle = p_disconnection_complete_event->Connection_Handle;
       OTA_APP_EvtRx(&OTAHandleNotification);
       NUS_APP_EvtRx(&NUSHandleNotification);
-      TOF_APP_EvtRx(&TOFHandleNotification);
       DIS_APP_EvtRx(&DISHandleNotification);
       /* USER CODE BEGIN EVT_DISCONN_COMPLETE */
       APP_BLE_Procedure_Gap_Peripheral(PROC_GAP_PERIPH_ADVERTISE_START_FAST);
@@ -719,15 +704,12 @@ SVCCTL_UserEvtFlowStatus_t SVCCTL_App_Notification(void *p_Pckt)
 
           OTAHandleNotification.EvtOpcode = OTA_CONN_HANDLE_EVT;
           NUSHandleNotification.EvtOpcode = NUS_CONN_HANDLE_EVT;
-          TOFHandleNotification.EvtOpcode = TOF_CONN_HANDLE_EVT;
           DISHandleNotification.EvtOpcode = DIS_CONN_HANDLE_EVT;
           OTAHandleNotification.ConnectionHandle = p_enhanced_conn_complete->Connection_Handle;
           NUSHandleNotification.ConnectionHandle = p_enhanced_conn_complete->Connection_Handle;
-          TOFHandleNotification.ConnectionHandle = p_enhanced_conn_complete->Connection_Handle;
           DISHandleNotification.ConnectionHandle = p_enhanced_conn_complete->Connection_Handle;
           OTA_APP_EvtRx(&OTAHandleNotification);
           NUS_APP_EvtRx(&NUSHandleNotification);
-          TOF_APP_EvtRx(&TOFHandleNotification);
           DIS_APP_EvtRx(&DISHandleNotification);
           /* USER CODE BEGIN HCI_EVT_LE_ENHANCED_CONN_COMPLETE */
           OTAHandleNotification.EvtOpcode = OTA_CONN_HANDLE_EVT;
@@ -774,15 +756,12 @@ SVCCTL_UserEvtFlowStatus_t SVCCTL_App_Notification(void *p_Pckt)
 
           OTAHandleNotification.EvtOpcode = OTA_CONN_HANDLE_EVT;
           NUSHandleNotification.EvtOpcode = NUS_CONN_HANDLE_EVT;
-          TOFHandleNotification.EvtOpcode = TOF_CONN_HANDLE_EVT;
           DISHandleNotification.EvtOpcode = DIS_CONN_HANDLE_EVT;
           OTAHandleNotification.ConnectionHandle = p_conn_complete->Connection_Handle;
           NUSHandleNotification.ConnectionHandle = p_conn_complete->Connection_Handle;
-          TOFHandleNotification.ConnectionHandle = p_conn_complete->Connection_Handle;
           DISHandleNotification.ConnectionHandle = p_conn_complete->Connection_Handle;
           OTA_APP_EvtRx(&OTAHandleNotification);
           NUS_APP_EvtRx(&NUSHandleNotification);
-          TOF_APP_EvtRx(&TOFHandleNotification);
           DIS_APP_EvtRx(&DISHandleNotification);
           /* USER CODE BEGIN HCI_EVT_LE_CONN_COMPLETE */
           OTAHandleNotification.EvtOpcode = OTA_CONN_HANDLE_EVT;
@@ -1605,7 +1584,7 @@ static void Ble_Hci_Gap_Gatt_Init(void)
   {
     ret = aci_gap_init(role,
                        CFG_PRIVACY,
-                       (uint8_t)BLE_GAP_DEVICE_NAME_LEN,
+                       sizeof(a_GapDeviceName),
                        &gap_service_handle,
                        &gap_dev_name_char_handle,
                        &gap_appearance_char_handle);
@@ -1627,7 +1606,7 @@ static void Ble_Hci_Gap_Gatt_Init(void)
       ret = aci_gatt_update_char_value(gap_service_handle,
                                        gap_dev_name_char_handle,
                                        0,
-                                       (uint8_t)BLE_GAP_DEVICE_NAME_LEN,
+                                       sizeof(a_GapDeviceName),
                                        (uint8_t *) a_GapDeviceName);
       if (ret != BLE_STATUS_SUCCESS)
       {
