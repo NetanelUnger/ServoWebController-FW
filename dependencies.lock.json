@@ -51,5 +51,12 @@
       "api_version": "2.0.0",
       "note": "Retains local RTOS-aware platform delay, output-selection settings and application task."
     }
+  },
+  "GC9A01-init": {
+    "repository": "https://github.com/adafruit/Adafruit_GC9A01A",
+    "commit": "e742c29db8d4b84e1bbca16005aa7bfd59cf0b3c",
+    "version": "1.2.0",
+    "scope": "Initialization data only, adapted to native STM32 HAL; DISPON deferred until after welcome frame.",
+    "license": "BSD (upstream notice retained in display/gc9a01_init.h)"
   }
 }

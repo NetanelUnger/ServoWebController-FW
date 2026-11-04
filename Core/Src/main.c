@@ -42,6 +42,9 @@
 
 /* Private variables ---------------------------------------------------------*/
 
+ADC_HandleTypeDef hadc4;
+SPI_HandleTypeDef hspi3;
+
 CRC_HandleTypeDef hcrc;
 
 DMA_HandleTypeDef handle_GPDMA1_Channel6;
@@ -79,6 +82,8 @@ static void MX_GTZC_Init(void);
 static void MX_IWDG_Init(void);
 static void MX_TIM1_Init(void);
 static void MX_I2C3_Init(void);
+static void MX_ADC4_Init(void);
+static void MX_SPI3_Init(void);
 static void MX_LPTIM1_Init(void);
 static void MX_TIM2_Init(void);
 /* USER CODE BEGIN PFP */
@@ -137,6 +142,8 @@ int main(void)
   MX_IWDG_Init();
   MX_TIM1_Init();
   MX_I2C3_Init();
+  MX_ADC4_Init();
+  MX_SPI3_Init();
   MX_LPTIM1_Init();
   MX_TIM2_Init();
   /* USER CODE BEGIN 2 */
@@ -403,9 +410,7 @@ static void MX_I2C3_Init(void)
 {
 
   /* USER CODE BEGIN I2C3_Init 0 */
-#if DISABLE_I2C_PCA9685 && DISABLE_I2C_VL53L5CX
-  return; /* No enabled device needs the I2C3 peripheral or its pins. */
-#endif
+/* The shared bus is configured even when device access is disabled. */
 
   /* USER CODE END I2C3_Init 0 */
 
@@ -857,112 +862,146 @@ void MX_GPIO_Init(void)
 {
   GPIO_InitTypeDef GPIO_InitStruct = {0};
   /* USER CODE BEGIN MX_GPIO_Init_1 */
-
+  /* Hardware correction: schematic RES/PB11 is DC, D/C/PA4 is CS,
+   * and CS/PA2 is RST on the purchased GC9A01 module. */
   /* USER CODE END MX_GPIO_Init_1 */
-
-  /* GPIO Ports Clock Enable */
   __HAL_RCC_GPIOA_CLK_ENABLE();
   __HAL_RCC_GPIOB_CLK_ENABLE();
   __HAL_RCC_GPIOC_CLK_ENABLE();
 
-  /*Configure GPIO pin Output Level */
-  HAL_GPIO_WritePin(GPIOA, MUX_SEL0_Pin|MUX_SEL1_Pin|MUX_SEL2_Pin|MUX_SEL3_Pin
-                          |BAT_ON_Pin|GLOBAL_EN_LOW_Pin, GPIO_PIN_RESET);
+  /* Set output latches before switching pin modes: power and PWM stay off. */
+  HAL_GPIO_WritePin(GPIOA, DISPLAY_RES_Pin|DIAG_EN1_Pin|DIAG_EN2_Pin|BAT_ON_Pin,
+                    GPIO_PIN_RESET);
+  HAL_GPIO_WritePin(GPIOA, DISPLAY_CS_Pin|OE_Pin|MUX_SEL1_Pin, GPIO_PIN_SET);
+  HAL_GPIO_WritePin(GPIOB, EN1_Pin|EN2_Pin|DISPLAY_DC_Pin, GPIO_PIN_RESET);
+  HAL_GPIO_WritePin(GPIOB, LED_GREEN_Pin|LED_BLUE_Pin, GPIO_PIN_SET);
 
-  /*Configure GPIO pin Output Level */
-  HAL_GPIO_WritePin(GLOBAL_EN_HIGH_GPIO_Port, GLOBAL_EN_HIGH_Pin, GPIO_PIN_RESET);
-
-  /*Configure GPIO pin Output Level */
-  HAL_GPIO_WritePin(GPIOB, LED_RED_Pin|LED_GREEN_Pin|LED_BLUE_Pin, GPIO_PIN_SET);
-
-  /*Configure GPIO pin Output Level */
-  HAL_GPIO_WritePin(FLASH_CS_GPIO_Port, FLASH_CS_Pin, GPIO_PIN_RESET);
-
-  /*Configure GPIO pins : LSM_INT1_Pin LSM_INT2_Pin */
-  GPIO_InitStruct.Pin = LSM_INT1_Pin|LSM_INT2_Pin;
-  GPIO_InitStruct.Mode = GPIO_MODE_IT_RISING;
-  GPIO_InitStruct.Pull = GPIO_NOPULL;
-  HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
-
-  /*Configure GPIO pins : MUX_SEL0_Pin MUX_SEL1_Pin MUX_SEL2_Pin MUX_SEL3_Pin
-                           BAT_ON_Pin GLOBAL_EN_LOW_Pin */
-  GPIO_InitStruct.Pin = MUX_SEL0_Pin|MUX_SEL1_Pin|MUX_SEL2_Pin|MUX_SEL3_Pin
-                          |BAT_ON_Pin|GLOBAL_EN_LOW_Pin;
+  GPIO_InitStruct.Pin = DISPLAY_CS_Pin|DISPLAY_RES_Pin|OE_Pin|DIAG_EN1_Pin
+                        |DIAG_EN2_Pin|MUX_SEL1_Pin|BAT_ON_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
   HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
 
-  /*Configure GPIO pin : PB9 */
-  GPIO_InitStruct.Pin = GPIO_PIN_9;
-  GPIO_InitStruct.Mode = GPIO_MODE_ANALOG;
-  GPIO_InitStruct.Pull = GPIO_NOPULL;
+  GPIO_InitStruct.Pin = EN1_Pin|EN2_Pin|DISPLAY_DC_Pin|LED_GREEN_Pin|LED_BLUE_Pin;
   HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
 
-  /*Configure GPIO pin : GLOBAL_EN_HIGH_Pin */
-  GPIO_InitStruct.Pin = GLOBAL_EN_HIGH_Pin;
-  GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
-  GPIO_InitStruct.Pull = GPIO_NOPULL;
-  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
-  HAL_GPIO_Init(GLOBAL_EN_HIGH_GPIO_Port, &GPIO_InitStruct);
-
-  /*Configure GPIO pins : LED_RED_Pin LED_GREEN_Pin LED_BLUE_Pin */
-  GPIO_InitStruct.Pin = LED_RED_Pin|LED_GREEN_Pin|LED_BLUE_Pin;
-  GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
-  GPIO_InitStruct.Pull = GPIO_NOPULL;
-  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
-  HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
-
-  /*Configure GPIO pin : FLASH_MISO_Pin */
-  GPIO_InitStruct.Pin = FLASH_MISO_Pin;
-  GPIO_InitStruct.Mode = GPIO_MODE_AF_PP;
-  GPIO_InitStruct.Pull = GPIO_NOPULL;
-  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_HIGH;
-  GPIO_InitStruct.Alternate = GPIO_AF5_SPI1;
-  HAL_GPIO_Init(FLASH_MISO_GPIO_Port, &GPIO_InitStruct);
-
-  /*Configure GPIO pin : FLASH_CS_Pin */
-  GPIO_InitStruct.Pin = FLASH_CS_Pin;
-  GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
-  GPIO_InitStruct.Pull = GPIO_NOPULL;
-  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_HIGH;
-  HAL_GPIO_Init(FLASH_CS_GPIO_Port, &GPIO_InitStruct);
-
-  /*Configure GPIO pin : FLASH_MOSI_Pin */
-  GPIO_InitStruct.Pin = FLASH_MOSI_Pin;
-  GPIO_InitStruct.Mode = GPIO_MODE_AF_PP;
-  GPIO_InitStruct.Pull = GPIO_NOPULL;
-  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_HIGH;
-  GPIO_InitStruct.Alternate = GPIO_AF5_SPI1;
-  HAL_GPIO_Init(FLASH_MOSI_GPIO_Port, &GPIO_InitStruct);
-
-  /*Configure GPIO pin : FLASH_SCK_Pin */
-  GPIO_InitStruct.Pin = FLASH_SCK_Pin;
-  GPIO_InitStruct.Mode = GPIO_MODE_AF_PP;
-  GPIO_InitStruct.Pull = GPIO_PULLDOWN;
-  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_HIGH;
-  GPIO_InitStruct.Alternate = GPIO_AF5_SPI1;
-  HAL_GPIO_Init(FLASH_SCK_GPIO_Port, &GPIO_InitStruct);
-
-  /*Configure GPIO pin : CHRG_CONN_Pin */
-  GPIO_InitStruct.Pin = CHRG_CONN_Pin;
+  /* VL53L5CX INT is active low. No sensor access occurs in the ISR. */
+  GPIO_InitStruct.Pin = INT_TOF_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_IT_FALLING;
   GPIO_InitStruct.Pull = GPIO_PULLUP;
+  HAL_GPIO_Init(INT_TOF_GPIO_Port, &GPIO_InitStruct);
+  GPIO_InitStruct.Pin = CHRG_CONN_Pin;
   HAL_GPIO_Init(CHRG_CONN_GPIO_Port, &GPIO_InitStruct);
 
-  /* EXTI interrupt init*/
-  HAL_NVIC_SetPriority(EXTI9_IRQn, 5, 0);
-  HAL_NVIC_EnableIRQ(EXTI9_IRQn);
-
-  HAL_NVIC_SetPriority(EXTI10_IRQn, 5, 0);
-  HAL_NVIC_EnableIRQ(EXTI10_IRQn);
-
+  HAL_NVIC_SetPriority(EXTI13_IRQn, 5, 0);
+  HAL_NVIC_EnableIRQ(EXTI13_IRQn);
   HAL_NVIC_SetPriority(EXTI15_IRQn, 5, 0);
   HAL_NVIC_EnableIRQ(EXTI15_IRQn);
-
   /* USER CODE BEGIN MX_GPIO_Init_2 */
-  HAL_GPIO_WritePin(GPIOA, MUX_SEL1_Pin, GPIO_PIN_SET);
   /* USER CODE END MX_GPIO_Init_2 */
+}
+
+static void MX_ADC4_Init(void)
+{
+
+  /* USER CODE BEGIN ADC4_Init 0 */
+
+  /* USER CODE END ADC4_Init 0 */
+
+  ADC_ChannelConfTypeDef sConfig = {0};
+
+  /* USER CODE BEGIN ADC4_Init 1 */
+
+  /* USER CODE END ADC4_Init 1 */
+
+  /** Common config
+  */
+  hadc4.Instance = ADC4;
+  hadc4.Init.ClockPrescaler = ADC_CLOCK_ASYNC_DIV8;
+  hadc4.Init.Resolution = ADC_RESOLUTION_12B;
+  hadc4.Init.DataAlign = ADC_DATAALIGN_RIGHT;
+  hadc4.Init.ScanConvMode = ADC_SCAN_DISABLE;
+  hadc4.Init.EOCSelection = ADC_EOC_SINGLE_CONV;
+  hadc4.Init.LowPowerAutoPowerOff = DISABLE;
+  hadc4.Init.LowPowerAutonomousDPD = ADC_LP_AUTONOMOUS_DPD_DISABLE;
+  hadc4.Init.LowPowerAutoWait = DISABLE;
+  hadc4.Init.ContinuousConvMode = DISABLE;
+  hadc4.Init.NbrOfConversion = 1;
+  hadc4.Init.ExternalTrigConv = ADC_SOFTWARE_START;
+  hadc4.Init.ExternalTrigConvEdge = ADC_EXTERNALTRIGCONVEDGE_NONE;
+  hadc4.Init.DMAContinuousRequests = DISABLE;
+  hadc4.Init.TriggerFrequencyMode = ADC_TRIGGER_FREQ_LOW;
+  hadc4.Init.Overrun = ADC_OVR_DATA_OVERWRITTEN;
+  hadc4.Init.SamplingTimeCommon1 = ADC_SAMPLETIME_814CYCLES_5;
+  hadc4.Init.SamplingTimeCommon2 = ADC_SAMPLETIME_814CYCLES_5;
+  hadc4.Init.OversamplingMode = DISABLE;
+  if (HAL_ADC_Init(&hadc4) != HAL_OK)
+  {
+    Error_Handler();
+  }
+
+  /** Configure Regular Channel
+  */
+  sConfig.Channel = ADC_CHANNEL_6;
+  sConfig.Rank = ADC_REGULAR_RANK_1;
+  sConfig.SamplingTime = ADC_SAMPLINGTIME_COMMON_1;
+  if (HAL_ADC_ConfigChannel(&hadc4, &sConfig) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  /* USER CODE BEGIN ADC4_Init 2 */
+  /* Single conversions are selected on demand by board_io, never by DMA. */
+  if (HAL_ADCEx_Calibration_Start(&hadc4) != HAL_OK)
+  {
+    Error_Handler();
+  }
+
+  /* USER CODE END ADC4_Init 2 */
+
+}
+
+static void MX_SPI3_Init(void)
+{
+
+  /* USER CODE BEGIN SPI3_Init 0 */
+
+  /* USER CODE END SPI3_Init 0 */
+
+  /* USER CODE BEGIN SPI3_Init 1 */
+
+  /* USER CODE END SPI3_Init 1 */
+  /* SPI3 parameter configuration*/
+  hspi3.Instance = SPI3;
+  hspi3.Init.Mode = SPI_MODE_MASTER;
+  hspi3.Init.Direction = SPI_DIRECTION_2LINES_TXONLY;
+  hspi3.Init.DataSize = SPI_DATASIZE_8BIT;
+  hspi3.Init.CLKPolarity = SPI_POLARITY_LOW;
+  hspi3.Init.CLKPhase = SPI_PHASE_1EDGE;
+  hspi3.Init.NSS = SPI_NSS_SOFT;
+  hspi3.Init.BaudRatePrescaler = SPI_BAUDRATEPRESCALER_32;
+  hspi3.Init.FirstBit = SPI_FIRSTBIT_MSB;
+  hspi3.Init.TIMode = SPI_TIMODE_DISABLE;
+  hspi3.Init.CRCCalculation = SPI_CRCCALCULATION_DISABLE;
+  hspi3.Init.CRCPolynomial = 0x7;
+  hspi3.Init.NSSPMode = SPI_NSS_PULSE_DISABLE;
+  hspi3.Init.NSSPolarity = SPI_NSS_POLARITY_LOW;
+  hspi3.Init.FifoThreshold = SPI_FIFO_THRESHOLD_01DATA;
+  hspi3.Init.MasterSSIdleness = SPI_MASTER_SS_IDLENESS_00CYCLE;
+  hspi3.Init.MasterInterDataIdleness = SPI_MASTER_INTERDATA_IDLENESS_00CYCLE;
+  hspi3.Init.MasterReceiverAutoSusp = SPI_MASTER_RX_AUTOSUSP_DISABLE;
+  hspi3.Init.MasterKeepIOState = SPI_MASTER_KEEP_IO_STATE_DISABLE;
+  hspi3.Init.IOSwap = SPI_IO_SWAP_DISABLE;
+  hspi3.Init.ReadyMasterManagement = SPI_RDY_MASTER_MANAGEMENT_INTERNALLY;
+  hspi3.Init.ReadyPolarity = SPI_RDY_POLARITY_HIGH;
+  if (HAL_SPI_Init(&hspi3) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  /* USER CODE BEGIN SPI3_Init 2 */
+
+  /* USER CODE END SPI3_Init 2 */
+
 }
 
 /* USER CODE BEGIN 4 */

@@ -34,6 +34,7 @@
 #include "log_module_conf.h"
 #include "nus_app.h"
 #include "comm/comm_interface.h"
+#include "display/display.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -336,6 +337,12 @@ void StartDefaultTask(void *argument)
 void commTask_Entry(void *argument)
 {
   /* USER CODE BEGIN commTask */
+#if ENABLE_DISPLAY
+  /* HAL's RTC timebase starts in MX_APPE_Init, so display reset/sleep delays
+   * must run here, after platform initialization and scheduler startup.
+   * This also serializes startup drawing with later GPIO diagnostic commands. */
+  g_display_boot_status = Display_ShowWelcome();
+#endif
 #ifdef ENABLE_COMM
 	comm_Init();
 #endif //ENABLE_COMM

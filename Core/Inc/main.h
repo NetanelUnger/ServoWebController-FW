@@ -83,49 +83,58 @@ void APP_SetPerformanceMinimum(void);
 /* USER CODE END EFP */
 
 /* Private defines -----------------------------------------------------------*/
-#define LSM_INT1_Pin GPIO_PIN_10
-#define LSM_INT1_GPIO_Port GPIOA
-#define LSM_INT1_EXTI_IRQn EXTI10_IRQn
-#define LSM_INT2_Pin GPIO_PIN_9
-#define LSM_INT2_GPIO_Port GPIOA
-#define LSM_INT2_EXTI_IRQn EXTI9_IRQn
 #define I2C_SDA_Pin GPIO_PIN_7
 #define I2C_SDA_GPIO_Port GPIOA
 #define I2C_SCL_Pin GPIO_PIN_6
 #define I2C_SCL_GPIO_Port GPIOA
-#define MUX_SEL0_Pin GPIO_PIN_0
-#define MUX_SEL0_GPIO_Port GPIOA
+#define EN2_Pin GPIO_PIN_4
+#define EN2_GPIO_Port GPIOB
+#define EN1_Pin GPIO_PIN_5
+#define EN1_GPIO_Port GPIOB
+#define SPI_MOSI_Pin GPIO_PIN_8
+#define SPI_MOSI_GPIO_Port GPIOB
+#define CURRENT_SENSE2_Pin GPIO_PIN_9
+#define CURRENT_SENSE2_GPIO_Port GPIOB
+#define DISPLAY_RES_Pin GPIO_PIN_2
+#define DISPLAY_RES_GPIO_Port GPIOA
+#define INT_TOF_Pin GPIO_PIN_13
+#define INT_TOF_GPIO_Port GPIOC
+#define SPI_SCK_Pin GPIO_PIN_0
+#define SPI_SCK_GPIO_Port GPIOA
+#define DISPLAY_CS_Pin GPIO_PIN_4
+#define DISPLAY_CS_GPIO_Port GPIOA
+#define CURRENT_SENSE1_Pin GPIO_PIN_3
+#define CURRENT_SENSE1_GPIO_Port GPIOA
+#define DISPLAY_DC_Pin GPIO_PIN_11
+#define DISPLAY_DC_GPIO_Port GPIOB
+#define ADC_BAT_Pin GPIO_PIN_5
+#define ADC_BAT_GPIO_Port GPIOA
+#define OE_Pin GPIO_PIN_9
+#define OE_GPIO_Port GPIOA
+#define DIAG_EN2_Pin GPIO_PIN_11
+#define DIAG_EN2_GPIO_Port GPIOA
+#define DIAG_EN1_Pin GPIO_PIN_10
+#define DIAG_EN1_GPIO_Port GPIOA
 #define MUX_SEL1_Pin GPIO_PIN_1
 #define MUX_SEL1_GPIO_Port GPIOA
-#define MUX_SEL2_Pin GPIO_PIN_2
-#define MUX_SEL2_GPIO_Port GPIOA
-#define MUX_SEL3_Pin GPIO_PIN_5
-#define MUX_SEL3_GPIO_Port GPIOA
-#define GLOBAL_EN_HIGH_Pin GPIO_PIN_13
-#define GLOBAL_EN_HIGH_GPIO_Port GPIOC
-#define LED_RED_Pin GPIO_PIN_8
-#define LED_RED_GPIO_Port GPIOB
 #define LED_GREEN_Pin GPIO_PIN_6
 #define LED_GREEN_GPIO_Port GPIOB
 #define LED_BLUE_Pin GPIO_PIN_7
 #define LED_BLUE_GPIO_Port GPIOB
-#define FLASH_MISO_Pin GPIO_PIN_3
-#define FLASH_MISO_GPIO_Port GPIOB
-#define FLASH_CS_Pin GPIO_PIN_5
-#define FLASH_CS_GPIO_Port GPIOB
-#define FLASH_MOSI_Pin GPIO_PIN_15
-#define FLASH_MOSI_GPIO_Port GPIOA
-#define FLASH_SCK_Pin GPIO_PIN_4
-#define FLASH_SCK_GPIO_Port GPIOB
 #define BAT_ON_Pin GPIO_PIN_12
 #define BAT_ON_GPIO_Port GPIOA
-#define GLOBAL_EN_LOW_Pin GPIO_PIN_11
-#define GLOBAL_EN_LOW_GPIO_Port GPIOA
 #define CHRG_CONN_Pin GPIO_PIN_15
 #define CHRG_CONN_GPIO_Port GPIOB
+#define INT_TOF_EXTI_IRQn EXTI13_IRQn
 #define CHRG_CONN_EXTI_IRQn EXTI15_IRQn
 
 /* USER CODE BEGIN Private defines */
+/* Purchased GC9A01 module wiring differs from the schematic signal labels:
+ * schematic RES (PB11) -> actual display DC (0=command, 1=data)
+ * schematic D/C (PA4)  -> actual display CS (active low)
+ * schematic CS  (PA2)  -> actual display RST (active low).
+ * DISPLAY_* names describe actual hardware functions.
+ * DISPLAY_RES is retained as the firmware/BLE name for the actual RST signal. */
 extern RTC_HandleTypeDef hrtc;
 extern IWDG_HandleTypeDef hiwdg;
 extern TIM_HandleTypeDef htim1;
@@ -135,14 +144,15 @@ extern DMA_QListTypeDef GPIOQueue;
 extern DMA_NodeTypeDef ADCNode;
 extern DMA_QListTypeDef ADCQueue;
 extern I2C_HandleTypeDef hi2c3;
+extern ADC_HandleTypeDef hadc4;
+extern SPI_HandleTypeDef hspi3;
 
 #define MUX_SEL_DMA_CHAN	handle_GPDMA1_Channel5
 #define ADC_DMA_CHAN		handle_GPDMA1_Channel6
 #define ADC_DMA_TIMER		htim1
 #define SAMPLING_ADC		hadc4
-#define IMU_I2C				hi2c1
-#define I2C_BUS				hi2c1
-#define FLASH_SPI			hspi1
+#define I2C_BUS              hi2c3
+#define DISPLAY_SPI          hspi3
 #define LOGGER_TIM			htim2
 
 extern uint32_t LPTime_GetElapsedMs(void);

@@ -62,3 +62,9 @@ The root MIT license applies to original application code. ST/Arm/FreeRTOS
 components retain their own notices and licenses. The boot manager has its own
 ST SLA license. Do not replace vendor licenses with the root project license.
 Whitespace inherited from upstream sources is preserved where possible.
+
+
+The GC9A01 initialization table is based on Adafruit_GC9A01A v1.2.0, commit
+`e742c29db8d4b84e1bbca16005aa7bfd59cf0b3c`, with upstream BSD attribution retained
+in `display/gc9a01_init.h`. Only the register data is adapted; Arduino/GFX are not
+linked. Text uses the existing ST `Utilities/Fonts/font24.c` and its bundled license.

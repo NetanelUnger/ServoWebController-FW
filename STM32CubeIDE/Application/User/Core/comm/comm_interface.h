@@ -15,8 +15,17 @@
 /** @brief Event bit indicating pending BLE NUS receive work. */
 #define COMM_NUS_RX_EVENT (1U << 2)
 
+/** @brief Response buffer size, including the snprintf terminator. */
+#define COMM_TEXT_RESPONSE_MAX_LEN 255U
+/** @brief List every command and its syntax. */
+#define COMM_CMD_HELP "HELP"
+
 /** @brief Connectivity check command. */
 #define COMM_CMD_PING "PING"
+/** Board diagnostics, using signal names or physical pin names. */
+#define COMM_CMD_GPIO_GET "GPIO_GET"
+#define COMM_CMD_GPIO_SET "GPIO_SET"
+#define COMM_CMD_ADC_READ "ADC_READ"
 /** @brief Immediate servo pulse update command. */
 #define COMM_CMD_PCA9685_SET_SERVO_US "SET_DIRECT"
 /** @brief Timed servo interpolation command. */
@@ -49,7 +58,7 @@ extern volatile comm_infoTypeDef comm_info;
  * @brief Parse one textual request and build the textual response payload.
  * @param payload Input request bytes.
  * @param req_len Number of valid bytes in @p payload.
- * @param res_payload Output buffer that receives the response body.
+ * @param res_payload Buffer of at least COMM_TEXT_RESPONSE_MAX_LEN bytes.
  * @return Number of bytes written into @p res_payload.
  */
 extern packetSize_t parser_ProcessOne(uint8_t *payload, packetSize_t req_len, uint8_t *res_payload);

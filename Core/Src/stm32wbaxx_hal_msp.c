@@ -659,6 +659,63 @@ void HAL_UART_MspDeInit(UART_HandleTypeDef* huart)
 
 }
 
+
+void HAL_ADC_MspInit(ADC_HandleTypeDef *hadc)
+{
+  GPIO_InitTypeDef gpio = {0};
+  RCC_PeriphCLKInitTypeDef clock = {0};
+  if (hadc->Instance != ADC4) return;
+  clock.PeriphClockSelection = RCC_PERIPHCLK_ADC;
+  clock.AdcClockSelection = RCC_ADCCLKSOURCE_HCLK;
+  if (HAL_RCCEx_PeriphCLKConfig(&clock) != HAL_OK) Error_Handler();
+  __HAL_RCC_ADC4_CLK_ENABLE();
+  __HAL_RCC_GPIOA_CLK_ENABLE();
+  __HAL_RCC_GPIOB_CLK_ENABLE();
+  gpio.Mode = GPIO_MODE_ANALOG;
+  gpio.Pull = GPIO_NOPULL;
+  gpio.Pin = CURRENT_SENSE1_Pin|ADC_BAT_Pin;
+  HAL_GPIO_Init(GPIOA, &gpio);
+  gpio.Pin = CURRENT_SENSE2_Pin;
+  HAL_GPIO_Init(GPIOB, &gpio);
+}
+
+void HAL_ADC_MspDeInit(ADC_HandleTypeDef *hadc)
+{
+  if (hadc->Instance != ADC4) return;
+  __HAL_RCC_ADC4_CLK_DISABLE();
+  HAL_GPIO_DeInit(GPIOA, CURRENT_SENSE1_Pin|ADC_BAT_Pin);
+  HAL_GPIO_DeInit(GPIOB, CURRENT_SENSE2_Pin);
+}
+
+void HAL_SPI_MspInit(SPI_HandleTypeDef *hspi)
+{
+  GPIO_InitTypeDef gpio = {0};
+  RCC_PeriphCLKInitTypeDef clock = {0};
+  if (hspi->Instance != SPI3) return;
+  clock.PeriphClockSelection = RCC_PERIPHCLK_SPI3;
+  clock.Spi3ClockSelection = RCC_SPI3CLKSOURCE_PCLK7;
+  if (HAL_RCCEx_PeriphCLKConfig(&clock) != HAL_OK) Error_Handler();
+  __HAL_RCC_SPI3_CLK_ENABLE();
+  __HAL_RCC_GPIOA_CLK_ENABLE();
+  __HAL_RCC_GPIOB_CLK_ENABLE();
+  gpio.Mode = GPIO_MODE_AF_PP;
+  gpio.Pull = GPIO_NOPULL;
+  gpio.Speed = GPIO_SPEED_FREQ_HIGH;
+  gpio.Alternate = GPIO_AF6_SPI3;
+  gpio.Pin = SPI_SCK_Pin;
+  HAL_GPIO_Init(SPI_SCK_GPIO_Port, &gpio);
+  gpio.Pin = SPI_MOSI_Pin;
+  HAL_GPIO_Init(SPI_MOSI_GPIO_Port, &gpio);
+}
+
+void HAL_SPI_MspDeInit(SPI_HandleTypeDef *hspi)
+{
+  if (hspi->Instance != SPI3) return;
+  __HAL_RCC_SPI3_CLK_DISABLE();
+  HAL_GPIO_DeInit(SPI_SCK_GPIO_Port, SPI_SCK_Pin);
+  HAL_GPIO_DeInit(SPI_MOSI_GPIO_Port, SPI_MOSI_Pin);
+}
+
 /* USER CODE BEGIN 1 */
 
 /* USER CODE END 1 */

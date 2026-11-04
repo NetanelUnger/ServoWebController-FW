@@ -222,32 +222,10 @@ void RCC_IRQHandler(void)
   /* USER CODE END RCC_IRQn 1 */
 }
 
-/**
-  * @brief This function handles EXTI Line9 interrupt.
-  */
-void EXTI9_IRQHandler(void)
+/** @brief TOF interrupt input (PC13). */
+void EXTI13_IRQHandler(void)
 {
-  /* USER CODE BEGIN EXTI9_IRQn 0 */
-
-  /* USER CODE END EXTI9_IRQn 0 */
-  HAL_GPIO_EXTI_IRQHandler(LSM_INT2_Pin);
-  /* USER CODE BEGIN EXTI9_IRQn 1 */
-
-  /* USER CODE END EXTI9_IRQn 1 */
-}
-
-/**
-  * @brief This function handles EXTI Line10 interrupt.
-  */
-void EXTI10_IRQHandler(void)
-{
-  /* USER CODE BEGIN EXTI10_IRQn 0 */
-
-  /* USER CODE END EXTI10_IRQn 0 */
-  HAL_GPIO_EXTI_IRQHandler(LSM_INT1_Pin);
-  /* USER CODE BEGIN EXTI10_IRQn 1 */
-
-  /* USER CODE END EXTI10_IRQn 1 */
+  HAL_GPIO_EXTI_IRQHandler(INT_TOF_Pin);
 }
 
 /**

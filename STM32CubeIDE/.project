@@ -678,5 +678,10 @@
 			<type>2</type>
 			<locationURI>PARENT-1-PROJECT_LOC/Middlewares/Third_Party/FreeRTOS/Source/portable/GCC/ARM_CM33_NTZ/non_secure</locationURI>
 		</link>
+		<link>
+			<name>Utilities/font24.c</name>
+			<type>1</type>
+			<locationURI>PARENT-1-PROJECT_LOC/Utilities/Fonts/font24.c</locationURI>
+		</link>
 	</linkedResources>
 </projectDescription>

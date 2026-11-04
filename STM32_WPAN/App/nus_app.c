@@ -31,6 +31,7 @@
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
+#include <string.h>
 
 /* USER CODE END Includes */
 
@@ -288,44 +289,43 @@ void NusTxTask(NUS_APP_QueueItem_t *item)
 		return;
 	  }
 
-	  NUS_Data_t data =
-	  {
-		.p_Payload = item->Payload,
-		.Length    = item->Length
-	  };
+      /* A multiline reply occupies one queue slot. Send its lines here instead
+       * of enqueueing them from commTask into the same bounded TX queue.
+       * HELP lines are <= 20 bytes; existing single-line replies stay intact. */
+      uint16_t offset = 0U;
+      while (offset < item->Length)
+      {
+          uint8_t *start = item->Payload + offset;
+          uint8_t *newline = memchr(start, '\n', item->Length - offset);
+          uint16_t length = newline ? (uint16_t)(newline - start) : item->Length - offset;
+          offset += length + (newline != NULL ? 1U : 0U);
+          if (length == 0U) continue;
+          if (NUS_APP_Context.ConnectionHandle == NUS_APP_INVALID_CONN_HANDLE) return;
 
-	  for (uint8_t retry = 0U; retry < NUS_APP_NOTIFICATION_RETRY_COUNT; retry++)
-	  {
-		tBleStatus res = 0;
-		res = NUS_UpdateValue(NUS_TX, &data);
-		if (res == BLE_STATUS_SUCCESS)
-		{
-			LOG_INFO_APP("Success TX %d bytes\r\n", data.Length);
-			/*
-			for (uint8_t i=0;i<data.Length;i++)
-			{
-				LOG_INFO_APP("%d,", data.p_Payload[i]);
-			}
-			LOG_INFO_APP("\r\n");
-			*/
-			retry = NUS_APP_NOTIFICATION_RETRY_COUNT;
-		}
-		else
-		{
-			LOG_INFO_APP("Failed to send NUS TX\r\n");
-			osDelay(NUS_APP_NOTIFICATION_RETRY_DELAY_MS);
-			if (retry == (NUS_APP_NOTIFICATION_RETRY_COUNT - 1U))
-			{
-			  LOG_INFO_APP("Failed to send NUS TX\r\n");
-			}
-		}
-	  }
+          NUS_Data_t data = { .p_Payload = start, .Length = length };
+          uint8_t sent = 0U;
+          for (uint8_t retry = 0U; retry < NUS_APP_NOTIFICATION_RETRY_COUNT; ++retry)
+          {
+              if (NUS_UpdateValue(NUS_TX, &data) == BLE_STATUS_SUCCESS)
+              {
+                  sent = 1U;
+                  break;
+              }
+              osDelay(NUS_APP_NOTIFICATION_RETRY_DELAY_MS);
+          }
+          if (sent == 0U)
+          {
+              /* Never send a completion marker after losing a HELP line. */
+              LOG_INFO_APP("Failed to send NUS TX\r\n");
+              return;
+          }
+      }
 }
 
 
 void NusRxTask(NUS_APP_QueueItem_t *item)
 {
-	  uint8_t res[50];
+	  uint8_t res[COMM_TEXT_RESPONSE_MAX_LEN];
 	  packetSize_t res_len = 0;
 
 	  res_len = parser_ProcessOne(item->Payload, item->Length, res);

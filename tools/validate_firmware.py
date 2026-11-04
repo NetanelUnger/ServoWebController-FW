@@ -26,6 +26,6 @@ for flag, symbol in [('PCA9685', 'pca9685_Init'), ('VL53L5CX', 'vl53l5cx_Task')]
     if f'#define DISABLE_I2C_{flag} 1' in config:
         assert symbol not in names, f'Disabled device linked: {symbol}'
 if all(f'#define DISABLE_I2C_{flag} 1' in config for flag in ['PCA9685', 'VL53L5CX']):
-    for symbol in ['HAL_I2C_Init', 'HAL_I2C_Mem_Read_IT', 'HAL_I2C_Mem_Write_IT', 'HAL_I2C_IsDeviceReady']:
+    for symbol in ['HAL_I2C_Mem_Read_IT', 'HAL_I2C_Mem_Write_IT', 'HAL_I2C_IsDeviceReady']:
         assert symbol not in names, f'I2C function linked: {symbol}'
 print('PASS: boot slot, application slot, reset vector, OTA tags, disabled-device symbols')

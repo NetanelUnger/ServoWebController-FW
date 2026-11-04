@@ -5,6 +5,8 @@ This is the main hand-written firmware area. Most BLE command, servo, PCA9685, s
 ## Module Map
 
 - `config.h`: product-level feature flags, BLE advertising name, watchdog bits, common task timing, and TOF encoding limits.
+- `display/`: GC9A01 SPI driver and startup welcome screen. Single-owner synchronous drawing; runs at commTask startup after the HAL RTC tick is active.
+- `board_io.*`: allowlisted GPIO diagnostics, on-demand ADC4 conversion and TOF interrupt counting. Called only by commTask; see root `BOARD_IO.md` for the board pin map.
 - `comm/`: text command parser and NUS queue integration. It owns command names, argument parsing, response strings, and routing into subsystem APIs.
 - `servo/`: high-level 16-channel servo state, immediate moves, and timed linear interpolation.
 - `PCA9685/`: low-level PWM/servo pulse driver for the PCA9685 on I2C3.
@@ -25,7 +27,9 @@ BLE command path:
 
 Currently important commands:
 
+- `HELP` (all command syntax and legacy aliases, delivered as short NUS lines)
 - `PING`
+- `GPIO_GET <signal_or_pin>`, `GPIO_SET <signal_or_pin> <0|1>`, `ADC_READ <signal_or_pin>`
 - `SET_DIRECT <channel> <pulse_us>`
 - `SET_TIMING <channel> <pulse_us> <duration_ms>`
 - `TOF_SET_MIN_MAX <min_mm> <max_mm>`

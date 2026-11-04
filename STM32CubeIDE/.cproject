@@ -82,6 +82,7 @@
 									<listOptionValue builtIn="false" value="../../Projects/Common/WPAN/Modules/SerialCmdInterpreter"/>
 									<listOptionValue builtIn="false" value="../../Projects/Common/WPAN/Modules/Log"/>
 									<listOptionValue builtIn="false" value="../../Utilities/misc"/>
+									<listOptionValue builtIn="false" value="../../Utilities/Fonts"/>
 									<listOptionValue builtIn="false" value="../../Utilities/sequencer"/>
 									<listOptionValue builtIn="false" value="../../Utilities/tim_serv"/>
 									<listOptionValue builtIn="false" value="../../Utilities/lpm/tiny_lpm"/>
@@ -212,6 +213,7 @@
 									<listOptionValue builtIn="false" value="../../Projects/Common/WPAN/Modules/SerialCmdInterpreter"/>
 									<listOptionValue builtIn="false" value="../../Projects/Common/WPAN/Modules/Log"/>
 									<listOptionValue builtIn="false" value="../../Utilities/misc"/>
+									<listOptionValue builtIn="false" value="../../Utilities/Fonts"/>
 									<listOptionValue builtIn="false" value="../../Utilities/sequencer"/>
 									<listOptionValue builtIn="false" value="../../Utilities/tim_serv"/>
 									<listOptionValue builtIn="false" value="../../Utilities/lpm/tiny_lpm"/>

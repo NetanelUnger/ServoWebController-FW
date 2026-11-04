@@ -195,10 +195,14 @@ In `STM32CubeIDE/Application/User/Core/config.h`, set `DISABLE_I2C_PCA9685`
 bring-up. Rebuild and flash after changing them.
 
 Disabled devices are not initialized, probed, read, or written, and their worker
-tasks are not started. When both are disabled, I2C3 initialization is skipped.
+tasks are not started. I2C3 remains initialized on PA6/PA7, with no transfers
+to disabled devices.
 BLE remains available; servo commands reply `- PCA9685 DISABLED` and the TOF
 configuration command replies `- VL53L5CX DISABLED`. The TOF BLE service remains
 visible but produces no sensor frames while disabled.
+
+See [BOARD_IO.md](BOARD_IO.md) for the current pin map, SPI3/ADC4 setup,
+safe startup levels and the `GPIO_GET`, `GPIO_SET` and `ADC_READ` BLE commands.
 
 ## Dependency Versions And Boot Manager
 
@@ -303,3 +307,13 @@ The repository also includes vendor and middleware code from ST, CMSIS, FreeRTOS
 ## Author
 
 Created by Netanel Unger as an embedded robotics and BLE firmware project.
+
+
+### GC9A01 welcome display and HELP
+
+The 240x240 round GC9A01 display on SPI3 shows `Welcome To` / `NatiLab 1.0`
+centered in black on white at startup. `ENABLE_DISPLAY` and `DISPLAY_ROTATION`
+are configured in `config.h`. See the
+[driver API and wiring](STM32CubeIDE/Application/User/Core/display/README.md).
+Send `HELP` over BLE NUS for every command, its syntax and legacy aliases.
+The reply uses short notifications from `OK HELP` through `OK HELP END`.

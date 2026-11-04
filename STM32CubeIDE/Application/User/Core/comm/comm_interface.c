@@ -10,6 +10,7 @@
 #include "log_module.h"
 
 #include "comm_interface.h"
+#include "board_io.h"
 #ifdef ENABLE_VL53L5CX
 #include "VL53L5CX/vl53l5cx_task.h"
 #endif
@@ -20,8 +21,24 @@
 #include <stdlib.h>
 #include <string.h>
 
-/** @brief Maximum textual response length returned by the command parser. */
-#define COMM_TEXT_RESPONSE_MAX_LEN 50U
+/* One short notification per line, including at the default ATT MTU of 23.
+ * Longer syntax continues on the next, indented line. Include disabled commands
+ * because they remain recognized by the parser, and preserve legacy aliases. */
+static const char comm_help_text[] =
+    "OK HELP\n"
+    COMM_CMD_HELP "\n"
+    COMM_CMD_PING "\n"
+    COMM_CMD_GPIO_GET " <pin>\n"
+    COMM_CMD_GPIO_SET " <pin> <0|1>\n"
+    COMM_CMD_ADC_READ " <pin>\n"
+    COMM_CMD_PCA9685_SET_SERVO_US " <ch> <us>\n"
+    COMM_CMD_SERVO_START_MOVE "\n <ch> <us> <ms>\n"
+    COMM_CMD_TOF_SET_MIN_MAX "\n <min_mm> <max_mm>\n"
+    COMM_CMD_LEGACY_PCA9685_SET_SERVO_US "\n = " COMM_CMD_PCA9685_SET_SERVO_US "\n"
+    COMM_CMD_LEGACY_SERVO_START_MOVE "\n = " COMM_CMD_SERVO_START_MOVE "\n"
+    "OK HELP END";
+_Static_assert(sizeof(comm_help_text) <= COMM_TEXT_RESPONSE_MAX_LEN,
+               "HELP must fit the response buffer and uint8_t queue length");
 
 /** @brief Shared communication runtime flags. */
 volatile comm_infoTypeDef comm_info = {
@@ -434,6 +451,43 @@ static void comm_ProcessRxQueue(void)
     }
 }
 
+/* Parse whole tokens so malformed writes cannot partly change an output. */
+static packetSize_t comm_BoardCommand(const char *command, char *args, uint8_t *reply)
+{
+    char *name;
+    char *rest;
+    const char *canonical = NULL;
+    uint8_t level = 0;
+    uint16_t raw = 0;
+    BoardIO_Status status;
+    if (!comm_ExtractCommandAndArgs(args, &name, &rest))
+        return comm_WriteResponseText(reply, "- BAD ARGUMENTS");
+
+    if (!strcmp(command, COMM_CMD_GPIO_SET)) {
+        if ((*rest != '0' && *rest != '1') || *comm_SkipSeparators(rest + 1) != '\0')
+            return comm_WriteResponseText(reply, "- BAD ARGUMENTS");
+        level = (uint8_t)(*rest - '0');
+        status = BoardIO_WriteGPIO(name, level, &canonical);
+    } else {
+        if (*rest != '\0') return comm_WriteResponseText(reply, "- BAD ARGUMENTS");
+        status = !strcmp(command, COMM_CMD_ADC_READ)
+            ? BoardIO_ReadADC(name, &canonical, &raw)
+            : BoardIO_ReadGPIO(name, &canonical, &level);
+    }
+    if (status == BOARD_IO_UNKNOWN_PIN) return comm_WriteResponseText(reply, "- UNKNOWN PIN");
+    if (status == BOARD_IO_READ_ONLY) return comm_WriteResponseText(reply, "- READ ONLY");
+    if (status != BOARD_IO_OK) return comm_WriteResponseText(reply, "- ADC ERROR");
+
+    if (!strcmp(canonical, "INT_TOF")) {
+        return (packetSize_t)snprintf((char *)reply, COMM_TEXT_RESPONSE_MAX_LEN,
+            "OK %s %s %u IRQ %lu", command, canonical, (unsigned)level,
+            (unsigned long)BoardIO_TofInterruptCount());
+    }
+    return (packetSize_t)snprintf((char *)reply, COMM_TEXT_RESPONSE_MAX_LEN,
+        "OK %s %s %u", command, canonical,
+        (unsigned)(!strcmp(command, COMM_CMD_ADC_READ) ? raw : level));
+}
+
 packetSize_t parser_ProcessOne(uint8_t *payload, packetSize_t req_len, uint8_t *res_payload)
 {
     char req_text[256];
@@ -452,12 +506,25 @@ packetSize_t parser_ProcessOne(uint8_t *payload, packetSize_t req_len, uint8_t *
         return comm_WriteResponseText(res_payload, "- BAD ARGUMENTS");
     }
 
+    if (memchr(payload, 0, req_len) != NULL)
+        return comm_WriteResponseText(res_payload, "- BAD ARGUMENTS");
+
     memcpy(req_text, payload, req_len);
     req_text[req_len] = '\0';
 
     if (comm_ExtractCommandAndArgs(req_text, &command, &args) == 0U)
     {
         return comm_WriteResponseText(res_payload, "- BAD ARGUMENTS");
+    }
+
+    if (!strcmp(command, COMM_CMD_HELP)) {
+        if (*args != '\0') return comm_WriteResponseText(res_payload, "- BAD ARGUMENTS");
+        return comm_WriteResponseText(res_payload, comm_help_text);
+    }
+
+    if (!strcmp(command, COMM_CMD_GPIO_GET) || !strcmp(command, COMM_CMD_GPIO_SET)
+        || !strcmp(command, COMM_CMD_ADC_READ)) {
+        return comm_BoardCommand(command, args, res_payload);
     }
 
     if (comm_CommandMatches(command, COMM_CMD_PING, NULL) != 0U)

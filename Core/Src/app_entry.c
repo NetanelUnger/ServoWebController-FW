@@ -55,6 +55,7 @@ extern void vPortSetupTimerInterrupt(void);
 
 /* Private includes -----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
+#include "board_io.h"
 #include "app_bsp.h"
 /* USER CODE END Includes */
 
@@ -682,7 +683,7 @@ void HAL_GPIO_EXTI_Rising_Callback(uint16_t GPIO_Pin)
 
 void HAL_GPIO_EXTI_Falling_Callback(uint16_t GPIO_Pin)
 {
-  UNUSED(GPIO_Pin);
+  if (GPIO_Pin == INT_TOF_Pin) BoardIO_TofInterrupt();
 }
 
 /* USER CODE END FD_LOCAL_FUNCTIONS */

@@ -11,9 +11,20 @@
 
 #define ENABLE_COMM
 #define ENABLE_LEDS
+
+/** GC9A01 welcome screen, drawn once at boot. Rotation is 0..3 quarter turns. */
+#ifndef ENABLE_DISPLAY
+#define ENABLE_DISPLAY 1
+#endif
+#ifndef DISPLAY_ROTATION
+#define DISPLAY_ROTATION 0
+#endif
+#if (ENABLE_DISPLAY != 0 && ENABLE_DISPLAY != 1) || (DISPLAY_ROTATION < 0 || DISPLAY_ROTATION > 3)
+#error "Invalid display configuration"
+#endif
 /** @name I2C device switches
  *  Set to 1 to disable all access to that device; set to 0 to enable it.
- *  When both devices are disabled, I2C3 hardware initialization is skipped.
+ *  I2C3 stays configured; disabled devices issue no bus transfers.
  *  Build flags may override these defaults.
  *  @{ */
 #ifndef DISABLE_I2C_PCA9685

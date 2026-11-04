@@ -1,0 +1,343 @@
+{
+  "utc": "2026-11-04T18:23:40.269258+00:00",
+  "address": "00:80:E1:2A:26:24",
+  "name": "BleServo",
+  "checks": [
+    {
+      "request": "PING",
+      "response": "OK PING"
+    },
+    {
+      "request": "GPIO_GET EN1",
+      "response": "OK GPIO_GET EN1 0"
+    },
+    {
+      "request": "GPIO_GET PB5",
+      "response": "OK GPIO_GET EN1 0"
+    },
+    {
+      "request": "GPIO_GET EN2",
+      "response": "OK GPIO_GET EN2 0"
+    },
+    {
+      "request": "GPIO_GET PB4",
+      "response": "OK GPIO_GET EN2 0"
+    },
+    {
+      "request": "GPIO_GET DIAG_EN1",
+      "response": "OK GPIO_GET DIAG_EN1 0"
+    },
+    {
+      "request": "GPIO_GET PA10",
+      "response": "OK GPIO_GET DIAG_EN1 0"
+    },
+    {
+      "request": "GPIO_GET DIAG_EN2",
+      "response": "OK GPIO_GET DIAG_EN2 0"
+    },
+    {
+      "request": "GPIO_GET PA11",
+      "response": "OK GPIO_GET DIAG_EN2 0"
+    },
+    {
+      "request": "GPIO_GET OE",
+      "response": "OK GPIO_GET OE 1"
+    },
+    {
+      "request": "GPIO_GET PA9",
+      "response": "OK GPIO_GET OE 1"
+    },
+    {
+      "request": "GPIO_GET DISPLAY_RES",
+      "response": "OK GPIO_GET DISPLAY_RES 0"
+    },
+    {
+      "request": "GPIO_GET PB11",
+      "response": "OK GPIO_GET DISPLAY_RES 0"
+    },
+    {
+      "request": "GPIO_GET DISPLAY_CS",
+      "response": "OK GPIO_GET DISPLAY_CS 1"
+    },
+    {
+      "request": "GPIO_GET PA2",
+      "response": "OK GPIO_GET DISPLAY_CS 1"
+    },
+    {
+      "request": "GPIO_GET DISPLAY_DC",
+      "response": "OK GPIO_GET DISPLAY_DC 0"
+    },
+    {
+      "request": "GPIO_GET PA4",
+      "response": "OK GPIO_GET DISPLAY_DC 0"
+    },
+    {
+      "request": "GPIO_GET INT_TOF",
+      "response": "OK GPIO_GET INT_TOF 0 IRQ 0"
+    },
+    {
+      "request": "GPIO_GET PC13",
+      "response": "OK GPIO_GET INT_TOF 0 IRQ 0"
+    },
+    {
+      "request": "ADC_READ ADC1",
+      "response": "OK ADC_READ ADC1 0"
+    },
+    {
+      "request": "ADC_READ PA3",
+      "response": "OK ADC_READ ADC1 0"
+    },
+    {
+      "request": "ADC_READ ADC2",
+      "response": "OK ADC_READ ADC2 0"
+    },
+    {
+      "request": "ADC_READ PB9",
+      "response": "OK ADC_READ ADC2 1"
+    },
+    {
+      "request": "ADC_READ ADC_BAT",
+      "response": "OK ADC_READ ADC_BAT 4095"
+    },
+    {
+      "request": "ADC_READ PA5",
+      "response": "OK ADC_READ ADC_BAT 4095"
+    },
+    {
+      "request": "GPIO_SET INT_TOF 1",
+      "response": "- READ ONLY"
+    },
+    {
+      "request": "GPIO_SET PC13 0",
+      "response": "- READ ONLY"
+    },
+    {
+      "request": "GPIO_SET PA13 1",
+      "response": "- UNKNOWN PIN"
+    },
+    {
+      "request": "GPIO_SET PA7 0",
+      "response": "- UNKNOWN PIN"
+    },
+    {
+      "request": "GPIO_SET PB8 1",
+      "response": "- UNKNOWN PIN"
+    },
+    {
+      "request": "GPIO_SET ADC1 1",
+      "response": "- UNKNOWN PIN"
+    },
+    {
+      "request": "ADC_READ EN1",
+      "response": "- UNKNOWN PIN"
+    },
+    {
+      "request": "ADC_READ PA4",
+      "response": "- UNKNOWN PIN"
+    },
+    {
+      "request": "GPIO_GET INVALID",
+      "response": "- UNKNOWN PIN"
+    },
+    {
+      "request": "GPIO_GET PA3",
+      "response": "- UNKNOWN PIN"
+    },
+    {
+      "request": "GPIO_SET EN1 2",
+      "response": "- BAD ARGUMENTS"
+    },
+    {
+      "request": "GPIO_SET EN1 -1",
+      "response": "- BAD ARGUMENTS"
+    },
+    {
+      "request": "GPIO_SET EN1 1junk",
+      "response": "- BAD ARGUMENTS"
+    },
+    {
+      "request": "GPIO_SET EN1 1 0",
+      "response": "- BAD ARGUMENTS"
+    },
+    {
+      "request": "GPIO_SET EN1",
+      "response": "- BAD ARGUMENTS"
+    },
+    {
+      "request": "GPIO_GET",
+      "response": "- BAD ARGUMENTS"
+    },
+    {
+      "request": "ADC_READ",
+      "response": "- BAD ARGUMENTS"
+    },
+    {
+      "request": "ADC_READ PA3 extra",
+      "response": "- BAD ARGUMENTS"
+    },
+    {
+      "request": "GPIO_SET EN1 1\u0000junk",
+      "response": "- BAD ARGUMENTS"
+    },
+    {
+      "request": "SET_DIRECT 0 1500",
+      "response": "- PCA9685 DISABLED"
+    },
+    {
+      "request": "TOF_SET_MIN_MAX 0 1000",
+      "response": "- VL53L5CX DISABLED"
+    },
+    {
+      "request": "GPIO_SET PB5 0",
+      "response": "OK GPIO_SET EN1 0"
+    },
+    {
+      "request": "GPIO_SET PB4 0",
+      "response": "OK GPIO_SET EN2 0"
+    },
+    {
+      "request": "GPIO_SET PA10 0",
+      "response": "OK GPIO_SET DIAG_EN1 0"
+    },
+    {
+      "request": "GPIO_SET PA11 0",
+      "response": "OK GPIO_SET DIAG_EN2 0"
+    },
+    {
+      "request": "GPIO_SET PA9 1",
+      "response": "OK GPIO_SET OE 1"
+    },
+    {
+      "request": "GPIO_SET PB11 0",
+      "response": "OK GPIO_SET DISPLAY_RES 0"
+    },
+    {
+      "request": "GPIO_SET PA2 1",
+      "response": "OK GPIO_SET DISPLAY_CS 1"
+    },
+    {
+      "request": "GPIO_SET PA4 0",
+      "response": "OK GPIO_SET DISPLAY_DC 0"
+    },
+    {
+      "request": "GPIO_SET DISPLAY_DC 1",
+      "response": "OK GPIO_SET DISPLAY_DC 1"
+    },
+    {
+      "request": "GPIO_GET PA4",
+      "response": "OK GPIO_GET DISPLAY_DC 1"
+    },
+    {
+      "request": "GPIO_SET DISPLAY_DC 0",
+      "response": "OK GPIO_SET DISPLAY_DC 0"
+    },
+    {
+      "request": "GPIO_GET EN1",
+      "response": "OK GPIO_GET EN1 0"
+    },
+    {
+      "request": "GPIO_GET EN2",
+      "response": "OK GPIO_GET EN2 0"
+    },
+    {
+      "request": "GPIO_GET DIAG_EN1",
+      "response": "OK GPIO_GET DIAG_EN1 0"
+    },
+    {
+      "request": "GPIO_GET DIAG_EN2",
+      "response": "OK GPIO_GET DIAG_EN2 0"
+    },
+    {
+      "request": "GPIO_GET OE",
+      "response": "OK GPIO_GET OE 1"
+    },
+    {
+      "request": "GPIO_GET DISPLAY_RES",
+      "response": "OK GPIO_GET DISPLAY_RES 0"
+    },
+    {
+      "request": "GPIO_GET DISPLAY_CS",
+      "response": "OK GPIO_GET DISPLAY_CS 1"
+    },
+    {
+      "request": "GPIO_GET DISPLAY_DC",
+      "response": "OK GPIO_GET DISPLAY_DC 0"
+    },
+    {
+      "request": "PING",
+      "response": "OK PING"
+    }
+  ],
+  "advertises_after_disconnect": true,
+  "pass": true,
+  "base_commit": "6daa1ea93b38e3c4a66c34273f1fc1209d60eabc",
+  "application_sha256": "03e819a004263ef1dd5681625e0b364629a1ae8ab03b835be5aba18bd4310e07",
+  "application_bin_bytes": 266228,
+  "clean_build": {
+    "errors": 0,
+    "warnings": 6,
+    "new_warnings": 0
+  },
+  "vendor_pin_database_check": "PASS",
+  "live_pin_modes_and_peripheral_registers": "PASS",
+  "live_registers": {
+    "0x42020000": "A956ADD6",
+    "0x42020004": "000000C0",
+    "0x42020008": "0800A002",
+    "0x4202000c": "64000000",
+    "0x42020010": "0000E2C6",
+    "0x42020014": "00000206",
+    "0x42020018": "00000000",
+    "0x4202001c": "00000000",
+    "0x42020020": "44000006",
+    "0x42020024": "00000007",
+    "0x42020400": "3E7E55BF",
+    "0x42020404": "00000000",
+    "0x42020408": "00020080",
+    "0x4202040c": "40000000",
+    "0x42020410": "000090C0",
+    "0x42020414": "000000C0",
+    "0x42020418": "00000000",
+    "0x4202041c": "00000000",
+    "0x42020420": "00000000",
+    "0x42020424": "00070006",
+    "0x42020800": "F0000000",
+    "0x42020804": "00000000",
+    "0x42020808": "00000000",
+    "0x4202080c": "04000000",
+    "0x42020810": "00000000",
+    "0x42020814": "00000000",
+    "0x42020818": "00000000",
+    "0x4202081c": "00000000",
+    "0x42020820": "00000000",
+    "0x42020824": "00000000",
+    "0x46002000": "00001000",
+    "0x46002004": "00000000",
+    "0x46002008": "40070007",
+    "0x4600200c": "04420000",
+    "0x46002010": "00000000",
+    "0x46002800": "00000001",
+    "0x46002804": "02000000",
+    "0x46002808": "00008000",
+    "0x4600280c": "00000000",
+    "0x46002810": "10C0ECFF",
+    "0x46002814": "00000000",
+    "0x46021000": "00001800",
+    "0x46021004": "00000000",
+    "0x46021008": "10000000",
+    "0x4602100c": "00201000",
+    "0x46021010": "20000000",
+    "0x46021014": "00000077",
+    "0x46021018": "00000000",
+    "0x4602101c": "00000000",
+    "0x46021020": "0FFF0000",
+    "0x46021024": "0FFF0000",
+    "0x46021028": "FFFFFFF4"
+  },
+  "limitations": [
+    "ADC_BAT saturated at 4095; analog scaling and board voltages not measured.",
+    "TOF input read low; no physical interrupt edge injected.",
+    "SPI configured; no display transactions or waveform measurement.",
+    "Web changes reviewed as source only; repository instructions prohibit build/compile/lint."
+  ]
+}
