@@ -62,6 +62,8 @@ extern void WatchdogFlagClear(uint32_t flagMask);
 
 /* Exported macro -------------------------------------------------------------*/
 /* USER CODE BEGIN EM */
+extern osThreadId_t displayTaskHandle;
+extern osMutexId_t displayMutexHandle;
 extern osSemaphoreId_t FMWriteSemaphoreHandle;
 extern osSemaphoreId_t FMEraseSemaphoreHandle;
 /* USER CODE END EM */
@@ -81,7 +83,7 @@ extern osEventFlagsId_t servoEventHandle;
 
 /* Exported function prototypes -----------------------------------------------*/
 /* USER CODE BEGIN FunctionPrototypes */
-
+void displayTask_Entry(void *argument);
 /* USER CODE END FunctionPrototypes */
 
 void StartDefaultTask(void *argument);

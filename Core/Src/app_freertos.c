@@ -61,6 +61,29 @@ typedef StaticEventGroup_t osStaticEventGroupDef_t;
 /* USER CODE BEGIN Variables */
 
 volatile uint32_t s_threadWatchdogFlags = WATCHDOG_ALL_FLAGS;
+/* Static display worker: lower priority than BLE/commands, no watchdog bit
+ * because a paused worker intentionally sleeps indefinitely. */
+osThreadId_t displayTaskHandle;
+osMutexId_t displayMutexHandle;
+#if ENABLE_DISPLAY
+uint32_t displayTaskBuffer[512];
+osStaticThreadDef_t displayTaskBlock;
+const osThreadAttr_t displayTask_attributes = {
+  .name = "displayTask",
+  .stack_mem = displayTaskBuffer,
+  .stack_size = sizeof(displayTaskBuffer),
+  .cb_mem = &displayTaskBlock,
+  .cb_size = sizeof(displayTaskBlock),
+  .priority = osPriorityBelowNormal,
+};
+osStaticMutexDef_t displayMutexControlBlock;
+const osMutexAttr_t displayMutex_attributes = {
+  .name = "displayMutex",
+  .attr_bits = osMutexPrioInherit,
+  .cb_mem = &displayMutexControlBlock,
+  .cb_size = sizeof(displayMutexControlBlock),
+};
+#endif
 osThreadId_t vl53l5cxTaskHandle;
 uint32_t vl53l5cxTaskBuffer[ 2048 ];
 osStaticThreadDef_t vl53l5cxTaskBlock;
@@ -250,7 +273,10 @@ void MX_FREERTOS_Init(void) {
   i2cMutexHandle = osMutexNew(&i2cMutex_attributes);
 
   /* USER CODE BEGIN RTOS_MUTEX */
-  /* add mutexes, ... */
+#if ENABLE_DISPLAY
+  displayMutexHandle = osMutexNew(&displayMutex_attributes);
+  if (displayMutexHandle == NULL) Error_Handler();
+#endif
   /* USER CODE END RTOS_MUTEX */
   /* creation of FMEraseSemaphore */
   FMEraseSemaphoreHandle = osSemaphoreNew(1, 1, &FMEraseSemaphore_attributes);
@@ -285,6 +311,10 @@ void MX_FREERTOS_Init(void) {
 #endif
 
   /* USER CODE BEGIN RTOS_THREADS */
+#if ENABLE_DISPLAY
+  displayTaskHandle = osThreadNew(displayTask_Entry, NULL, &displayTask_attributes);
+  if (displayTaskHandle == NULL) Error_Handler();
+#endif
 #ifdef ENABLE_VL53L5CX
   vl53l5cxTaskHandle = osThreadNew(vl53l5cxTask_Entry, NULL, &vl53l5cxTask_attributes);
   if (vl53l5cxTaskHandle == NULL)
@@ -337,12 +367,6 @@ void StartDefaultTask(void *argument)
 void commTask_Entry(void *argument)
 {
   /* USER CODE BEGIN commTask */
-#if ENABLE_DISPLAY
-  /* HAL's RTC timebase starts in MX_APPE_Init, so display reset/sleep delays
-   * must run here, after platform initialization and scheduler startup.
-   * This also serializes startup drawing with later GPIO diagnostic commands. */
-  g_display_boot_status = Display_ShowWelcome();
-#endif
 #ifdef ENABLE_COMM
 	comm_Init();
 #endif //ENABLE_COMM
@@ -391,6 +415,11 @@ void vl53l5cxTask_Entry(void *argument)
 
 /* Private application code --------------------------------------------------*/
 /* USER CODE BEGIN Application */
+
+void displayTask_Entry(void *argument)
+{
+  Display_Task(argument);
+}
 
 void WatchdogFlagClear(uint32_t flagMask)
 {

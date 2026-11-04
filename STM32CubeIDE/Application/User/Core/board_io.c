@@ -1,5 +1,6 @@
 #include "board_io.h"
 #include "app_conf.h"
+#include "display/display.h"
 #include <string.h>
 
 /* Radio temperature calibration is disabled in this project. If enabled later,
@@ -56,7 +57,16 @@ BoardIO_Status BoardIO_WriteGPIO(const char *name, uint8_t level, const char **c
     if (pin == NULL) return BOARD_IO_UNKNOWN_PIN;
     if (!pin->writable) return BOARD_IO_READ_ONLY;
     *canonical = pin->name;
-    HAL_GPIO_WritePin(pin->port, pin->pin, level ? GPIO_PIN_SET : GPIO_PIN_RESET);
+    GPIO_PinState state = level ? GPIO_PIN_SET : GPIO_PIN_RESET;
+    if ((pin->port == DISPLAY_CS_GPIO_Port && pin->pin == DISPLAY_CS_Pin)
+        || (pin->port == DISPLAY_DC_GPIO_Port && pin->pin == DISPLAY_DC_Pin)
+        || (pin->port == DISPLAY_RES_GPIO_Port && pin->pin == DISPLAY_RES_Pin)) {
+        /* Wait for the current drawing transaction, then pause animation and
+         * write under the same lock. It stays paused until Display_Start/reset. */
+        if (Display_WriteControlPin(pin->port, pin->pin, state) != osOK) Error_Handler();
+    } else {
+        HAL_GPIO_WritePin(pin->port, pin->pin, state);
+    }
     return BOARD_IO_OK;
 }
 

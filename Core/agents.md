@@ -17,11 +17,12 @@ Startup flow:
 1. `main.c` initializes clocks, GPIO, I2C3, timers, RNG, RTC, and other peripherals.
 2. `MX_FREERTOS_Init()` in `app_freertos.c` initializes app state and creates RTOS objects.
 3. `MX_APPE_Init()` in `app_entry.c` initializes the WPAN/BLE stack and app services.
-4. The scheduler runs `defaultTask`, `commTask`, `servoTask`, and optionally `vl53l5cxTask`.
+4. The scheduler runs `defaultTask`, `commTask`, enabled sensor/servo tasks, and `displayTask` when `ENABLE_DISPLAY=1`.
 
 RTOS objects that matter for application work:
 
 - `i2cMutexHandle`: protects the shared I2C3 bus used by PCA9685 and VL53L5CX.
+- `displayTaskHandle` / `displayMutexHandle`: static, below-normal display owner and drawing/manual GPIO lock. Stop via `Display_Stop()`, never suspend it mid-transfer. No watchdog bit: it may intentionally wait forever.
 - `commRxQueueHandle` and `commTxQueueHandle`: move NUS RX/TX packets between BLE callbacks and `commTask`.
 - `commEventHandle`: wakes `commTask` for NUS RX/TX work.
 - `s_threadWatchdogFlags`: watchdog bookkeeping; update `config.h` and the relevant task loop if adding new watched tasks.

@@ -62,7 +62,10 @@ power paths. A reset restores the startup levels above.
 SPI3 is initialized as a transmit-only master: 8-bit, MSB first, mode 0, software
 NSS and PCLK7 / 32 (3.125 MHz at the configured 100 MHz clock). PB9 remains an
 analog input; no MISO pin is configured. `DISPLAY_SPI` names `hspi3`. The GC9A01
-driver draws a white welcome screen with black text once after scheduler startup.
+worker draws a white welcome screen with black text after scheduler startup,
+then starts color face playback after two seconds. Manual writes to CS/DC/RES
+pause that worker under a shared mutex before changing the pin. Reads do not
+pause animation and may observe control levels during SPI transfers.
 See [the display driver](STM32CubeIDE/Application/User/Core/display/README.md).
 
 ADC4 uses 12-bit right-aligned, single software-triggered conversions, HCLK / 8,

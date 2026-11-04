@@ -78,8 +78,12 @@ outside BLE callbacks. A GPIO_SET acknowledgement echoes the commanded level;
 use GPIO_GET to read back the actual pin.
 
 The board starts with EN1/EN2 and DIAG_EN1/DIAG_EN2 low, OE high, DISPLAY_CS high,
-DISPLAY_RES initially low and DISPLAY_DC low. With ENABLE_DISPLAY=1, startup
-drawing releases DISPLAY_RES high before command handling. Manual commands can override these levels
+DISPLAY_RES initially low and DISPLAY_DC low. With ENABLE_DISPLAY=1, the display
+worker releases DISPLAY_RES high during initialization and starts face animation
+after the two-second welcome. GPIO_SET on any display pin waits for the current
+draw and pauses playback before writing; playback stays stopped until a firmware
+Display_Start() call or reset. GPIO_GET is passive and may read a transient level
+during SPI drawing. Manual commands can override these levels
 even while I2C device drivers are disabled. ADC readings are raw codes, not volts
 or amperes. See [BOARD_IO.md](../../../../../BOARD_IO.md) for the peripheral setup.
 
