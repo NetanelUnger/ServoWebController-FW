@@ -4,6 +4,7 @@
  */
 
 #include "pca9685.h"
+#include "config.h"
 #include "main.h"
 #include "../i2c_os/i2c_os.h"
 
@@ -240,6 +241,9 @@ static HAL_StatusTypeDef pca9685_setPwmFrequencyHz(uint16_t freq_hz)
 
 HAL_StatusTypeDef pca9685_Init(void)
 {
+#if DISABLE_I2C_PCA9685
+    return HAL_ERROR; /* No probing, register access or PWM output. */
+#endif
     uint8_t channel;
     uint8_t mode1_readback;
     uint8_t mode2_readback;
@@ -315,6 +319,9 @@ HAL_StatusTypeDef pca9685_Init(void)
 
 HAL_StatusTypeDef pca9685_SetPwm(uint8_t channel, uint16_t on_tick, uint16_t off_tick)
 {
+#if DISABLE_I2C_PCA9685
+    return HAL_ERROR; /* No probing, register access or PWM output. */
+#endif
     uint8_t payload[4];
     uint16_t reg;
 

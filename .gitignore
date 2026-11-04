@@ -9,3 +9,7 @@ STM32CubeIDE/.settings/language.settings.xml
 STM32CubeIDE/.settings/stm32cubeide.project.prefs
 /STM32CubeIDE/Debug
 *.rar
+
+# Boot manager generated outputs
+Bootloader/**/STM32CubeIDE/Debug/
+Bootloader/**/STM32CubeIDE/Release/

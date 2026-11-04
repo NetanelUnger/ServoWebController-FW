@@ -472,6 +472,9 @@ packetSize_t parser_ProcessOne(uint8_t *payload, packetSize_t req_len, uint8_t *
 
     if (comm_CommandMatches(command, COMM_CMD_PCA9685_SET_SERVO_US, COMM_CMD_LEGACY_PCA9685_SET_SERVO_US) != 0U)
     {
+#if DISABLE_I2C_PCA9685
+        return comm_WriteResponseText(res_payload, "- PCA9685 DISABLED");
+#endif
         if (comm_ParseChannelAndValue(args, &channel, &value) == 0U)
         {
             return comm_WriteResponseText(res_payload, "- BAD ARGUMENTS");
@@ -487,6 +490,9 @@ packetSize_t parser_ProcessOne(uint8_t *payload, packetSize_t req_len, uint8_t *
 
     if (comm_CommandMatches(command, COMM_CMD_SERVO_START_MOVE, COMM_CMD_LEGACY_SERVO_START_MOVE) != 0U)
     {
+#if DISABLE_I2C_PCA9685
+        return comm_WriteResponseText(res_payload, "- PCA9685 DISABLED");
+#endif
         uint32_t duration_ms;
 
         if (comm_ParseChannelValueAndDuration(args, &channel, &value, &duration_ms) == 0U)
@@ -524,6 +530,12 @@ packetSize_t parser_ProcessOne(uint8_t *payload, packetSize_t req_len, uint8_t *
     }
 #endif
 
+#if DISABLE_I2C_VL53L5CX
+    if (comm_CommandMatches(command, COMM_CMD_TOF_SET_MIN_MAX, COMM_CMD_TOF_SET_MIN_MAX) != 0U)
+    {
+        return comm_WriteResponseText(res_payload, "- VL53L5CX DISABLED");
+    }
+#endif
     return comm_WriteResponseText(res_payload, "- NOT SUPPORTED");
 }
 

@@ -18,6 +18,8 @@
 /* USER CODE END Header */
 
 /* Includes ------------------------------------------------------------------*/
+#include <servo/servo_task.h>
+#include <VL53L5CX/vl53l5cx_task.h>
 #include "app_freertos.h"
 
 /* Private includes ----------------------------------------------------------*/
@@ -25,8 +27,6 @@
 #include "main.h"
 #include "app_ble.h"
 #include "config.h"
-#include "servo/servo_task.h"
-#include "VL53L5CX/vl53l5cx_task.h"
 #include "ll_sys_if.h"
 #include "timer_if.h"
 #include "stm32wbaxx_hal_iwdg.h"
@@ -60,7 +60,6 @@ typedef StaticEventGroup_t osStaticEventGroupDef_t;
 /* USER CODE BEGIN Variables */
 
 volatile uint32_t s_threadWatchdogFlags = WATCHDOG_ALL_FLAGS;
-osMessageQueueId_t memoryQueueHandle;
 osThreadId_t vl53l5cxTaskHandle;
 uint32_t vl53l5cxTaskBuffer[ 2048 ];
 osStaticThreadDef_t vl53l5cxTaskBlock;
@@ -98,6 +97,18 @@ const osThreadAttr_t commTask_attributes = {
   .cb_size = sizeof(commTaskBlock),
   .priority = (osPriority_t) osPriorityHigh,
 };
+/* Definitions for servoTask */
+osThreadId_t servoTaskHandle;
+uint32_t servoTaskBuffer[ 1024 ];
+osStaticThreadDef_t servoTaskBlock;
+const osThreadAttr_t servoTask_attributes = {
+  .name = "servoTask",
+  .stack_mem = &servoTaskBuffer[0],
+  .stack_size = sizeof(servoTaskBuffer),
+  .cb_mem = &servoTaskBlock,
+  .cb_size = sizeof(servoTaskBlock),
+  .priority = (osPriority_t) osPriorityAboveNormal,
+};
 /* Definitions for i2cMutex */
 osMutexId_t i2cMutexHandle;
 osStaticMutexDef_t i2cMutexControlBlock;
@@ -128,6 +139,8 @@ const osMessageQueueAttr_t commRxQueue_attributes = {
   .mq_mem = &NusRxQueueBuffer,
   .mq_size = sizeof(NusRxQueueBuffer)
 };
+/* Definitions for memoryQueue */
+
 /* Definitions for FMEraseSemaphore */
 osSemaphoreId_t FMEraseSemaphoreHandle;
 osStaticSemaphoreDef_t FMEraseSemaphoreControlBlock01;
@@ -160,12 +173,20 @@ const osEventFlagsAttr_t loggerOutEvents_attributes = {
   .cb_mem = &loggerOutEventControlBlock,
   .cb_size = sizeof(loggerOutEventControlBlock),
 };
+/* Definitions for servoEvent */
+osEventFlagsId_t servoEventHandle;
+osStaticEventGroupDef_t servoEventControlBlock;
+const osEventFlagsAttr_t servoEvent_attributes = {
+  .name = "servoEvent",
+  .cb_mem = &servoEventControlBlock,
+  .cb_size = sizeof(servoEventControlBlock),
+};
 
 /* Private function prototypes -----------------------------------------------*/
 /* USER CODE BEGIN FunctionPrototypes */
-#ifdef ENABLE_VL53L5CX
-void vl53l5cxTask_Entry(void *argument);
-#endif /* ENABLE_VL53L5CX */
+/* Exported by the selected FreeRTOS GCC Cortex-M33 port. BLE can issue
+ * ISR-safe RTOS calls during MX_APPE_Init, before osKernelStart. */
+extern void vPortConfigureInterruptPriorities(void);
 /* USER CODE END FunctionPrototypes */
 
 /* USER CODE BEGIN 2 */
@@ -215,6 +236,9 @@ __weak void vPortSuppressTicksAndSleep( TickType_t xExpectedIdleTime )
   */
 void MX_FREERTOS_Init(void) {
   /* USER CODE BEGIN Init */
+  /* Configure ISR validation before WPAN enables radio interrupts.
+   * The port also repeats this initialization when the scheduler starts. */
+  vPortConfigureInterruptPriorities();
   servo_Init();
 #ifdef ENABLE_VL53L5CX
   vl53l5cx_TaskInit();
@@ -254,6 +278,11 @@ void MX_FREERTOS_Init(void) {
   /* creation of commTask */
   commTaskHandle = osThreadNew(commTask_Entry, NULL, &commTask_attributes);
 
+  /* creation of servoTask */
+#if !DISABLE_I2C_PCA9685
+  servoTaskHandle = osThreadNew(servoTask_Entry, NULL, &servoTask_attributes);
+#endif
+
   /* USER CODE BEGIN RTOS_THREADS */
 #ifdef ENABLE_VL53L5CX
   vl53l5cxTaskHandle = osThreadNew(vl53l5cxTask_Entry, NULL, &vl53l5cxTask_attributes);
@@ -269,6 +298,9 @@ void MX_FREERTOS_Init(void) {
 
   /* creation of loggerOutEvents */
   loggerOutEventsHandle = osEventFlagsNew(&loggerOutEvents_attributes);
+
+  /* creation of servoEvent */
+  servoEventHandle = osEventFlagsNew(&servoEvent_attributes);
 
   /* USER CODE BEGIN RTOS_EVENTS */
   /* add events, ... */
@@ -321,10 +353,24 @@ void commTask_Entry(void *argument)
   /* USER CODE END commTask */
 }
 
-/* Private application code --------------------------------------------------*/
-/* USER CODE BEGIN Application */
+/* USER CODE BEGIN Header_servoTask_Entry */
+/**
+* @brief Function implementing the servoTask thread.
+* @param argument: Not used
+* @retval None
+*/
+/* USER CODE END Header_servoTask_Entry */
+void servoTask_Entry(void *argument)
+{
+  /* USER CODE BEGIN servoTask */
+  /* Infinite loop */
+  for(;;)
+  {
+      servo_Task();
+  }
+  /* USER CODE END servoTask */
+}
 
-#ifdef ENABLE_VL53L5CX
 void vl53l5cxTask_Entry(void *argument)
 {
   UNUSED(argument);
@@ -335,7 +381,9 @@ void vl53l5cxTask_Entry(void *argument)
     WatchdogFlagClear(WATCHDOG_FLAG_VL53L5CX);
   }
 }
-#endif /* ENABLE_VL53L5CX */
+
+/* Private application code --------------------------------------------------*/
+/* USER CODE BEGIN Application */
 
 void WatchdogFlagClear(uint32_t flagMask)
 {

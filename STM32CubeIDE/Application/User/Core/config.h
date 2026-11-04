@@ -11,8 +11,24 @@
 
 #define ENABLE_COMM
 #define ENABLE_LEDS
-/** @brief Enable the VL53L5CX time-of-flight sensor task and BLE streaming path. */
+/** @name I2C device switches
+ *  Set to 1 to disable all access to that device; set to 0 to enable it.
+ *  When both devices are disabled, I2C3 hardware initialization is skipped.
+ *  Build flags may override these defaults.
+ *  @{ */
+#ifndef DISABLE_I2C_PCA9685
+#define DISABLE_I2C_PCA9685 1
+#endif
+#ifndef DISABLE_I2C_VL53L5CX
+#define DISABLE_I2C_VL53L5CX 1
+#endif
+#if ((DISABLE_I2C_PCA9685 != 0) && (DISABLE_I2C_PCA9685 != 1)) || \
+    ((DISABLE_I2C_VL53L5CX != 0) && (DISABLE_I2C_VL53L5CX != 1))
+#error "I2C device switches must be 0 or 1"
+#endif
+#if !DISABLE_I2C_VL53L5CX
 #define ENABLE_VL53L5CX
+#endif
 /** @} */
 
 /**
@@ -22,7 +38,7 @@
  * That 11-character limit comes from the 31-byte legacy advertising packet after reserving space
  * for the 128-bit service UUID record in `app_ble.c`.
  */
-#define ADV_NAME "BleServoCtl"
+#define ADV_NAME "BleServo"
 
 
 /** @name Debug Output Configuration
@@ -77,7 +93,11 @@
 #define WATCHDOG_FLAG_DEFAULT     (1UL << 0)
 #define WATCHDOG_FLAG_COMM        (1UL << 1)
 #define WATCHDOG_FLAG_VL53L5CX    (1UL << 2)
+#ifdef ENABLE_VL53L5CX
 #define WATCHDOG_ALL_FLAGS        (WATCHDOG_FLAG_DEFAULT | WATCHDOG_FLAG_COMM | WATCHDOG_FLAG_VL53L5CX)
+#else
+#define WATCHDOG_ALL_FLAGS        (WATCHDOG_FLAG_DEFAULT | WATCHDOG_FLAG_COMM)
+#endif
 /** @} */
 
 /** @name BLE Device Information Service Strings

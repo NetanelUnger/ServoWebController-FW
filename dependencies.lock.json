@@ -1,0 +1,55 @@
+{
+  "checked_on": "2026-11-04",
+  "STM32CubeWBA": {
+    "repository": "https://github.com/STMicroelectronics/STM32CubeWBA",
+    "commit": "4ccfd1526870263657ec8e0854c64cda6ed2b5da",
+    "package": "1.10.0 + upstream fixes",
+    "boot_manager_path": "Projects/NUCLEO-WBA55CG/Applications/BLE/BLE_ApplicationInstallManager"
+  },
+  "components": {
+    "HAL": {
+      "commit": "3f3458ef245ecb1ae98485f6fa899086da95d076",
+      "repository": "https://github.com/STMicroelectronics/stm32wbaxx-hal-driver"
+    },
+    "CMSIS-device": {
+      "commit": "3373b40fa3b71ce114f58b170acd0f8833d42508",
+      "repository": "https://github.com/STMicroelectronics/cmsis-device-wba"
+    },
+    "WPAN": {
+      "commit": "7e764835982f0a8b94fdd6b2b056d6e0afc4d1ba",
+      "repository": "https://github.com/STMicroelectronics/stm32-mw-wpan",
+      "version": "2.10.0"
+    },
+    "B-WBA5M-WPAN": {
+      "commit": "62299ed57ed77f042bc8b3ad071b6e69c04353c4",
+      "repository": "https://github.com/STMicroelectronics/b-wba5m-wpan-bsp"
+    },
+    "BSP-Common": {
+      "commit": "cf3581ba46e88944b604f6961505559b9efdac56",
+      "repository": "https://github.com/STMicroelectronics/stm32-bsp-common"
+    },
+    "m24256": {
+      "commit": "d7cba42c74ab2d417de22bc134511366dfec9da2",
+      "repository": "https://github.com/STMicroelectronics/stm32-m24256"
+    },
+    "FreeRTOS": {
+      "commit": "b2acad4f86633d3e5a2912f7c6f6003e99ef4b15",
+      "repository": "https://github.com/STMicroelectronics/stm32-mw-freertos",
+      "version": "11.3.1_20261016",
+      "note": "Explicit upgrade beyond CubeWBA pinned 10.6.2; only GCC CM33 non-secure port and heap implementations vendored."
+    },
+    "CMSIS-RTOS2-header": {
+      "commit": "3c860f7a5810a34205bdbadb84b6d5f78f1cb322",
+      "repository": "https://github.com/ARM-software/CMSIS_6",
+      "path": "CMSIS/RTOS2/Include/cmsis_os2.h",
+      "version": "2.3.0"
+    },
+    "VL53L5CX": {
+      "commit": "c12709c3ac802d91dd2a215178f53cb94c024709",
+      "repository": "https://github.com/STMicroelectronics/x-cube-tof1",
+      "path": "Drivers/BSP/Components/vl53l5cx",
+      "api_version": "2.0.0",
+      "note": "Retains local RTOS-aware platform delay, output-selection settings and application task."
+    }
+  }
+}

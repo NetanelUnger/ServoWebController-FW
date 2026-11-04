@@ -61,6 +61,10 @@ void vl53l5cx_TaskInit(void)
 
 void vl53l5cx_Task(void)
 {
+#if DISABLE_I2C_VL53L5CX
+    osDelay(pdMS_TO_TICKS(CONFIG_VL53L5CX_TASK_PERIOD_MS));
+    return;
+#endif
     int32_t status;
 
     if (TOF_APP_IsNotificationEnabled() == 0U)
@@ -358,6 +362,9 @@ static int32_t vl53l5cx_GetTick(void)
 
 static int32_t vl53l5cx_WriteReg(uint16_t Address, uint16_t Register, uint8_t *pData, uint16_t Size)
 {
+#if DISABLE_I2C_VL53L5CX
+    return -1; /* Keep the transport blocked even for a direct driver call. */
+#endif
     HAL_StatusTypeDef status;
 
     status = i2c_writeOS(&VL53L5CX_I2C_HANDLE, Address, Register, I2C_MEMADD_SIZE_16BIT, pData, Size);
@@ -371,6 +378,9 @@ static int32_t vl53l5cx_WriteReg(uint16_t Address, uint16_t Register, uint8_t *p
 
 static int32_t vl53l5cx_ReadReg(uint16_t Address, uint16_t Register, uint8_t *pData, uint16_t Size)
 {
+#if DISABLE_I2C_VL53L5CX
+    return -1; /* Keep the transport blocked even for a direct driver call. */
+#endif
     HAL_StatusTypeDef status;
 
     status = i2c_readOS(&VL53L5CX_I2C_HANDLE, Address, Register, I2C_MEMADD_SIZE_16BIT, pData, Size);

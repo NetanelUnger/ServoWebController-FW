@@ -63,7 +63,6 @@ typedef struct
 
 // #define VL53L5CX_DISABLE_AMBIENT_PER_SPAD
 #define VL53L5CX_DISABLE_NB_SPADS_ENABLED
-#define VL53L5CX_DISABLE_AMBIENT_DMAX
 // #define VL53L5CX_DISABLE_NB_TARGET_DETECTED
 // #define VL53L5CX_DISABLE_SIGNAL_PER_SPAD
 #define VL53L5CX_DISABLE_RANGE_SIGMA_MM
@@ -96,7 +95,7 @@ typedef struct
  * @return (uint8_t) status : 0 if OK
  */
 
-uint8_t RdByte(
+uint8_t VL53L5CX_RdByte(
 		VL53L5CX_Platform *p_platform,
 		uint16_t RegisterAdress,
 		uint8_t *p_value);
@@ -110,7 +109,7 @@ uint8_t RdByte(
  * @return (uint8_t) status : 0 if OK
  */
 
-uint8_t WrByte(
+uint8_t VL53L5CX_WrByte(
 		VL53L5CX_Platform *p_platform,
 		uint16_t RegisterAdress,
 		uint8_t value);
@@ -125,7 +124,7 @@ uint8_t WrByte(
  * @return (uint8_t) status : 0 if OK
  */
 
-uint8_t RdMulti(
+uint8_t VL53L5CX_RdMulti(
 		VL53L5CX_Platform *p_platform,
 		uint16_t RegisterAdress,
 		uint8_t *p_values,
@@ -141,7 +140,7 @@ uint8_t RdMulti(
  * @return (uint8_t) status : 0 if OK
  */
 
-uint8_t WrMulti(
+uint8_t VL53L5CX_WrMulti(
 		VL53L5CX_Platform *p_platform,
 		uint16_t RegisterAdress,
 		uint8_t *p_values,
@@ -154,7 +153,7 @@ uint8_t WrMulti(
  * @param (uint16_t) size : Buffer size to swap
  */
 
-void SwapBuffer(
+void VL53L5CX_SwapBuffer(
     uint8_t     *buffer,
     uint16_t     size);
 
@@ -167,7 +166,7 @@ void SwapBuffer(
  * @return (uint8_t) status : 0 if wait is finished.
  */
 
-uint8_t WaitMs(
+uint8_t VL53L5CX_WaitMs(
 		VL53L5CX_Platform *p_platform,
 		uint32_t TimeMs);
 

@@ -125,7 +125,7 @@ The VL53L5CX driver uses ST's default `0x52` I2C address constant, which corresp
 The firmware advertises as:
 
 ```text
-BleServoCtl
+BleServo
 ```
 
 Main BLE UUIDs defined by the project:
@@ -187,6 +187,38 @@ The project contains STM32Cube-generated code, vendor middleware, and hand-writt
 
 Generated-code boundaries matter in this repository. When changing STM32Cube-generated files, use the existing `USER CODE` sections and check the local `agents.md` notes in each area.
 
+## I2C Device Switches
+
+In `STM32CubeIDE/Application/User/Core/config.h`, set `DISABLE_I2C_PCA9685`
+(servo PWM controller) and `DISABLE_I2C_VL53L5CX` (TOF sensor) independently:
+`1` disables the device, `0` enables it. Both default to `1` for board-only
+bring-up. Rebuild and flash after changing them.
+
+Disabled devices are not initialized, probed, read, or written, and their worker
+tasks are not started. When both are disabled, I2C3 initialization is skipped.
+BLE remains available; servo commands reply `- PCA9685 DISABLED` and the TOF
+configuration command replies `- VL53L5CX DISABLED`. The TOF BLE service remains
+visible but produces no sensor frames while disabled.
+
+## Dependency Versions And Boot Manager
+
+The repository includes ST's application install manager under `Bootloader/`.
+The boot manager starts at `0x08000000`, and this application starts at
+`0x08006000`. Program both images on a blank board; flashing only the application
+will not start it after reset if the boot manager is missing.
+
+See [Bootloader/README.md](Bootloader/README.md) for build/flash instructions and
+[DEPENDENCIES.md](DEPENDENCIES.md) for the current ST baseline, integration notes,
+validation scope and CubeMX regeneration constraints. Exact upstream commits
+are recorded in [dependencies.lock.json](dependencies.lock.json).
+
+From PowerShell:
+
+```powershell
+./tools/build.ps1
+./tools/flash.ps1
+```
+
 ## Build And Flash
 
 The project is set up for STM32CubeIDE.
@@ -196,7 +228,7 @@ The project is set up for STM32CubeIDE.
 3. Confirm that the STM32WBA support package required by the project is installed.
 4. Build the active configuration.
 5. Flash the target board.
-6. Connect from a BLE client to `BleServoCtl`.
+6. Connect from a BLE client to `BleServo`.
 7. Send `PING` over the NUS RX characteristic and verify the `OK PING` response.
 
 The main CubeMX configuration file is:
@@ -222,7 +254,7 @@ This is active firmware development, not a sealed commercial product.
 - Servo command path over BLE NUS is implemented.
 - PCA9685 servo output and timed motion support are implemented.
 - VL53L5CX task and TOF BLE service code are present.
-- TOF streaming should be verified against the current BLE application wiring before relying on distance-map notifications in a demo.
+- TOF service initialization and BLE connection events are wired. Verify sensor streaming on the target hardware before relying on it in a demo.
 - The independent watchdog is currently disabled during bring-up through the project configuration.
 
 ## Safety Notes
@@ -262,7 +294,9 @@ They show the main application flow from BLE input to parsed command to RTOS tas
 
 ## License
 
-This repository is released under the MIT License. See `LICENSE`.
+Original application code is released under the MIT License. See `LICENSE`.
+The ST boot manager and vendored components retain their respective licenses;
+see `DEPENDENCIES.md`.
 
 The repository also includes vendor and middleware code from ST, CMSIS, FreeRTOS, and sensor support packages. Keep their original notices and license files intact when redistributing.
 

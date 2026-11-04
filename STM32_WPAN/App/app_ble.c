@@ -41,6 +41,8 @@
 #include "ota_app.h"
 #include "nus.h"
 #include "nus_app.h"
+#include "tof.h"
+#include "tof_app.h"
 #include "dis.h"
 #include "dis_app.h"
 /* Private includes ----------------------------------------------------------*/
@@ -181,16 +183,25 @@ static uint8_t a_BLE_CfgErValue[16];
 static BleApplicationContext_t bleAppContext;
 OTA_APP_ConnHandleNotEvt_t OTAHandleNotification;
 NUS_APP_ConnHandleNotEvt_t NUSHandleNotification;
+TOF_APP_ConnHandleNotEvt_t TOFHandleNotification;
 DIS_APP_ConnHandleNotEvt_t DISHandleNotification;
 
-static char a_GapDeviceName[] = {  'B', 'l', 'e', 'S', 'e', 'r', 'v', 'o', 'C', 'o', 'n', 't', 'r', 'o', 'l', 'l', 'e', 'r' }; /* Gap Device Name */
+_Static_assert(BLE_GAP_DEVICE_NAME_LEN > 0U, "ADV_NAME must not be empty");
+_Static_assert(BLE_GAP_DEVICE_NAME_LEN <= BLE_ADV_NAME_MAX_LEN,
+               "ADV_NAME is too long for the current advertising payload");
 
-/* Advertising Data */
-uint8_t a_AdvData[28] =
+static const char a_GapDeviceName[] = ADV_NAME; /* Gap Device Name */
+
+static const uint8_t a_AdvDataUuidField[BLE_ADV_UUID_RECORD_LEN] =
 {
-  9, AD_TYPE_COMPLETE_LOCAL_NAME, 'B', 'l', 'e', 'S', 'e', 'r', 'v', 'o', 'C', 'o', 'n', 't', 'r', 'o', 'l', 'l', 'e', 'r',  /* Complete name */
   17, AD_TYPE_128_BIT_SERV_UUID_CMPLT_LIST, 0x9E, 0xCA, 0xDC, 0x24, 0x0E, 0xE5, 0xA9, 0xE0, 0x93, 0xF3, 0xA3, 0xB5, 0x01, 0x00, 0x40, 0x6E,
 };
+
+/* Advertising Data */
+uint8_t a_AdvData[BLE_ADV_DATA_LEN] = {0};
+
+_Static_assert(BLE_ADV_DATA_LEN <= sizeof(sys_AdvData),
+               "sys_AdvData buffer is too small for the advertising payload");
 
 /* Host stack init variables */
 static BleStack_init_t pInitParams;
@@ -289,7 +300,6 @@ static void BLE_HOST_Task_Entry(void* argument);
 static void HciAsyncEvt_Task_Entry(void* argument);
 /* USER CODE BEGIN PFP */
 static void BLE_InitAdvData(void);
-size_t BLE_updAdvDevName(uint8_t *src_adv_data, uint8_t *dst_adv_data);
 void UpdDIS();
 
 /* USER CODE END PFP */
@@ -310,7 +320,6 @@ void UpdDIS();
 void APP_BLE_Init(void)
 {
   /* USER CODE BEGIN APP_BLE_Init_1 */
-  BLE_InitAdvData();
 
   /* USER CODE END APP_BLE_Init_1 */
 
@@ -370,12 +379,12 @@ void APP_BLE_Init(void)
   host_nvm_buffer[0] = 0;
 
   /* Register A NVM buffer for BLE Host stack */
-  SNVMA_Register(APP_BLE_NvmBuffer,
+  SNVMA_Register(APP_BLE_Host_SNVMA_BufferId_1_1,
                   (uint32_t *)host_nvm_buffer,
                   (CFG_BLE_NVM_SIZE_MAX * 2));
 
   /* Realize a restore */
-  SNVMA_Restore(APP_BLE_NvmBuffer);
+  SNVMA_Restore(APP_BLE_Host_SNVMA_BufferId_1_1);
   /* USER CODE BEGIN APP_BLE_Init_Buffers */
 
   /* USER CODE END APP_BLE_Init_Buffers */
@@ -415,13 +424,15 @@ void APP_BLE_Init(void)
     LOG_INFO_APP("Services and Characteristics creation\n");
     OTA_APP_Init();
     NUS_APP_Init();
+    TOF_APP_Init();
     DIS_APP_Init();
     LOG_INFO_APP("End of Services and Characteristics creation\n");
     LOG_INFO_APP("\n");
 
     /* USER CODE BEGIN APP_BLE_Init_3 */
+    BLE_InitAdvData();
     APP_BLE_Procedure_Gap_Peripheral(PROC_GAP_PERIPH_ADVERTISE_START_FAST);
-
+    BLE_InitAdvData();
     /* USER CODE END APP_BLE_Init_3 */
 
   }
@@ -596,12 +607,15 @@ SVCCTL_UserEvtFlowStatus_t SVCCTL_App_Notification(void *p_Pckt)
       /* USER CODE END EVT_DISCONN_COMPLETE_1 */
       OTAHandleNotification.EvtOpcode = OTA_DISCON_HANDLE_EVT;
       NUSHandleNotification.EvtOpcode = NUS_DISCON_HANDLE_EVT;
+      TOFHandleNotification.EvtOpcode = TOF_DISCON_HANDLE_EVT;
       DISHandleNotification.EvtOpcode = DIS_DISCON_HANDLE_EVT;
       OTAHandleNotification.ConnectionHandle = p_disconnection_complete_event->Connection_Handle;
       NUSHandleNotification.ConnectionHandle = p_disconnection_complete_event->Connection_Handle;
+      TOFHandleNotification.ConnectionHandle = p_disconnection_complete_event->Connection_Handle;
       DISHandleNotification.ConnectionHandle = p_disconnection_complete_event->Connection_Handle;
       OTA_APP_EvtRx(&OTAHandleNotification);
       NUS_APP_EvtRx(&NUSHandleNotification);
+      TOF_APP_EvtRx(&TOFHandleNotification);
       DIS_APP_EvtRx(&DISHandleNotification);
       /* USER CODE BEGIN EVT_DISCONN_COMPLETE */
       APP_BLE_Procedure_Gap_Peripheral(PROC_GAP_PERIPH_ADVERTISE_START_FAST);
@@ -704,12 +718,15 @@ SVCCTL_UserEvtFlowStatus_t SVCCTL_App_Notification(void *p_Pckt)
 
           OTAHandleNotification.EvtOpcode = OTA_CONN_HANDLE_EVT;
           NUSHandleNotification.EvtOpcode = NUS_CONN_HANDLE_EVT;
+          TOFHandleNotification.EvtOpcode = TOF_CONN_HANDLE_EVT;
           DISHandleNotification.EvtOpcode = DIS_CONN_HANDLE_EVT;
           OTAHandleNotification.ConnectionHandle = p_enhanced_conn_complete->Connection_Handle;
           NUSHandleNotification.ConnectionHandle = p_enhanced_conn_complete->Connection_Handle;
+          TOFHandleNotification.ConnectionHandle = p_enhanced_conn_complete->Connection_Handle;
           DISHandleNotification.ConnectionHandle = p_enhanced_conn_complete->Connection_Handle;
           OTA_APP_EvtRx(&OTAHandleNotification);
           NUS_APP_EvtRx(&NUSHandleNotification);
+          TOF_APP_EvtRx(&TOFHandleNotification);
           DIS_APP_EvtRx(&DISHandleNotification);
           /* USER CODE BEGIN HCI_EVT_LE_ENHANCED_CONN_COMPLETE */
           OTAHandleNotification.EvtOpcode = OTA_CONN_HANDLE_EVT;
@@ -756,12 +773,15 @@ SVCCTL_UserEvtFlowStatus_t SVCCTL_App_Notification(void *p_Pckt)
 
           OTAHandleNotification.EvtOpcode = OTA_CONN_HANDLE_EVT;
           NUSHandleNotification.EvtOpcode = NUS_CONN_HANDLE_EVT;
+          TOFHandleNotification.EvtOpcode = TOF_CONN_HANDLE_EVT;
           DISHandleNotification.EvtOpcode = DIS_CONN_HANDLE_EVT;
           OTAHandleNotification.ConnectionHandle = p_conn_complete->Connection_Handle;
           NUSHandleNotification.ConnectionHandle = p_conn_complete->Connection_Handle;
+          TOFHandleNotification.ConnectionHandle = p_conn_complete->Connection_Handle;
           DISHandleNotification.ConnectionHandle = p_conn_complete->Connection_Handle;
           OTA_APP_EvtRx(&OTAHandleNotification);
           NUS_APP_EvtRx(&NUSHandleNotification);
+          TOF_APP_EvtRx(&TOFHandleNotification);
           DIS_APP_EvtRx(&DISHandleNotification);
           /* USER CODE BEGIN HCI_EVT_LE_CONN_COMPLETE */
           OTAHandleNotification.EvtOpcode = OTA_CONN_HANDLE_EVT;
@@ -1255,7 +1275,7 @@ void APP_BLE_Procedure_Gap_Peripheral(ProcGapPeripheralId_t ProcGapPeripheralId)
       adv_data_len = sizeof(a_AdvData);
       /* USER CODE BEGIN ADV_DATA_UPDATE_1 */
 
-      adv_data_len = BLE_updAdvDevName(a_AdvData, sys_AdvData);
+      BLE_InitAdvData();
       adv_data_p = &sys_AdvData[0];
       SetGapDeviceName(&sys_AdvData[2], sys_AdvData[0]-1);
 
@@ -1302,8 +1322,7 @@ void APP_BLE_Procedure_Gap_Peripheral(ProcGapPeripheralId_t ProcGapPeripheralId)
       adv_data_p = &a_AdvData[0];
       adv_data_len = sizeof(a_AdvData);
       /* USER CODE BEGIN ADV_DATA_UPDATE_2 */
-
-      adv_data_len = BLE_updAdvDevName(a_AdvData, sys_AdvData);
+      BLE_InitAdvData();
       adv_data_p = &sys_AdvData[0];
       SetGapDeviceName(&sys_AdvData[2], sys_AdvData[0]-1);
 
@@ -1394,7 +1413,7 @@ tBleStatus SetGapDeviceName(uint8_t *devicename, uint8_t devicename_len)
 void APP_BLE_HostNvmStore(void)
 {
   /* Start SNVMA write procedure */
-  SNVMA_Write(APP_BLE_NvmBuffer, BLE_NvmCallback);
+  SNVMA_Write(APP_BLE_Host_SNVMA_BufferId_1_1, BLE_NvmCallback);
 }
 
 void BleStack_Process_BG(void)
@@ -1584,7 +1603,7 @@ static void Ble_Hci_Gap_Gatt_Init(void)
   {
     ret = aci_gap_init(role,
                        CFG_PRIVACY,
-                       sizeof(a_GapDeviceName),
+                       (uint8_t)BLE_GAP_DEVICE_NAME_LEN,
                        &gap_service_handle,
                        &gap_dev_name_char_handle,
                        &gap_appearance_char_handle);
@@ -1606,7 +1625,7 @@ static void Ble_Hci_Gap_Gatt_Init(void)
       ret = aci_gatt_update_char_value(gap_service_handle,
                                        gap_dev_name_char_handle,
                                        0,
-                                       sizeof(a_GapDeviceName),
+                                       (uint8_t)BLE_GAP_DEVICE_NAME_LEN,
                                        (uint8_t *) a_GapDeviceName);
       if (ret != BLE_STATUS_SUCCESS)
       {
@@ -2031,7 +2050,7 @@ static void BLE_NvmCallback(SNVMA_Callback_Status_t CbkStatus)
   if (CbkStatus != SNVMA_OPERATION_COMPLETE)
   {
     /* Retry the write operation */
-    SNVMA_Write (APP_BLE_NvmBuffer, BLE_NvmCallback);
+    SNVMA_Write (APP_BLE_Host_SNVMA_BufferId_1_1, BLE_NvmCallback);
   }
 }
 
@@ -2042,33 +2061,7 @@ static void BLE_InitAdvData(void)
   a_AdvData[1] = AD_TYPE_COMPLETE_LOCAL_NAME;
   memcpy(&a_AdvData[2], a_GapDeviceName, BLE_GAP_DEVICE_NAME_LEN);
   memcpy(&a_AdvData[BLE_ADV_NAME_RECORD_LEN], a_AdvDataUuidField, sizeof(a_AdvDataUuidField));
-}
-
-void BLE_changeLastCharrAdvData(uint8_t lastChar)
-{
-#ifdef FORCE_NAME_ENDFIX
-	return;
-#endif //FORCE_NAME_ENDFIX
-  uint16_t i =0;
-  uint8_t ad_length, ad_type;
-
-  while(i < sizeof(a_AdvData))
-  {
-    ad_length = a_AdvData[i];
-    ad_type = a_AdvData[i + 1];
-
-    if ( (i + ad_length) >= sizeof(a_AdvData) )
-    {
-      break;
-    }
-
-    if (ad_type == AD_TYPE_COMPLETE_LOCAL_NAME)
-	{
-    	a_AdvData[i + ad_length - 1] = lastChar;
-	}
-
-    i += ad_length + 1; /* increment the iterator to go on next element*/
-  }
+  memcpy(sys_AdvData, a_AdvData, sizeof(a_AdvData));
 }
 
 void UpdDIS()
@@ -2086,39 +2079,6 @@ void UpdDIS()
 	DIS_UpdateValue(DIS_FRS, &dis_information_data);
 
 	return;
-}
-
-size_t BLE_updAdvDevName(uint8_t *src_adv_data, uint8_t *dst_adv_data)
-{
-	memcpy(dst_adv_data, src_adv_data, sizeof(a_AdvData));
-
-	return sizeof(a_AdvData);
-}
-
-uint8_t BLE_getLastCharAdvData()
-{
-  uint16_t i =0;
-  uint8_t ad_length, ad_type;
-
-  while(i < sizeof(a_AdvData))
-  {
-    ad_length = a_AdvData[i];
-    ad_type = a_AdvData[i + 1];
-
-    if ( (i + ad_length) >= sizeof(a_AdvData) )
-    {
-      break;
-    }
-
-    if (ad_type == AD_TYPE_COMPLETE_LOCAL_NAME)
-	{
-    	return a_AdvData[i + ad_length - 1];
-	}
-
-    i += ad_length + 1; /* increment the iterator to go on next element*/
-  }
-
-  return 0;
 }
 
 /* USER CODE END FD_LOCAL_FUNCTION */

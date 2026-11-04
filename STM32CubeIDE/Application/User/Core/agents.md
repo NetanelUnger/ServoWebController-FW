@@ -10,7 +10,7 @@ This is the main hand-written firmware area. Most BLE command, servo, PCA9685, s
 - `PCA9685/`: low-level PWM/servo pulse driver for the PCA9685 on I2C3.
 - `i2c_os/`: mutex-protected HAL I2C wrappers used by both PCA9685 and VL53L5CX.
 - `VL53L5CX/`: TOF sensor task, latest-frame runtime state, 64-byte BLE payload encoding, and the ST sensor support files.
-- `cli/` and `leds/`: small board/support helpers.
+- `leds/`: small board/support helpers.
 
 ## Command Flow
 

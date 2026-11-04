@@ -9,6 +9,8 @@
 - Error replies are:
   - `- BAD ARGUMENTS`
   - `- NOT SUPPORTED`
+  - `- PCA9685 DISABLED` when servo hardware is disabled in `config.h`
+  - `- VL53L5CX DISABLED` when TOF hardware is disabled in `config.h`
 - Servo channels are `0..15`.
 
 ## Supported Commands

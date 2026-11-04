@@ -41,10 +41,10 @@
 
 typedef enum
 {
-  Tx_NOTIFICATION_OFF,
-  Tx_NOTIFICATION_ON,
-  Tx_INDICATION_OFF,
-  Tx_INDICATION_ON,
+  Tx_NOTIFICATION_OFF = 0U,
+  Tx_NOTIFICATION_ON  = 1U,
+  Tx_INDICATION_OFF   = 0U,
+  Tx_INDICATION_ON    = 1U,
   /* USER CODE BEGIN Service2_APP_SendInformation_t */
 
   /* USER CODE END Service2_APP_SendInformation_t */
@@ -203,6 +203,9 @@ void NUS_APP_EvtRx(NUS_APP_ConnHandleNotEvt_t *p_Notification)
 void NUS_APP_Init(void)
 {
   UNUSED(NUS_APP_Context);
+  NUS_APP_Context.ConnectionHandle = NUS_APP_INVALID_CONN_HANDLE;
+  NUS_APP_Context.Tx_Notification_Status = Tx_NOTIFICATION_OFF;
+  NUS_APP_Context.Tx_Indication_Status = Tx_INDICATION_OFF;
   NUS_Init();
 
   /* USER CODE BEGIN Service2_APP_Init */

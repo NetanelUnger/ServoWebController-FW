@@ -5,6 +5,7 @@
 
 #include <servo/servo_task.h>
 
+#include "config.h"
 #include "FreeRTOS.h"
 #include "task.h"
 #include "cmsis_os2.h"
@@ -107,6 +108,9 @@ void servo_Init(void)
 
 HAL_StatusTypeDef servo_SetServoImmediateValue(uint8_t channel, uint16_t value)
 {
+#if DISABLE_I2C_PCA9685
+    return HAL_ERROR;
+#endif
     uint16_t clamped_value;
     volatile servo_state_t *servo;
 
@@ -136,6 +140,9 @@ HAL_StatusTypeDef servo_SetServoImmediateValue(uint8_t channel, uint16_t value)
 
 HAL_StatusTypeDef servo_StartTimedMove(uint8_t channel, uint16_t target_value, uint32_t duration_ms)
 {
+#if DISABLE_I2C_PCA9685
+    return HAL_ERROR;
+#endif
     volatile servo_state_t *servo;
     uint16_t clamped_target;
 
@@ -165,6 +172,10 @@ HAL_StatusTypeDef servo_StartTimedMove(uint8_t channel, uint16_t target_value, u
 
 void servo_Task(void)
 {
+#if DISABLE_I2C_PCA9685
+    osDelay(pdMS_TO_TICKS(SERVO_TASK_PERIOD_MS));
+    return;
+#endif
     uint8_t channel;
     uint16_t next_value;
     volatile servo_state_t *servo;
