@@ -33,7 +33,6 @@ typedef struct
 
 extern volatile vl53l8cx_runtime_t g_vl53l8cx_runtime;
 /* SWD bring-up control. Zero by default: range only for BLE subscribers. */
-extern volatile uint32_t g_vl53l8cx_force_ranging;
 
 void vl53l8cx_TaskInit(void);
 void vl53l8cx_Task(void);

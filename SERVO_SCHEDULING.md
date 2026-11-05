@@ -15,6 +15,19 @@ When any channel is dirty, the worker captures all 16 targets and sends one
 64-byte auto-increment transaction to LED0..LED15. MODE2.OCH=0 latches these
 registers together on the same I2C STOP, so TOF/IMU transactions cannot interleave
 between channels. No frame is sent when all channels are unchanged.
+The Web `updateServos` helper reads the current snapshot, patches the requested
+channels and writes one 32-byte characteristic value (16 little-endian uint16s),
+even when only ten motors change. The FW rejects incomplete payloads. This is
+desired-state scheduling: a newer complete snapshot may supersede a pending one.
+The task never splits an accepted snapshot into individual motor transactions.
+PCA initialization/recovery keeps OE disabled until a full desired frame succeeds.
+
+IMU mode 0 (also selected when notifications are disabled) performs its shutdown
+configuration once, then returns without sensor reads. TOF without notifications
+stops ranging once and performs no polling/init; the old debug force-ranging
+bypass has been removed. An already-started sensor transaction must finish before
+the servo task obtains the bus. BLE High3, servo High2 and command High1 priorities
+keep sensor/display work below the motor path; the radio retains higher priority.
 This covers the binary BLE command containing all 16 target values as well as
 DEMO1. The same `i2cMutexHandle` protects PCA9685, IMU, TOF, readiness probes and
 bring-up diagnostics. It remains held through the completion interrupt, or

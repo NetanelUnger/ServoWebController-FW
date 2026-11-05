@@ -22,6 +22,9 @@
 #define SERVO_DEMO1_LOW_US 500U
 #define SERVO_DEMO1_HIGH_US 2000U
 
+_Static_assert(SERVO_CHANNEL_COUNT == PCA9685_CHANNEL_COUNT,
+               "BLE servo snapshots and PCA frames must cover the same channels");
+
 /** @brief Global runtime state for the servo controller. */
 volatile servos_controller_t servos_controller;
 
@@ -417,9 +420,15 @@ void servo_Task(void)
         frame[channel] = servos_controller.servo[channel].current_value;
     dirty_channels = 0U;
     taskEXIT_CRITICAL();
-    if (pending && pca9685_SetServoPulseFrame(frame) != HAL_OK) {
-        servos_controller.pca9685_ready = 0U;
-        BoardIO_SetPwmReady(0U);
+    if (pending) {
+        if (pca9685_SetServoPulseFrame(frame) != HAL_OK) {
+            servos_controller.pca9685_ready = 0U;
+            BoardIO_SetPwmReady(0U);
+        } else {
+            /* Includes the first complete frame after initialization/recovery.
+             * BoardIO also checks BLE state: this cannot override disconnect. */
+            BoardIO_SetPwmReady(1U);
+        }
     }
 
     if (task_changed != 0U)

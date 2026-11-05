@@ -297,8 +297,8 @@ HAL_StatusTypeDef pca9685_Init(void)
         }
     }
 
-    /* BLE state owns OE. Finishing init while disconnected keeps PWM off. */
-    BoardIO_SetPwmReady(1U);
+    /* Keep OE disabled through init/recovery. The servo owner enables it only
+     * after the complete desired frame has been written successfully. */
     return HAL_OK;
 }
 

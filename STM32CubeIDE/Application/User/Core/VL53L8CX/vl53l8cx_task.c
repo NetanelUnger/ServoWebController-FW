@@ -19,7 +19,6 @@
 #define VL53L8CX_I2C_HANDLE hi2c3
 
 volatile vl53l8cx_runtime_t g_vl53l8cx_runtime;
-volatile uint32_t g_vl53l8cx_force_ranging;
 
 static VL53L8CX_Object_t s_vl53l8cxObject;
 static VL53L8CX_Result_t s_vl53l8cxResult;
@@ -68,7 +67,7 @@ void vl53l8cx_Task(void)
 #endif
     int32_t status;
 
-    if (TOF_APP_IsNotificationEnabled() == 0U && g_vl53l8cx_force_ranging == 0U)
+    if (TOF_APP_IsNotificationEnabled() == 0U)
     {
         if (g_vl53l8cx_runtime.ranging_active != 0U)
         {
