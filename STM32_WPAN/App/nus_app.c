@@ -33,6 +33,8 @@
 /* USER CODE BEGIN Includes */
 #include <string.h>
 
+#include <servo/servo_task.h>
+#include "board_io.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -57,6 +59,7 @@ typedef struct
   NUS_APP_SendInformation_t     Tx_Notification_Status;
   NUS_APP_SendInformation_t     Tx_Indication_Status;
   /* USER CODE BEGIN Service2_APP_Context_t */
+  NUS_APP_SendInformation_t     AllChannelDc_Notification_Status;
 
   /* USER CODE END Service2_APP_Context_t */
   uint16_t              ConnectionHandle;
@@ -67,6 +70,8 @@ typedef struct
 #define NUS_APP_INVALID_CONN_HANDLE 0xFFFFU
 #define NUS_APP_NOTIFICATION_RETRY_DELAY_MS 5
 #define NUS_APP_NOTIFICATION_RETRY_COUNT 10
+#define NUS_APP_ALL_CHANNEL_DC_VALUE_SIZE_BYTES 2U
+#define NUS_APP_ALL_CHANNEL_DC_PAYLOAD_LEN (SERVO_CHANNEL_COUNT * NUS_APP_ALL_CHANNEL_DC_VALUE_SIZE_BYTES)
 /* USER CODE END PD */
 
 /* External variables --------------------------------------------------------*/
@@ -85,6 +90,7 @@ static NUS_APP_Context_t NUS_APP_Context;
 uint8_t a_NUS_UpdateCharData[247];
 
 /* USER CODE BEGIN PV */
+static uint8_t NUS_APP_SuppressServoChangeSync;
 
 /* USER CODE END PV */
 
@@ -93,6 +99,9 @@ static void NUS_Tx_SendNotification(void);
 static void NUS_Tx_SendIndication(void);
 
 /* USER CODE BEGIN PFP */
+static uint16_t NUS_APP_ReadLe16(const uint8_t *pData);
+static void NUS_APP_WriteLe16(uint8_t *pData, uint16_t value);
+static void NUS_APP_HandleServoValuesChanged(void);
 
 /* USER CODE END PFP */
 
@@ -148,6 +157,20 @@ void NUS_Notification(NUS_NotificationEvt_t *p_Notification)
       /* USER CODE END Service2Char2_WRITE_EVT */
       break;
 
+    case NUS_ALL_CHANNEL_DC_NOTIFY_ENABLED_EVT:
+      /* USER CODE BEGIN Service2Char3_NOTIFY_ENABLED_EVT */
+      NUS_APP_Context.AllChannelDc_Notification_Status = Tx_NOTIFICATION_ON;
+      LOG_INFO_APP("ALL_CHANNEL_DC_NOTIFY_ENABLED\r\n");
+      /* USER CODE END Service2Char3_NOTIFY_ENABLED_EVT */
+      break;
+
+    case NUS_ALL_CHANNEL_DC_NOTIFY_DISABLED_EVT:
+      /* USER CODE BEGIN Service2Char3_NOTIFY_DISABLED_EVT */
+      NUS_APP_Context.AllChannelDc_Notification_Status = Tx_NOTIFICATION_OFF;
+      LOG_INFO_APP("ALL_CHANNEL_DC_NOTIFY_DISABLED\r\n");
+      /* USER CODE END Service2Char3_NOTIFY_DISABLED_EVT */
+      break;
+
     default:
       /* USER CODE BEGIN Service2_Notification_default */
 
@@ -173,17 +196,22 @@ void NUS_APP_EvtRx(NUS_APP_ConnHandleNotEvt_t *p_Notification)
     /* USER CODE END Service2_APP_EvtRx_Service2_EvtOpcode */
     case NUS_CONN_HANDLE_EVT :
       /* USER CODE BEGIN Service2_APP_CONN_HANDLE_EVT */
+        BoardIO_SetPowerConnected(1U);
 		NUS_APP_Context.ConnectionHandle = p_Notification->ConnectionHandle;
 		NUS_APP_Context.Tx_Notification_Status = Tx_NOTIFICATION_OFF;
 		NUS_APP_Context.Tx_Indication_Status = Tx_INDICATION_OFF;
+		NUS_APP_Context.AllChannelDc_Notification_Status = Tx_NOTIFICATION_OFF;
       /* USER CODE END Service2_APP_CONN_HANDLE_EVT */
       break;
 
     case NUS_DISCON_HANDLE_EVT :
       /* USER CODE BEGIN Service2_APP_DISCON_HANDLE_EVT */
+        if (p_Notification->ConnectionHandle != NUS_APP_Context.ConnectionHandle) break;
+        BoardIO_SetPowerConnected(0U);
 		NUS_APP_Context.ConnectionHandle = NUS_APP_INVALID_CONN_HANDLE;
     	NUS_APP_Context.Tx_Indication_Status = Tx_INDICATION_OFF;
     	NUS_APP_Context.Tx_Notification_Status = Tx_NOTIFICATION_OFF;
+        NUS_APP_Context.AllChannelDc_Notification_Status = Tx_NOTIFICATION_OFF;
       /* USER CODE END Service2_APP_DISCON_HANDLE_EVT */
       break;
 
@@ -203,11 +231,16 @@ void NUS_APP_EvtRx(NUS_APP_ConnHandleNotEvt_t *p_Notification)
 
 void NUS_APP_Init(void)
 {
+  BoardIO_SetPowerConnected(0U);
   UNUSED(NUS_APP_Context);
   NUS_APP_Context.ConnectionHandle = NUS_APP_INVALID_CONN_HANDLE;
   NUS_APP_Context.Tx_Notification_Status = Tx_NOTIFICATION_OFF;
   NUS_APP_Context.Tx_Indication_Status = Tx_INDICATION_OFF;
+  NUS_APP_Context.AllChannelDc_Notification_Status = Tx_NOTIFICATION_OFF;
+  NUS_APP_SuppressServoChangeSync = 0U;
   NUS_Init();
+  servo_RegisterChangeCallback(NUS_APP_HandleServoValuesChanged);
+  (void)NUS_APP_SyncAllChannelDcCharacteristic();
 
   /* USER CODE BEGIN Service2_APP_Init */
 
@@ -216,7 +249,53 @@ void NUS_APP_Init(void)
 }
 
 /* USER CODE BEGIN FD */
+tBleStatus NUS_APP_WriteAllChannelDcPayload(const uint8_t *pData, uint8_t length)
+{
+  uint8_t channel;
+  HAL_StatusTypeDef servo_status;
+  uint16_t values[SERVO_CHANNEL_COUNT];
 
+  if ((pData == NULL) || (length != NUS_APP_ALL_CHANNEL_DC_PAYLOAD_LEN))
+  {
+    return BLE_STATUS_INVALID_PARAMS;
+  }
+
+  for (channel = 0U; channel < SERVO_CHANNEL_COUNT; channel++)
+  {
+    values[channel] = NUS_APP_ReadLe16(&pData[channel * NUS_APP_ALL_CHANNEL_DC_VALUE_SIZE_BYTES]);
+  }
+
+  NUS_APP_SuppressServoChangeSync = 1U;
+  servo_status = servo_SetAllServoImmediateValues(values);
+  NUS_APP_SuppressServoChangeSync = 0U;
+
+  if (servo_status != HAL_OK)
+  {
+    return BLE_STATUS_FAILED;
+  }
+
+  return BLE_STATUS_SUCCESS;
+}
+
+tBleStatus NUS_APP_SyncAllChannelDcCharacteristic(void)
+{
+  uint8_t channel;
+  uint16_t values[SERVO_CHANNEL_COUNT];
+  uint8_t payload[NUS_APP_ALL_CHANNEL_DC_PAYLOAD_LEN];
+  NUS_Data_t data;
+
+  servo_GetAllServoImmediateValues(values);
+
+  for (channel = 0U; channel < SERVO_CHANNEL_COUNT; channel++)
+  {
+    NUS_APP_WriteLe16(&payload[channel * NUS_APP_ALL_CHANNEL_DC_VALUE_SIZE_BYTES], values[channel]);
+  }
+
+  data.p_Payload = payload;
+  data.Length = NUS_APP_ALL_CHANNEL_DC_PAYLOAD_LEN;
+
+  return NUS_UpdateValue(NUS_ALL_CHANNEL_DC, &data);
+}
 /* USER CODE END FD */
 
 /*************************************************************
@@ -273,6 +352,28 @@ __USED void NUS_Tx_SendIndication(void) /* Property Indication */
 }
 
 /* USER CODE BEGIN FD_LOCAL_FUNCTIONS */
+static uint16_t NUS_APP_ReadLe16(const uint8_t *pData)
+{
+  return (uint16_t)((uint16_t)pData[0] | ((uint16_t)pData[1] << 8));
+}
+
+static void NUS_APP_WriteLe16(uint8_t *pData, uint16_t value)
+{
+  pData[0] = (uint8_t)(value & 0xFFU);
+  pData[1] = (uint8_t)((value >> 8) & 0xFFU);
+}
+
+static void NUS_APP_HandleServoValuesChanged(void)
+{
+  if ((NUS_APP_SuppressServoChangeSync != 0U) ||
+      (NUS_APP_Context.ConnectionHandle == NUS_APP_INVALID_CONN_HANDLE))
+  {
+    return;
+  }
+
+  (void)NUS_APP_SyncAllChannelDcCharacteristic();
+}
+
 void NusTxTask(NUS_APP_QueueItem_t *item)
 {
 	  if ((NUS_APP_Context.ConnectionHandle == NUS_APP_INVALID_CONN_HANDLE) ||

@@ -686,6 +686,7 @@ SVCCTL_UserEvtFlowStatus_t SVCCTL_App_Notification(void *p_Pckt)
           uint32_t conn_interval_us = 0;
           hci_le_enhanced_connection_complete_event_rp0 *p_enhanced_conn_complete;
           p_enhanced_conn_complete = (hci_le_enhanced_connection_complete_event_rp0 *) p_meta_evt->data;
+          if (p_enhanced_conn_complete->Status != 0U) break;
           conn_interval_us = p_enhanced_conn_complete->Conn_Interval * 1250;
           LOG_INFO_APP(">>== HCI_LE_ENHANCED_CONNECTION_COMPLETE_SUBEVT_CODE - Connection handle: 0x%04X\n", p_enhanced_conn_complete->Connection_Handle);
           LOG_INFO_APP("     - Connection established with @:%02x:%02x:%02x:%02x:%02x:%02x\n",
@@ -741,6 +742,7 @@ SVCCTL_UserEvtFlowStatus_t SVCCTL_App_Notification(void *p_Pckt)
           uint32_t conn_interval_us = 0;
           hci_le_connection_complete_event_rp0 *p_conn_complete;
           p_conn_complete = (hci_le_connection_complete_event_rp0 *) p_meta_evt->data;
+          if (p_conn_complete->Status != 0U) break;
           conn_interval_us = p_conn_complete->Conn_Interval * 1250;
           LOG_INFO_APP(">>== HCI_LE_CONNECTION_COMPLETE_SUBEVT_CODE - Connection handle: 0x%04X\n", p_conn_complete->Connection_Handle);
           LOG_INFO_APP("     - Connection established with @:%02x:%02x:%02x:%02x:%02x:%02x\n",

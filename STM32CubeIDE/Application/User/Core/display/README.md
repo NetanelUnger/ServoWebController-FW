@@ -62,6 +62,22 @@ CS is high, DC low and RST high between transfers. SPI speed is unchanged.
 unchanged poses). A transfer error pauses the worker without a retry loop.
 `Display_Start()` can retry after resolving the fault. BLE remains independent.
 
+SPI transfers use a bounded 1000 ms HAL timeout. This is a deadline, not a delay:
+successful transfers return immediately. The lower-priority display worker can
+be preempted by BLE and I2C startup work, which also consumes that deadline.
+With the combined board firmware, the previous 100 ms deadline caused
+`HAL_TIMEOUT` during a 480-byte welcome-screen transfer and permanently paused
+the worker (boot/frame status 3, zero animation frames). A 1000 ms budget
+restored successful startup and advancing frames on the board. Compiling only
+HAL_SPI_Transmit without optimization did not fix the failure and was reverted.
+`g_display_spi_diagnostic` records transfer count, length, HAL start/end time,
+status, SPI status register and elapsed RTOS ticks for future diagnosis.
+Hardware validation (2026-11-05): boot/frame status HAL_OK, advancing animation
+counter, and user-confirmed visible moving faces. With this image running,
+`check_tof_ble.py` passed both 12-frame subscription cycles and NUS PING;
+report: `STM32CubeIDE/Debug/tof-display-validation.json`. The board was left
+running after BLE disconnect, without another debugger attachment.
+
 This project initializes HAL's RTC timebase in `MX_APPE_Init()`. The welcome
 sequence therefore runs after platform/scheduler startup, not in `main()`'s
 pre-RTOS peripheral initialization. BLE radio work can run while the frame is

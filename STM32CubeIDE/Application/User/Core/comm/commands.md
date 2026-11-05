@@ -10,7 +10,7 @@
   - `- BAD ARGUMENTS`
   - `- NOT SUPPORTED`
   - `- PCA9685 DISABLED` when servo hardware is disabled in `config.h`
-  - `- VL53L5CX DISABLED` when TOF hardware is disabled in `config.h`
+  - `- VL53L8CX DISABLED` when TOF hardware is disabled in `config.h`
 - Servo channels are `0..15`.
 
 ## Supported Commands
@@ -19,6 +19,7 @@
 | --- | --- | --- | --- |
 | `HELP` | none | List every command, syntax and legacy alias, including commands for disabled devices. | Multiple notifications, from `OK HELP` through `OK HELP END`. |
 | `PING` | none | Connectivity check. | `OK PING` |
+| `TOF_SET_MIN_MAX` | `<min_mm> <max_mm>` | Set distance-map scaling; 0 <= min < max <= 4000. Default 0..500 mm. | `OK TOF_SET_MIN_MAX <min_mm> <max_mm>` |
 | `GPIO_GET` | `<signal_or_pin>` | Read the electrical GPIO level. INT_TOF adds its falling-edge counter. | `OK GPIO_GET <signal> <0_or_1>`; INT_TOF adds ` IRQ <count>` |
 | `GPIO_SET` | `<signal_or_pin> <0_or_1>` | Write a board output. The level must be the literal `0` or `1`. | `OK GPIO_SET <signal> <0_or_1>` |
 | `ADC_READ` | `<signal_or_pin>` | Single on-demand 12-bit ADC reading. | `OK ADC_READ <signal> <raw_0_to_4095>` |
@@ -49,11 +50,11 @@ ADC_READ ADC_BAT
 
 | Signal | Physical pin alias | Access |
 | --- | --- | --- |
-| EN1 | PB5 | GPIO_GET / GPIO_SET |
-| EN2 | PB4 | GPIO_GET / GPIO_SET |
-| DIAG_EN1 | PA10 | GPIO_GET / GPIO_SET |
-| DIAG_EN2 | PA11 | GPIO_GET / GPIO_SET |
-| OE | PA9 | GPIO_GET / GPIO_SET (0 enables PCA9685 outputs) |
+| EN1 | PB5 | GPIO_GET; BLE-managed, GPIO_SET returns READ ONLY |
+| EN2 | PB4 | GPIO_GET; BLE-managed, GPIO_SET returns READ ONLY |
+| DIAG_EN1 | PA10 | GPIO_GET; BLE-managed, GPIO_SET returns READ ONLY |
+| DIAG_EN2 | PA11 | GPIO_GET; BLE-managed, GPIO_SET returns READ ONLY |
+| OE | PA9 | GPIO_GET / GPIO_SET (1 enables PCA9685 outputs through Q6) |
 | DISPLAY_RES | PA2 | GPIO_GET / GPIO_SET |
 | DISPLAY_CS | PA4 | GPIO_GET / GPIO_SET |
 | DISPLAY_DC | PB11 | GPIO_GET / GPIO_SET |
@@ -77,7 +78,7 @@ pin modes. Analog inputs cannot be written. These commands run in commTask,
 outside BLE callbacks. A GPIO_SET acknowledgement echoes the commanded level;
 use GPIO_GET to read back the actual pin.
 
-The board starts with EN1/EN2 and DIAG_EN1/DIAG_EN2 low, OE high, DISPLAY_CS high,
+The board starts with EN1/EN2 and DIAG_EN1/DIAG_EN2 low, OE low, DISPLAY_CS high,
 DISPLAY_RES initially low and DISPLAY_DC low. With ENABLE_DISPLAY=1, the display
 worker releases DISPLAY_RES high during initialization and starts face animation
 after the two-second welcome. GPIO_SET on any display pin waits for the current
@@ -99,3 +100,14 @@ on the next indented line. Aliases are followed by `= <canonical_command>`.
 `ch` is the servo channel, `us` is microseconds and `ms` is milliseconds.
 Commands for disabled devices remain listed and still return `DISABLED` if used.
 `HELP extra` returns `- BAD ARGUMENTS` without a partial help listing.
+
+Hardware correction: GPIO_SET OE 1 enables PCA outputs through inverting Q6; GPIO_SET OE 0 disables them. Startup PA9 is now low.
+
+## MPQ power follows BLE connection
+
+EN1 (PB5), EN2 (PB4), DIAG_EN1 (PA10), DIAG_EN2 (PA11) start low.
+A successful BLE connection sets all four high; its disconnect event clears
+EN first, then DIAG_EN. Failed connection events cannot enable power.
+Signal names and physical-pin aliases are read-only through GPIO_SET, so queued
+commands cannot override disconnect shutdown. HELP remains available as 16
+short notifications, ending with OK HELP END.

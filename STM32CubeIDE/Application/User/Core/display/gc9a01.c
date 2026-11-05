@@ -8,6 +8,11 @@
  * DISPLAY_RES is retained as the firmware/BLE name for the actual RST signal. */
 #include <string.h>
 #include "gc9a01_init.h"
+#include "cmsis_os2.h"
+
+volatile struct {
+    uint32_t calls, length, start_ms, end_ms, status, spi_sr, elapsed_ticks;
+} g_display_spi_diagnostic;
 
 /* This buffer replaces a 115200-byte framebuffer. Calls must be serialized. */
 static uint8_t scanline[GC9A01_WIDTH * 2U];
@@ -20,7 +25,18 @@ static void select_panel(bool selected)
 
 static HAL_StatusTypeDef transmit(const uint8_t *data, uint16_t length)
 {
-    return HAL_SPI_Transmit(&DISPLAY_SPI, data, length, 100U);
+    ++g_display_spi_diagnostic.calls;
+    g_display_spi_diagnostic.length = length;
+    g_display_spi_diagnostic.start_ms = HAL_GetTick();
+    uint32_t start = osKernelGetTickCount();
+    /* This worker is lower priority than BLE and I2C bring-up. HAL's timeout
+     * includes time spent preempted, not just time driving SPI clocks. */
+    HAL_StatusTypeDef status = HAL_SPI_Transmit(&DISPLAY_SPI, data, length, 1000U);
+    g_display_spi_diagnostic.end_ms = HAL_GetTick();
+    g_display_spi_diagnostic.status = status;
+    g_display_spi_diagnostic.spi_sr = DISPLAY_SPI.Instance->SR;
+    g_display_spi_diagnostic.elapsed_ticks = osKernelGetTickCount() - start;
+    return status;
 }
 
 /* CS remains asserted throughout each command and its arguments. */

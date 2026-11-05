@@ -133,31 +133,9 @@ static HAL_StatusTypeDef pca9685_probeAddress(uint16_t addr_8bit)
 
 static HAL_StatusTypeDef pca9685_findAddress(void)
 {
-    uint16_t addr7;
-    uint16_t addr8;
-
-    if (pca9685_probeAddress(pca9685_i2c_addr_8bit) == HAL_OK)
-    {
-        return HAL_OK;
-    }
-
-    for (addr7 = PCA9685_I2C_SCAN_MIN_7BIT; addr7 <= PCA9685_I2C_SCAN_MAX_7BIT; addr7++)
-    {
-        addr8 = (uint16_t)(addr7 << 1);
-
-        if (addr8 == pca9685_i2c_addr_8bit)
-        {
-            continue;
-        }
-
-        if (pca9685_probeAddress(addr8) == HAL_OK)
-        {
-            pca9685_i2c_addr_8bit = addr8;
-            return HAL_OK;
-        }
-    }
-
-    return HAL_ERROR;
+    /* Hardware address straps, not the All Call alias or a responding sensor. */
+    pca9685_i2c_addr_8bit = PCA9685_I2C_DEFAULT_ADDR_8BIT;
+    return pca9685_probeAddress(pca9685_i2c_addr_8bit);
 }
 
 static HAL_StatusTypeDef pca9685_setPwmFrequencyHz(uint16_t freq_hz)
@@ -249,6 +227,10 @@ HAL_StatusTypeDef pca9685_Init(void)
     uint8_t mode2_readback;
     uint8_t led0_regs[4];
 
+    /* Q6 inverts PA9: low disables the PCA's active-low OE input.
+     * Keep outputs disabled until all initialization/readback checks pass. */
+    HAL_GPIO_WritePin(OE_GPIO_Port, OE_Pin, GPIO_PIN_RESET);
+
     /* Find the active PCA9685 I2C address before configuring the chip. */
     if (pca9685_findAddress() != HAL_OK)
     {
@@ -314,6 +296,8 @@ HAL_StatusTypeDef pca9685_Init(void)
         }
     }
 
+    /* Normal operation must enable outputs itself; diagnostic mode is optional. */
+    HAL_GPIO_WritePin(OE_GPIO_Port, OE_Pin, GPIO_PIN_SET);
     return HAL_OK;
 }
 

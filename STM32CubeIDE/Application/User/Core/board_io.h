@@ -17,5 +17,7 @@ BoardIO_Status BoardIO_WriteGPIO(const char *name, uint8_t level, const char **c
 BoardIO_Status BoardIO_ReadADC(const char *name, const char **canonical, uint16_t *raw);
 void BoardIO_TofInterrupt(void);
 uint32_t BoardIO_TofInterruptCount(void);
+/* BLE link owns MPQ enable/diagnostic pins; no bus access or blocking calls. */
+void BoardIO_SetPowerConnected(uint8_t connected);
 
 #endif

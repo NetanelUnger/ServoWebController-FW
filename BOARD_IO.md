@@ -1,5 +1,21 @@
 # Board pin map and BLE diagnostics
 
+## Restored servo-data BLE interface (2026-11-05)
+
+Integrated the `new-chars` branch's servo-data feature (commits `0620838` and
+`ab095fd`) into the current firmware without reverting HELP, display or TOF.
+NUS characteristic `6e400004-b5a3-f393-e0a9-e50e24dcca9e` exposes read/write/notify,
+32 bytes: 16 little-endian uint16 commanded pulse widths in microseconds.
+These are software command values, not measured servo positions.
+The normal PCA control disable switch also rejects binary writes (ATT error
+0x80); read and notification subscription remain available for Web connection.
+The fixed PWM_CH1 diagnostic is separate and unchanged.
+
+Built, flashed and verified on the board. `tools/check_servo_characteristic.py`
+verified uncached discovery, 32-byte reads, notification delivery, rejected
+malformed/disabled writes, complete 16-line HELP, PING and 64-byte TOF streaming.
+Actual motor movement and the enabled-PCA write path were not exercised.
+
 The Git firmware uses the following mapping in `BleServoController.ioc`,
 `Core/Inc/main.h`, startup code and the diagnostic command allowlist.
 
@@ -18,7 +34,7 @@ The Git firmware uses the following mapping in `BleServoController.ioc`,
 | PA3 | ADC1 / CURRENT_SENSE1 | ADC4 channel 6, analog, no pull | On-demand sampling |
 | PA4 | DISPLAY_CS | GPIO output, push-pull | 1 (deselected) |
 | PA5 | ADC_BAT | ADC4 channel 4, analog, no pull | On-demand sampling |
-| PA9 | OE | GPIO output, push-pull | 1 (PCA9685 outputs disabled) |
+| PA9 | OE | GPIO output, push-pull | 0 (PCA9685 outputs disabled through Q6) |
 | PA11 | DIAG_EN2 | GPIO output, push-pull | 0 |
 | PA10 | DIAG_EN1 | GPIO output, push-pull | 0 |
 
@@ -47,14 +63,17 @@ while the user works on the hardware. It has not been flashed or measured yet.
 
 I2C3 uses PA6/PA7 and timing `0x10C0ECFF` with its 100 MHz PCLK7 clock
 (nominal Standard-mode 100 kHz). Both pins use AF4 open drain, without internal
-pull-ups; the board must supply pull-ups. PCA9685 and VL53L5CX continue to use
+pull-ups; the board must supply pull-ups. PCA9685 and VL53L8CX continue to use
 the same `hi2c3` and `i2c_os` mutex. `I2C_BUS` also points to `hi2c3`.
 
-Both `DISABLE_I2C_PCA9685` and `DISABLE_I2C_VL53L5CX` still default to `1`.
-Their tasks and transfers remain disabled. The shared bus itself now initializes
-even with both devices disabled, so the configured pins match the board design.
+`DISABLE_I2C_PCA9685=1` disables the normal servo task; the separately enabled
+PCA diagnostic retains its fixed neutral pulse on PWM_CH1.
+`DISABLE_I2C_VL53L8CX=0` enables the new TOF task. It initializes and ranges only
+while a BLE client subscribes to the distance map, and stops after unsubscribe
+or disconnect. Set it to `1` to disable that device's task and transport.
+The old VL53L5CX driver is excluded from the Debug build. See `VL53L8CX_MIGRATION.md`.
 Manual GPIO test commands do not start either driver. GPIO writes are direct
-electrical controls: `OE 0` enables PWM outputs, and EN writes can change the
+electrical controls: `OE 1` enables PWM outputs through Q6, and EN writes can change the
 power paths. A reset restores the startup levels above.
 
 ## SPI and ADC
@@ -117,3 +136,5 @@ to zero. It never enables EN1, EN2 or OE. Run on the intended board after reset.
 The older DMA linked-list helpers are unused legacy code; do not start the GPIO
 mux DMA with this pin map. SPI waveforms, TOF interrupt edges and analog scaling
 still need physical instruments or known external stimuli for electrical validation.
+
+OE correction from supplied schematic: PA9 drives Q6 gate. PA9=1 enables PCA outputs; PA9=0 disables them. Earlier active-low references describe the PCA pin, not MCU PA9.

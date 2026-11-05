@@ -70,7 +70,7 @@ extern osSemaphoreId_t FMEraseSemaphoreHandle;
 extern osThreadId_t defaultTaskHandle;
 extern osThreadId_t commTaskHandle;
 extern osThreadId_t servoTaskHandle;
-extern osThreadId_t vl53l5cxTaskHandle;
+extern osThreadId_t vl53l8cxTaskHandle;
 extern osMutexId_t i2cMutexHandle;
 extern osMessageQueueId_t commTxQueueHandle;
 extern osMessageQueueId_t commRxQueueHandle;
@@ -89,7 +89,7 @@ void displayTask_Entry(void *argument);
 void StartDefaultTask(void *argument);
 void commTask_Entry(void *argument);
 void servoTask_Entry(void *argument);
-void vl53l5cxTask_Entry(void *argument);
+void vl53l8cxTask_Entry(void *argument);
 
 void MX_FREERTOS_Init(void); /* (MISRA C 2004 rule 8.1) */
 

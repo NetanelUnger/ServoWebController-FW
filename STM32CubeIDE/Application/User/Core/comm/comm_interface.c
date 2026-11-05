@@ -11,8 +11,8 @@
 
 #include "comm_interface.h"
 #include "board_io.h"
-#ifdef ENABLE_VL53L5CX
-#include "VL53L5CX/vl53l5cx_task.h"
+#ifdef ENABLE_VL53L8CX
+#include "VL53L8CX/vl53l8cx_task.h"
 #endif
 
 #include <limits.h>
@@ -575,7 +575,7 @@ packetSize_t parser_ProcessOne(uint8_t *payload, packetSize_t req_len, uint8_t *
         return comm_WriteOkEchoChannelValueU32(res_payload, COMM_CMD_SERVO_START_MOVE, channel, value, duration_ms);
     }
 
-#ifdef ENABLE_VL53L5CX
+#ifdef ENABLE_VL53L8CX
     if (comm_CommandMatches(command, COMM_CMD_TOF_SET_MIN_MAX, COMM_CMD_TOF_SET_MIN_MAX) != 0U)
     {
         uint16_t min_mm, max_mm;
@@ -586,21 +586,21 @@ packetSize_t parser_ProcessOne(uint8_t *payload, packetSize_t req_len, uint8_t *
             return comm_WriteResponseText(res_payload, "- BAD ARGUMENTS");
         }
 
-        if (vl53l5cx_SetDistanceEncodingRange(min_mm, max_mm) == 0U)
+        if (vl53l8cx_SetDistanceEncodingRange(min_mm, max_mm) == 0U)
         {
             return comm_WriteResponseText(res_payload, "- BAD VALUES");
         }
 
-        vl53l5cx_GetDistanceEncodingRange(&applied_min_mm, &applied_max_mm);
+        vl53l8cx_GetDistanceEncodingRange(&applied_min_mm, &applied_max_mm);
 
         return comm_WriteOkEchoValuePair(res_payload, COMM_CMD_TOF_SET_MIN_MAX, applied_min_mm, applied_max_mm);
     }
 #endif
 
-#if DISABLE_I2C_VL53L5CX
+#if DISABLE_I2C_VL53L8CX
     if (comm_CommandMatches(command, COMM_CMD_TOF_SET_MIN_MAX, COMM_CMD_TOF_SET_MIN_MAX) != 0U)
     {
-        return comm_WriteResponseText(res_payload, "- VL53L5CX DISABLED");
+        return comm_WriteResponseText(res_payload, "- VL53L8CX DISABLED");
     }
 #endif
     return comm_WriteResponseText(res_payload, "- NOT SUPPORTED");

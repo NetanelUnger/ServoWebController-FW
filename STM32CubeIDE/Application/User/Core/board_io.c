@@ -18,10 +18,11 @@ typedef struct {
 } DigitalPin;
 
 static const DigitalPin digital_pins[] = {
-    {"EN1", "PB5", EN1_GPIO_Port, EN1_Pin, 1},
-    {"EN2", "PB4", EN2_GPIO_Port, EN2_Pin, 1},
-    {"DIAG_EN1", "PA10", DIAG_EN1_GPIO_Port, DIAG_EN1_Pin, 1},
-    {"DIAG_EN2", "PA11", DIAG_EN2_GPIO_Port, DIAG_EN2_Pin, 1},
+    /* Readable for diagnostics, but only BLE lifecycle may change power. */
+    {"EN1", "PB5", EN1_GPIO_Port, EN1_Pin, 0},
+    {"EN2", "PB4", EN2_GPIO_Port, EN2_Pin, 0},
+    {"DIAG_EN1", "PA10", DIAG_EN1_GPIO_Port, DIAG_EN1_Pin, 0},
+    {"DIAG_EN2", "PA11", DIAG_EN2_GPIO_Port, DIAG_EN2_Pin, 0},
     {"OE", "PA9", OE_GPIO_Port, OE_Pin, 1},
     /* Signal names follow the real module, not the schematic labels. */
     {"DISPLAY_RES", "PA2", DISPLAY_RES_GPIO_Port, DISPLAY_RES_Pin, 1},
@@ -31,6 +32,21 @@ static const DigitalPin digital_pins[] = {
 };
 
 static volatile uint32_t tof_interrupt_count;
+
+void BoardIO_SetPowerConnected(uint8_t connected)
+{
+    if (connected) {
+        HAL_GPIO_WritePin(DIAG_EN1_GPIO_Port, DIAG_EN1_Pin, GPIO_PIN_SET);
+        HAL_GPIO_WritePin(DIAG_EN2_GPIO_Port, DIAG_EN2_Pin, GPIO_PIN_SET);
+        HAL_GPIO_WritePin(EN1_GPIO_Port, EN1_Pin, GPIO_PIN_SET);
+        HAL_GPIO_WritePin(EN2_GPIO_Port, EN2_Pin, GPIO_PIN_SET);
+    } else {
+        HAL_GPIO_WritePin(EN1_GPIO_Port, EN1_Pin, GPIO_PIN_RESET);
+        HAL_GPIO_WritePin(EN2_GPIO_Port, EN2_Pin, GPIO_PIN_RESET);
+        HAL_GPIO_WritePin(DIAG_EN1_GPIO_Port, DIAG_EN1_Pin, GPIO_PIN_RESET);
+        HAL_GPIO_WritePin(DIAG_EN2_GPIO_Port, DIAG_EN2_Pin, GPIO_PIN_RESET);
+    }
+}
 
 static const DigitalPin *find_digital_pin(const char *name)
 {

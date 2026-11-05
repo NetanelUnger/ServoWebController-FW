@@ -45,6 +45,7 @@ typedef enum
   NUS_TX,
   NUS_RX,
   /* USER CODE BEGIN Service2_CharOpcode_t */
+  NUS_ALL_CHANNEL_DC,
 
   /* USER CODE END Service2_CharOpcode_t */
   NUS_CHAROPCODE_LAST
@@ -59,6 +60,8 @@ typedef enum
   NUS_TX_INDICATE_DISABLED_EVT,
   NUS_RX_WRITE_EVT,
   /* USER CODE BEGIN Service2_OpcodeEvt_t */
+  NUS_ALL_CHANNEL_DC_NOTIFY_ENABLED_EVT,
+  NUS_ALL_CHANNEL_DC_NOTIFY_DISABLED_EVT,
 
   /* USER CODE END Service2_OpcodeEvt_t */
   NUS_BOOT_REQUEST_EVT

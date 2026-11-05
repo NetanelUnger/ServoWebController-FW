@@ -12,6 +12,9 @@
 #define ENABLE_COMM
 #define ENABLE_LEDS
 
+/* Keep the fixed-pulse diagnostic off while normal servo control owns the PCA. */
+#define ENABLE_PCA9685_DIAGNOSTIC 0
+
 /** GC9A01 worker: welcome screen, then color face animation. */
 #ifndef ENABLE_DISPLAY
 #define ENABLE_DISPLAY 1
@@ -37,17 +40,17 @@
  *  Build flags may override these defaults.
  *  @{ */
 #ifndef DISABLE_I2C_PCA9685
-#define DISABLE_I2C_PCA9685 1
+#define DISABLE_I2C_PCA9685 0
 #endif
-#ifndef DISABLE_I2C_VL53L5CX
-#define DISABLE_I2C_VL53L5CX 1
+#ifndef DISABLE_I2C_VL53L8CX
+#define DISABLE_I2C_VL53L8CX 0
 #endif
 #if ((DISABLE_I2C_PCA9685 != 0) && (DISABLE_I2C_PCA9685 != 1)) || \
-    ((DISABLE_I2C_VL53L5CX != 0) && (DISABLE_I2C_VL53L5CX != 1))
+    ((DISABLE_I2C_VL53L8CX != 0) && (DISABLE_I2C_VL53L8CX != 1))
 #error "I2C device switches must be 0 or 1"
 #endif
-#if !DISABLE_I2C_VL53L5CX
-#define ENABLE_VL53L5CX
+#if !DISABLE_I2C_VL53L8CX
+#define ENABLE_VL53L8CX
 #endif
 /** @} */
 
@@ -84,27 +87,27 @@
 /** @brief Timeout converted into scheduler ticks for CMSIS-RTOS wait APIs. */
 #define THREAD_WAIT_TIMEOUT_TICKS (pdMS_TO_TICKS(THREAD_WAIT_TIMEOUT_MS))
 
-/** @name VL53L5CX Streaming Configuration
+/** @name VL53L8CX Streaming Configuration
  *  @{
  */
-#define CONFIG_VL53L5CX_STARTUP_DELAY_MS      100U
-#define CONFIG_VL53L5CX_INIT_RETRY_MS        1000U
-#define CONFIG_VL53L5CX_TASK_PERIOD_MS         20U
-#define CONFIG_VL53L5CX_TIMING_BUDGET_MS       20U
-#define CONFIG_VL53L5CX_RANGING_FREQUENCY_HZ    5U
+#define CONFIG_VL53L8CX_STARTUP_DELAY_MS      100U
+#define CONFIG_VL53L8CX_INIT_RETRY_MS        1000U
+#define CONFIG_VL53L8CX_TASK_PERIOD_MS         20U
+#define CONFIG_VL53L8CX_TIMING_BUDGET_MS       20U
+#define CONFIG_VL53L8CX_RANGING_FREQUENCY_HZ    5U
 /** @brief Absolute lower bound accepted by the runtime TOF BLE scaling command. */
-#define CONFIG_VL53L5CX_DISTANCE_LIMIT_MIN_MM    0U
+#define CONFIG_VL53L8CX_DISTANCE_LIMIT_MIN_MM    0U
 /** @brief Absolute upper bound accepted by the runtime TOF BLE scaling command. */
-#define CONFIG_VL53L5CX_DISTANCE_LIMIT_MAX_MM 4000U
+#define CONFIG_VL53L8CX_DISTANCE_LIMIT_MAX_MM 4000U
 /** @brief Default lower bound mapped to BLE payload value 0. */
-#define CONFIG_VL53L5CX_DISTANCE_MIN_MM 0U
+#define CONFIG_VL53L8CX_DISTANCE_MIN_MM 0U
 /**
  * @brief Default upper bound mapped to the highest valid BLE payload value.
  *
  * The value `0xFF` stays reserved for invalid/no-target zones, so valid distances
  * are encoded across `0x00..0xFE`.
  */
-#define CONFIG_VL53L5CX_DISTANCE_MAX_MM 500U
+#define CONFIG_VL53L8CX_DISTANCE_MAX_MM 500U
 /** @} */
 
 /** @name Watchdog Registration Flags
@@ -112,9 +115,9 @@
  */
 #define WATCHDOG_FLAG_DEFAULT     (1UL << 0)
 #define WATCHDOG_FLAG_COMM        (1UL << 1)
-#define WATCHDOG_FLAG_VL53L5CX    (1UL << 2)
-#ifdef ENABLE_VL53L5CX
-#define WATCHDOG_ALL_FLAGS        (WATCHDOG_FLAG_DEFAULT | WATCHDOG_FLAG_COMM | WATCHDOG_FLAG_VL53L5CX)
+#define WATCHDOG_FLAG_VL53L8CX    (1UL << 2)
+#ifdef ENABLE_VL53L8CX
+#define WATCHDOG_ALL_FLAGS        (WATCHDOG_FLAG_DEFAULT | WATCHDOG_FLAG_COMM | WATCHDOG_FLAG_VL53L8CX)
 #else
 #define WATCHDOG_ALL_FLAGS        (WATCHDOG_FLAG_DEFAULT | WATCHDOG_FLAG_COMM)
 #endif

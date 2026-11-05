@@ -19,7 +19,7 @@
 
 /* Includes ------------------------------------------------------------------*/
 #include <servo/servo_task.h>
-#include <VL53L5CX/vl53l5cx_task.h>
+#include <VL53L8CX/vl53l8cx_task.h>
 #include "app_freertos.h"
 
 /* Private includes ----------------------------------------------------------*/
@@ -35,6 +35,7 @@
 #include "nus_app.h"
 #include "comm/comm_interface.h"
 #include "display/display.h"
+#include "PCA9685/pca9685_diagnostic.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -84,15 +85,15 @@ const osMutexAttr_t displayMutex_attributes = {
   .cb_size = sizeof(displayMutexControlBlock),
 };
 #endif
-osThreadId_t vl53l5cxTaskHandle;
-uint32_t vl53l5cxTaskBuffer[ 2048 ];
-osStaticThreadDef_t vl53l5cxTaskBlock;
-const osThreadAttr_t vl53l5cxTask_attributes = {
-  .name = "vl53l5cxTask",
-  .stack_mem = &vl53l5cxTaskBuffer[0],
-  .stack_size = sizeof(vl53l5cxTaskBuffer),
-  .cb_mem = &vl53l5cxTaskBlock,
-  .cb_size = sizeof(vl53l5cxTaskBlock),
+osThreadId_t vl53l8cxTaskHandle;
+uint32_t vl53l8cxTaskBuffer[ 2048 ];
+osStaticThreadDef_t vl53l8cxTaskBlock;
+const osThreadAttr_t vl53l8cxTask_attributes = {
+  .name = "vl53l8cxTask",
+  .stack_mem = &vl53l8cxTaskBuffer[0],
+  .stack_size = sizeof(vl53l8cxTaskBuffer),
+  .cb_mem = &vl53l8cxTaskBlock,
+  .cb_size = sizeof(vl53l8cxTaskBlock),
   .priority = (osPriority_t) osPriorityAboveNormal,
 };
 
@@ -264,9 +265,9 @@ void MX_FREERTOS_Init(void) {
    * The port also repeats this initialization when the scheduler starts. */
   vPortConfigureInterruptPriorities();
   servo_Init();
-#ifdef ENABLE_VL53L5CX
-  vl53l5cx_TaskInit();
-#endif /* ENABLE_VL53L5CX */
+#ifdef ENABLE_VL53L8CX
+  vl53l8cx_TaskInit();
+#endif /* ENABLE_VL53L8CX */
 
   /* USER CODE END Init */
   /* creation of i2cMutex */
@@ -315,13 +316,13 @@ void MX_FREERTOS_Init(void) {
   displayTaskHandle = osThreadNew(displayTask_Entry, NULL, &displayTask_attributes);
   if (displayTaskHandle == NULL) Error_Handler();
 #endif
-#ifdef ENABLE_VL53L5CX
-  vl53l5cxTaskHandle = osThreadNew(vl53l5cxTask_Entry, NULL, &vl53l5cxTask_attributes);
-  if (vl53l5cxTaskHandle == NULL)
+#ifdef ENABLE_VL53L8CX
+  vl53l8cxTaskHandle = osThreadNew(vl53l8cxTask_Entry, NULL, &vl53l8cxTask_attributes);
+  if (vl53l8cxTaskHandle == NULL)
   {
     Error_Handler();
   }
-#endif /* ENABLE_VL53L5CX */
+#endif /* ENABLE_VL53L8CX */
   /* USER CODE END RTOS_THREADS */
 
   /* creation of commEvent */
@@ -348,9 +349,11 @@ void MX_FREERTOS_Init(void) {
 void StartDefaultTask(void *argument)
 {
   /* USER CODE BEGIN defaultTask */
+    PCA9685_DiagnosticInit();
 	for(;;)
 	{
 		osDelay(THREAD_WAIT_TIMEOUT_TICKS);
+        PCA9685_DiagnosticStep();
 
 		WatchdogFlagClear(WATCHDOG_FLAG_DEFAULT);
 	}
@@ -402,14 +405,14 @@ void servoTask_Entry(void *argument)
   /* USER CODE END servoTask */
 }
 
-void vl53l5cxTask_Entry(void *argument)
+void vl53l8cxTask_Entry(void *argument)
 {
   UNUSED(argument);
 
   for (;;)
   {
-    vl53l5cx_Task();
-    WatchdogFlagClear(WATCHDOG_FLAG_VL53L5CX);
+    vl53l8cx_Task();
+    WatchdogFlagClear(WATCHDOG_FLAG_VL53L8CX);
   }
 }
 

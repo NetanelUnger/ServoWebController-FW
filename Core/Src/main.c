@@ -870,9 +870,9 @@ void MX_GPIO_Init(void)
   __HAL_RCC_GPIOC_CLK_ENABLE();
 
   /* Set output latches before switching pin modes: power and PWM stay off. */
-  HAL_GPIO_WritePin(GPIOA, DISPLAY_RES_Pin|DIAG_EN1_Pin|DIAG_EN2_Pin|BAT_ON_Pin,
+  HAL_GPIO_WritePin(GPIOA, DISPLAY_RES_Pin|DIAG_EN1_Pin|DIAG_EN2_Pin|BAT_ON_Pin|OE_Pin,
                     GPIO_PIN_RESET);
-  HAL_GPIO_WritePin(GPIOA, DISPLAY_CS_Pin|OE_Pin|MUX_SEL1_Pin, GPIO_PIN_SET);
+  HAL_GPIO_WritePin(GPIOA, DISPLAY_CS_Pin|MUX_SEL1_Pin, GPIO_PIN_SET);
   HAL_GPIO_WritePin(GPIOB, EN1_Pin|EN2_Pin|DISPLAY_DC_Pin, GPIO_PIN_RESET);
   HAL_GPIO_WritePin(GPIOB, LED_GREEN_Pin|LED_BLUE_Pin, GPIO_PIN_SET);
 

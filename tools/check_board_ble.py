@@ -1,4 +1,4 @@
-"""Board bring-up checks over NUS. Never enables power or PWM outputs."""
+"""Board bring-up checks over NUS. Connecting enables the BLE-managed MPQ power outputs."""
 import argparse
 import asyncio
 import json
@@ -10,8 +10,8 @@ from bleak import BleakClient, BleakScanner
 
 RX = '6e400002-b5a3-f393-e0a9-e50e24dcca9e'
 TX = '6e400003-b5a3-f393-e0a9-e50e24dcca9e'
-OUTPUTS = [('EN1', 'PB5', 0), ('EN2', 'PB4', 0), ('DIAG_EN1', 'PA10', 0),
-           ('DIAG_EN2', 'PA11', 0), ('OE', 'PA9', 1), ('DISPLAY_RES', 'PA2', 1),
+OUTPUTS = [('EN1', 'PB5', 1), ('EN2', 'PB4', 1), ('DIAG_EN1', 'PA10', 1),
+           ('DIAG_EN2', 'PA11', 1), ('OE', 'PA9', 1), ('DISPLAY_RES', 'PA2', 1),
            ('DISPLAY_CS', 'PA4', 1), ('DISPLAY_DC', 'PB11', 0)]
 
 
@@ -79,12 +79,17 @@ async def check(args):
             ('ADC_READ', '- BAD ARGUMENTS'), ('ADC_READ PA3 extra', '- BAD ARGUMENTS'),
             (b'GPIO_SET EN1 1\x00junk', '- BAD ARGUMENTS'),
             ('SET_DIRECT 0 1500', '- PCA9685 DISABLED'),
-            ('TOF_SET_MIN_MAX 0 1000', '- VL53L5CX DISABLED'),
+            ('TOF_SET_MIN_MAX 0 1000', '- VL53L8CX DISABLED' if args.tof_disabled else 'OK TOF_SET_MIN_MAX 0 1000'),
         ]:
             await command(request, error)
+        if not args.tof_disabled:
+            await command('TOF_SET_MIN_MAX 0 500', 'OK TOF_SET_MIN_MAX 0 500')
         # Benign writes exercise the command without energizing power/PWM paths.
         for name, pin, level in outputs:
-            await command(f'GPIO_SET {pin} {level}', f'OK GPIO_SET {name} {level}')
+            if name in ('EN1', 'EN2', 'DIAG_EN1', 'DIAG_EN2'):
+                await command(f'GPIO_SET {pin} {level}', '- READ ONLY')
+            else:
+                await command(f'GPIO_SET {pin} {level}', f'OK GPIO_SET {name} {level}')
         if args.exercise_display_dc:
             try:
                 await command('GPIO_SET DISPLAY_DC 1', 'OK GPIO_SET DISPLAY_DC 1')
@@ -110,4 +115,5 @@ if __name__ == '__main__':
     parser.add_argument('--exercise-display-dc', action='store_true')
     parser.add_argument('--display-disabled', action='store_true', help='Expect DISPLAY_RES low when ENABLE_DISPLAY=0')
     parser.add_argument('--report', help='JSON result file')
+    parser.add_argument('--tof-disabled', action='store_true', help='Expect DISABLE_I2C_VL53L8CX=1')
     asyncio.run(check(parser.parse_args()))
