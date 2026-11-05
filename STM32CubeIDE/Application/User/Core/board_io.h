@@ -13,11 +13,13 @@ typedef enum {
 
 BoardIO_Status BoardIO_ReadGPIO(const char *name, const char **canonical, uint8_t *level);
 BoardIO_Status BoardIO_WriteGPIO(const char *name, uint8_t level, const char **canonical);
-/* Raw 12-bit result; no assumption about VDDA, divider ratio or current scaling. */
+/* Latest 12-bit DMA sample; never reconfigure ADC4 or interrupt its scan. */
 BoardIO_Status BoardIO_ReadADC(const char *name, const char **canonical, uint16_t *raw);
 void BoardIO_TofInterrupt(void);
 uint32_t BoardIO_TofInterruptCount(void);
-/* BLE link owns MPQ enable/diagnostic pins; no bus access or blocking calls. */
+/* BLE link owns MPQ enable/diagnostic pins and gates PWM; no blocking calls.
+ * Disconnect disables PWM before EN/DIAG_EN. Init may not bypass this gate. */
 void BoardIO_SetPowerConnected(uint8_t connected);
+void BoardIO_SetPwmReady(uint8_t ready);
 
 #endif

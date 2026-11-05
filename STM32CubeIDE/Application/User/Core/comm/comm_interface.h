@@ -22,10 +22,14 @@
 
 /** @brief Connectivity check command. */
 #define COMM_CMD_PING "PING"
+/** All-channel repeating PWM test and motion cancellation. */
+#define COMM_CMD_DEMO1 "DEMO1"
+#define COMM_CMD_STOP "STOP"
 /** Board diagnostics, using signal names or physical pin names. */
 #define COMM_CMD_GPIO_GET "GPIO_GET"
 #define COMM_CMD_GPIO_SET "GPIO_SET"
 #define COMM_CMD_ADC_READ "ADC_READ"
+#define COMM_CMD_PWM_GET "PWM_GET"
 /** @brief Immediate servo pulse update command. */
 #define COMM_CMD_PCA9685_SET_SERVO_US "SET_DIRECT"
 /** @brief Timed servo interpolation command. */

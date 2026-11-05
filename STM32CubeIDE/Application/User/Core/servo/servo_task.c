@@ -11,13 +11,30 @@
 #include "FreeRTOS.h"
 #include "task.h"
 #include "cmsis_os2.h"
+#include "app_freertos.h"
 #include "../PCA9685/pca9685.h"
+#include "../board_io.h"
+#include "timer_if.h"
 
 /** @brief Servo update period used for timed interpolation. */
 #define SERVO_TASK_PERIOD_MS 20U
+#define SERVO_DEMO1_PERIOD_MS 2000U
+#define SERVO_DEMO1_LOW_US 500U
+#define SERVO_DEMO1_HIGH_US 2000U
 
 /** @brief Global runtime state for the servo controller. */
 volatile servos_controller_t servos_controller;
+
+/* Only servoTask performs PCA writes. Producers update state and wake it. */
+static volatile uint16_t dirty_channels;
+static TickType_t move_tick[SERVO_CHANNEL_COUNT];
+static uint32_t demo_tick;
+static uint16_t demo_value;
+static uint8_t ble_connected;
+static void servo_Wake(void)
+{
+    if (servoTaskHandle != NULL) (void)osThreadFlagsSet(servoTaskHandle, 1U);
+}
 
 /** @brief Optional observer called after commanded servo values change. */
 static servo_ChangeCallback_t servo_change_callback = NULL;
@@ -65,6 +82,63 @@ static void servo_StopTimedMove(volatile servo_state_t *servo)
     servo->move.elapsed_ms = 0U;
 }
 
+/* Caller holds the state critical section; hardware writes stay in servoTask. */
+static void servo_ApplyDemoValue(void)
+{
+    for (uint8_t channel = 0U; channel < SERVO_CHANNEL_COUNT; channel++) {
+        servos_controller.servo[channel].current_value = demo_value;
+        servo_StopTimedMove(&servos_controller.servo[channel]);
+    }
+    dirty_channels = 0xffffU;
+}
+
+static void servo_StopLocked(void)
+{
+    servos_controller.demo1_active = 0U;
+    for (uint8_t channel = 0U; channel < SERVO_CHANNEL_COUNT; channel++)
+        servo_StopTimedMove(&servos_controller.servo[channel]);
+}
+
+void servo_SetBleConnected(uint8_t connected)
+{
+    taskENTER_CRITICAL();
+    ble_connected = connected != 0U;
+    if (!ble_connected) servo_StopLocked();
+    taskEXIT_CRITICAL();
+}
+
+void servo_Stop(void)
+{
+    taskENTER_CRITICAL();
+    servo_StopLocked();
+    taskEXIT_CRITICAL();
+    servo_Wake();
+}
+
+HAL_StatusTypeDef servo_StartDemo1(void)
+{
+#if DISABLE_I2C_PCA9685
+    return HAL_ERROR;
+#endif
+    taskENTER_CRITICAL();
+    if (!ble_connected || !servos_controller.pca9685_ready) {
+        taskEXIT_CRITICAL();
+        return HAL_ERROR;
+    }
+    if (servos_controller.demo1_active) {
+        taskEXIT_CRITICAL();
+        return HAL_OK; /* Repeated requests do not restart the two-second phase. */
+    }
+    demo_tick = TIMER_IF_GetTimerValue();
+    demo_value = SERVO_DEMO1_LOW_US;
+    servos_controller.demo1_active = 1U;
+    servo_ApplyDemoValue();
+    taskEXIT_CRITICAL();
+    servo_Wake();
+    servo_NotifyChange();
+    return HAL_OK;
+}
+
 /**
  * @brief Compute the next pulse value for an active timed move.
  *
@@ -109,6 +183,9 @@ void servo_Init(void)
     uint8_t channel;
 
     servos_controller.pca9685_ready = 0U;
+    servos_controller.demo1_active = 0U;
+    ble_connected = 0U;
+    dirty_channels = 0xffffU;
 
     for (channel = 0U; channel < SERVO_CHANNEL_COUNT; channel++)
     {
@@ -146,18 +223,16 @@ HAL_StatusTypeDef servo_SetServoImmediateValue(uint8_t channel, uint16_t value)
     servo = &servos_controller.servo[channel];
 
     taskENTER_CRITICAL();
+    if (servos_controller.demo1_active) {
+        taskEXIT_CRITICAL();
+        return HAL_BUSY;
+    }
     changed = (servo->current_value != clamped_value) ? 1U : 0U;
     servo->current_value = clamped_value;
     servo_StopTimedMove(servo);
+    dirty_channels |= (uint16_t)(1U << channel);
     taskEXIT_CRITICAL();
-
-    if (servos_controller.pca9685_ready != 0U)
-    {
-        if (pca9685_SetServoPulseUs(channel, clamped_value, NULL) != HAL_OK)
-        {
-            servos_controller.pca9685_ready = 0U;
-        }
-    }
+    servo_Wake();
 
     if (changed != 0U)
     {
@@ -188,6 +263,10 @@ HAL_StatusTypeDef servo_SetAllServoImmediateValues(const uint16_t values[SERVO_C
     }
 
     taskENTER_CRITICAL();
+    if (servos_controller.demo1_active) {
+        taskEXIT_CRITICAL();
+        return HAL_BUSY;
+    }
     for (channel = 0U; channel < SERVO_CHANNEL_COUNT; channel++)
     {
         servo = &servos_controller.servo[channel];
@@ -199,19 +278,9 @@ HAL_StatusTypeDef servo_SetAllServoImmediateValues(const uint16_t values[SERVO_C
         servo->current_value = clamped_values[channel];
         servo_StopTimedMove(servo);
     }
+    dirty_channels = 0xffffU;
     taskEXIT_CRITICAL();
-
-    if (servos_controller.pca9685_ready != 0U)
-    {
-        for (channel = 0U; channel < SERVO_CHANNEL_COUNT; channel++)
-        {
-            if (pca9685_SetServoPulseUs(channel, clamped_values[channel], NULL) != HAL_OK)
-            {
-                servos_controller.pca9685_ready = 0U;
-                break;
-            }
-        }
-    }
+    servo_Wake();
 
     if (changed != 0U)
     {
@@ -260,13 +329,18 @@ HAL_StatusTypeDef servo_StartTimedMove(uint8_t channel, uint16_t target_value, u
     clamped_target = servo_ClampPulseUs(target_value);
 
     taskENTER_CRITICAL();
+    if (servos_controller.demo1_active) {
+        taskEXIT_CRITICAL();
+        return HAL_BUSY;
+    }
     servo->move.active = 1U;
     servo->move.start_value = servo->current_value;
     servo->move.target_value = clamped_target;
     servo->move.duration_ms = duration_ms;
     servo->move.elapsed_ms = 0U;
+    move_tick[channel] = xTaskGetTickCount();
     taskEXIT_CRITICAL();
-
+    servo_Wake();
     return HAL_OK;
 }
 
@@ -277,53 +351,75 @@ void servo_Task(void)
     return;
 #endif
     uint8_t channel;
-    uint8_t changed;
     uint8_t task_changed = 0U;
     uint16_t next_value;
+    uint16_t frame[SERVO_CHANNEL_COUNT];
+    uint8_t pending;
     volatile servo_state_t *servo;
 
-    osDelay(pdMS_TO_TICKS(SERVO_TASK_PERIOD_MS));
+    (void)osThreadFlagsWait(1U, osFlagsWaitAny, pdMS_TO_TICKS(SERVO_TASK_PERIOD_MS));
 
     if (servos_controller.pca9685_ready == 0U)
     {
         servos_controller.pca9685_ready = (pca9685_Init() == HAL_OK) ? 1U : 0U;
+        taskENTER_CRITICAL();
+        dirty_channels = 0xffffU;
+        taskEXIT_CRITICAL();
     }
 
     if (servos_controller.pca9685_ready == 0U)
     {
+        osDelay(pdMS_TO_TICKS(250)); /* A missing PCA must not starve the system. */
         return;
     }
+
+    taskENTER_CRITICAL();
+    if (servos_controller.demo1_active && ble_connected) {
+        /* Use elapsed RTC time, not the quantized 1 ms scheduler tick. */
+        uint32_t period = TIMER_IF_Convert_ms2Tick(SERVO_DEMO1_PERIOD_MS);
+        uint32_t phases = (TIMER_IF_GetTimerValue() - demo_tick) / period;
+        if (phases != 0U) {
+            demo_tick += phases * period;
+            if (phases & 1U)
+                demo_value = (demo_value == SERVO_DEMO1_LOW_US) ? SERVO_DEMO1_HIGH_US : SERVO_DEMO1_LOW_US;
+            servo_ApplyDemoValue();
+            task_changed = 1U;
+        }
+    }
+    taskEXIT_CRITICAL();
 
     for (channel = 0U; channel < SERVO_CHANNEL_COUNT; channel++)
     {
         servo = &servos_controller.servo[channel];
 
         taskENTER_CRITICAL();
-        next_value = servo_ComputeTimedMoveValue(servo, SERVO_TASK_PERIOD_MS);
+        if (servo->move.active) {
+            TickType_t now = xTaskGetTickCount();
+            uint32_t elapsed = (uint32_t)((uint64_t)(now - move_tick[channel]) * 1000U / configTICK_RATE_HZ);
+            if (elapsed) {
+                move_tick[channel] = now;
+                next_value = servo_ComputeTimedMoveValue(servo, elapsed);
+                if (servo->current_value != next_value) {
+                    servo->current_value = next_value;
+                    dirty_channels |= (uint16_t)(1U << channel);
+                    task_changed = 1;
+                }
+            }
+        }
         taskEXIT_CRITICAL();
+    }
 
-        if (pca9685_SetServoPulseUs(channel, next_value, NULL) == HAL_OK)
-        {
-            taskENTER_CRITICAL();
-            changed = (servo->current_value != next_value) ? 1U : 0U;
-            servo->current_value = next_value;
-            if (servo->move.active == 0U)
-            {
-                servo->move.start_value = next_value;
-                servo->move.target_value = next_value;
-            }
-            taskEXIT_CRITICAL();
-
-            if (changed != 0U)
-            {
-                task_changed = 1U;
-            }
-        }
-        else
-        {
-            servos_controller.pca9685_ready = 0U;
-            break;
-        }
+    /* Capture one coherent frame after interpolation. New commands received
+     * during the I2C transfer retain their dirty bits for the next frame. */
+    taskENTER_CRITICAL();
+    pending = dirty_channels != 0U;
+    for (channel = 0U; channel < SERVO_CHANNEL_COUNT; channel++)
+        frame[channel] = servos_controller.servo[channel].current_value;
+    dirty_channels = 0U;
+    taskEXIT_CRITICAL();
+    if (pending && pca9685_SetServoPulseFrame(frame) != HAL_OK) {
+        servos_controller.pca9685_ready = 0U;
+        BoardIO_SetPwmReady(0U);
     }
 
     if (task_changed != 0U)

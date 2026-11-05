@@ -16,20 +16,23 @@ PINS = [('EN1', 'PB5'), ('EN2', 'PB4'), ('DIAG_EN1', 'PA10'), ('DIAG_EN2', 'PA11
 
 def check_off(programmer):
     result = subprocess.run([programmer, '-c', 'port=SWD', 'mode=HOTPLUG',
-                             '-r32', '0x42020010', '8', '-r32', '0x42020410', '8', '-r32', '0x2000bd5c', '8', '-r32', '0x2000bcd0', '16'],
+                             '-r32', '0x42020010', '8', '-r32', '0x42020410', '8'],
                             capture_output=True, text=True, errors='replace', check=True)
     try:
-        for address, mask in [('42020010', 0xC00), ('42020410', 0x30)]:
+        for address, mask in [('42020010', 0xE00), ('42020410', 0x30)]:
             match = re.search(r'0x' + address + r'\s*:\s*([0-9A-Fa-f]+)\s+([0-9A-Fa-f]+)', result.stdout)
             assert match, result.stdout
             assert all(int(word, 16) & mask == 0 for word in match.groups()), result.stdout
-        print('OFF verified: PA10/PA11/PB4/PB5 input and output registers low', flush=True)
+        print('OFF verified: OE/PA9, PA10/PA11/PB4/PB5 input and output registers low', flush=True)
     finally:
         subprocess.run([programmer, '-c', 'port=SWD', 'mode=HOTPLUG', '-rst'],
                        capture_output=True, check=True)
 
 async def main(args):
     if not args.connected_only:
+        subprocess.run([args.programmer, '-c', 'port=SWD', 'mode=HOTPLUG', '-rst'],
+                       capture_output=True, check=True)
+        await asyncio.sleep(2)
         check_off(args.programmer)
         for cycle in range(2):
             subprocess.run([sys.executable, __file__, '--address', args.address,
@@ -49,9 +52,13 @@ async def main(args):
                 await client.write_gatt_char(RX, text.encode(), response=True)
                 return await asyncio.wait_for(replies.get(), 5)
             await client.write_gatt_char(RX, b'HELP', response=True)
-            lines = [await asyncio.wait_for(replies.get(), 5) for _ in range(16)]
+            lines = []
+            while not lines or lines[-1] != 'OK HELP END':
+                lines.append(await asyncio.wait_for(replies.get(), 5))
+                assert len(lines) <= 32, 'HELP did not terminate'
             assert lines[0] == 'OK HELP' and lines[-1] == 'OK HELP END'
             assert 'GPIO_GET <pin>' in lines and 'ADC_READ <pin>' in lines
+            assert 'PWM_GET <ch>' in lines
             for signal, pin in PINS:
                 assert await command('GPIO_GET ' + signal) == f'OK GPIO_GET {signal} 1'
                 assert await command('GPIO_GET ' + pin) == f'OK GPIO_GET {signal} 1'
@@ -59,7 +66,12 @@ async def main(args):
                     for value in [0, 1]:
                         assert await command(f'GPIO_SET {target} {value}') == '- READ ONLY'
             assert await command('PING') == 'OK PING'
-            print(f'Cycle {cycle+1}: HELP complete; four pins high; manual writes rejected', flush=True)
+            assert await command('GPIO_GET OE') == 'OK GPIO_GET OE 1'
+            assert await command('GPIO_SET OE 0') == 'OK GPIO_SET OE 0'
+            assert await command('GPIO_GET PA9') == 'OK GPIO_GET OE 0'
+            assert await command('GPIO_SET PA9 1') == 'OK GPIO_SET OE 1'
+            assert await command('GPIO_GET OE') == 'OK GPIO_GET OE 1'
+            print(f'Cycle {cycle+1}: HELP complete; power pins high/read-only; OE enabled and diagnostic control verified', flush=True)
             await client.stop_notify(TX)
             client._backend._session.maintain_connection = False
         del client

@@ -9,6 +9,11 @@
 #include "main.h"
 #include "app_freertos.h"
 
+/* One priority-inheriting mutex protects PCA9685, IMU, TOF and probes.
+ * Each call owns the bus until the entire buffer completes (or is aborted).
+ * A grouped servo update is one 64-byte call; never split it per channel or
+ * acquire this non-recursive mutex around a call to these wrappers. */
+
 /**
  * @brief Perform a mutex-protected I2C memory write and wait for completion.
  * @param hi2c Target HAL I2C peripheral handle.

@@ -26,14 +26,14 @@ The Git firmware uses the following mapping in `BleServoController.ioc`,
 | PB4 | EN2 | GPIO output, push-pull | 0 |
 | PB5 | EN1 | GPIO output, push-pull | 0 |
 | PB8 | SPI_MOSI | SPI3 MOSI, AF6 | GC9A01 startup drawing |
-| PB9 | ADC2 / CURRENT_SENSE2 | ADC4 channel 10, analog, no pull | On-demand sampling |
+| PB9 | ADC2 / CURRENT_SENSE2 | ADC4 channel 10, analog, no pull | Continuous DMA, 1 ksample/s |
 | PB11 | DISPLAY_DC | GPIO output, push-pull | 0 |
 | PC13 | INT_TOF | EXTI13, falling edge, pull-up | Input; edge count starts at zero |
 | PA0 | SPI_SCK | SPI3 SCK, AF6 | GC9A01 startup drawing |
 | PA2 | DISPLAY_RES (actual RST) | GPIO output, push-pull | Initially 0, then 1 after display reset |
-| PA3 | ADC1 / CURRENT_SENSE1 | ADC4 channel 6, analog, no pull | On-demand sampling |
+| PA3 | ADC1 / CURRENT_SENSE1 | ADC4 channel 6, analog, no pull | Continuous DMA, 1 ksample/s |
 | PA4 | DISPLAY_CS | GPIO output, push-pull | 1 (deselected) |
-| PA5 | ADC_BAT | ADC4 channel 4, analog, no pull | On-demand sampling |
+| PA5 | ADC_BAT | ADC4 channel 4, analog, no pull | Continuous DMA, 1 ksample/s |
 | PA9 | OE | GPIO output, push-pull | 0 (PCA9685 outputs disabled through Q6) |
 | PA11 | DIAG_EN2 | GPIO output, push-pull | 0 |
 | PA10 | DIAG_EN1 | GPIO output, push-pull | 0 |
@@ -72,9 +72,34 @@ PCA diagnostic retains its fixed neutral pulse on PWM_CH1.
 while a BLE client subscribes to the distance map, and stops after unsubscribe
 or disconnect. Set it to `1` to disable that device's task and transport.
 The old VL53L5CX driver is excluded from the Debug build. See `VL53L8CX_MIGRATION.md`.
-Manual GPIO test commands do not start either driver. GPIO writes are direct
-electrical controls: `OE 1` enables PWM outputs through Q6, and EN writes can change the
-power paths. A reset restores the startup levels above.
+Manual GPIO test commands do not start either driver. EN1/EN2 and DIAG_EN1/2
+are read-only through GPIO_SET; the BLE connection owns them.
+`GPIO_SET OE 1` enables PWM through Q6 only while BLE is connected and the PCA
+has initialized successfully. Otherwise it returns READ ONLY. `OE 0` disables
+PWM for diagnostics. A fresh connection restores the normal PWM request.
+
+## Motor power and PWM follow the BLE link
+
+Startup keeps EN1/EN2, DIAG_EN1/2 and OE low. A successful BLE connection sets
+the MPQ control pins high, then permits PWM if the PCA is ready. Disconnect
+clears OE first, then EN and DIAG_EN, with no I2C wait. A late PCA initialization,
+retry or queued manual OE write cannot override the disconnected state.
+Normal and diagnostic PCA initialization both use the same gate. A normal PWM
+write failure also disables OE until the PCA initializes successfully again.
+
+The local hardware `Servo supply.SchDoc` (both Rev00 and Rev01) shows R6=10k
+between Vin and Vout for off-state open-load diagnostics. If populated, it
+allows an unloaded high-impedance meter to read nearly Vin even with EN low.
+At 5V the resistor path supplies at most about 0.5mA; it is not motor power.
+GPIO readback verifies the MCU control state, not the MPQ output voltage.
+Verify switching with an appropriate load and measure EN at the physical MPQ.
+
+Validation (2026-11-05): built and flashed with CubeProgrammer verify.
+`tools/check_mpq_ble.py` passed startup OFF and two connect/disconnect cycles:
+BLE reads EN1/2, DIAG_EN1/2 and OE high while connected; SWD reads both GPIO IDR
+and ODR low for all five pins after disconnect. Manual OE 0/1 works only within
+the gate; MPQ pin writes remain rejected. This does not measure Vout or confirm
+physical motor movement. The user's 5V observation was at an unloaded connector.
 
 ## SPI and ADC
 
@@ -87,12 +112,13 @@ pause that worker under a shared mutex before changing the pin. Reads do not
 pause animation and may observe control levels during SPI transfers.
 See [the display driver](STM32CubeIDE/Application/User/Core/display/README.md).
 
-ADC4 uses 12-bit right-aligned, single software-triggered conversions, HCLK / 8,
-and 814.5-cycle acquisition time. Startup performs ADC calibration. Each command
-selects one input, discards one settling sample, and returns the next sample.
-No ADC DMA or periodic acquisition is started. `commTask` serializes diagnostic
-calls; future ADC clients must share an owner or mutex. Radio temperature-based
-calibration is disabled; enabling it requires integration with ST's ADC arbiter.
+ADC4 uses 12-bit right-aligned, TIM2-triggered scans at 1 kHz, HCLK / 8 and
+814.5-cycle acquisition time. Startup performs ADC calibration. Circular DMA
+captures paired samples of each input, discarding the first after mux switching.
+`ADC_READ` returns the latest individual DMA sample without changing the ADC.
+The BLE ADC service sends amplitude-weighted window means; see `ADC_RAW.md`.
+Radio temperature calibration remains disabled; enabling it requires integration
+with ST's ADC arbiter.
 
 ADC results are raw `0..4095` codes. They are not battery volts or amperes:
 those need the board's VDDA/reference, battery divider and FT/CS scaling. The

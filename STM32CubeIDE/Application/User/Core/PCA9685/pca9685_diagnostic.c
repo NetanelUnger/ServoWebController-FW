@@ -4,6 +4,7 @@
 #include "pca9685_diagnostic.h"
 #include "app_freertos.h"
 #include "config.h"
+#include "../board_io.h"
 #include <string.h>
 
 /* SWD-readable report, all fields are 32-bit words; no debugger function calls.
@@ -74,8 +75,8 @@ static int verified_write(uint8_t reg, uint8_t value)
 void PCA9685_DiagnosticInit(void)
 {
     if (!ENABLE_PCA9685_DIAGNOSTIC) return;
-    HAL_GPIO_WritePin(OE_GPIO_Port, OE_Pin, GPIO_PIN_RESET);
-    osMutexAcquire(i2cMutexHandle, osWaitForever);
+    BoardIO_SetPwmReady(0U);
+    if (osMutexAcquire(i2cMutexHandle, osWaitForever) != osOK) return;
     g_pca_diagnostic.stage = 1;
     g_pca_diagnostic.scl = HAL_GPIO_ReadPin(GPIOA, GPIO_PIN_6);
     g_pca_diagnostic.sda = HAL_GPIO_ReadPin(GPIOA, GPIO_PIN_7);
@@ -109,7 +110,7 @@ void PCA9685_DiagnosticInit(void)
     /* Q6 inverts MCU PA9: high at MCU enables active-low OE at PCA.
      * PWM_CH1 / LED0 only: nominal 1500 us at 50 Hz, no automatic sweep. */
     if (!verified_write(8, 0x33) || !verified_write(9, 0x01)) goto done;
-    HAL_GPIO_WritePin(OE_GPIO_Port, OE_Pin, GPIO_PIN_SET);
+    BoardIO_SetPwmReady(1U);
     active = 1;
     g_pca_diagnostic.stage = 4;
 done:
@@ -118,12 +119,12 @@ done:
 void PCA9685_DiagnosticStep(void)
 {
     if (!active) return;
-    osMutexAcquire(i2cMutexHandle, osWaitForever);
+    if (osMutexAcquire(i2cMutexHandle, osWaitForever) != osOK) return;
     uint8_t low, high;
     if (read_reg(8, &low) != HAL_OK || read_reg(9, &high) != HAL_OK || low != 0x33 || high != 1) {
         active = 0;
         g_pca_diagnostic.stage = 3;
-        HAL_GPIO_WritePin(OE_GPIO_Port, OE_Pin, GPIO_PIN_RESET);
+        BoardIO_SetPwmReady(0U);
     }
     ++g_pca_diagnostic.cycles;
     osMutexRelease(i2cMutexHandle);

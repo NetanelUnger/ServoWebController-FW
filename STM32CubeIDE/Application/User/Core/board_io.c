@@ -1,5 +1,6 @@
 #include "board_io.h"
 #include "app_conf.h"
+#include "adc_dma.h"
 #include "display/display.h"
 #include <string.h>
 
@@ -32,20 +33,51 @@ static const DigitalPin digital_pins[] = {
 };
 
 static volatile uint32_t tof_interrupt_count;
+static uint8_t power_connected;
+static uint8_t pwm_ready;
+static uint8_t pwm_requested = 1U;
+
+/* Called with interrupts masked: a lower-priority init/diagnostic command must
+ * never re-enable PWM after the BLE disconnect handler has switched it off.
+ * Q6 inverts PA9; MCU low disables PCA outputs (MODE2 OUTNE=00 drives low). */
+static void apply_pwm_enable(void)
+{
+    HAL_GPIO_WritePin(OE_GPIO_Port, OE_Pin,
+        power_connected && pwm_ready && pwm_requested ? GPIO_PIN_SET : GPIO_PIN_RESET);
+}
+
+void BoardIO_SetPwmReady(uint8_t ready)
+{
+    uint32_t saved_primask = __get_PRIMASK();
+    __disable_irq();
+    pwm_ready = ready != 0U;
+    apply_pwm_enable();
+    __set_PRIMASK(saved_primask);
+}
 
 void BoardIO_SetPowerConnected(uint8_t connected)
 {
+    uint32_t saved_primask = __get_PRIMASK();
+    __disable_irq();
     if (connected) {
+        if (!power_connected) pwm_requested = 1U;
+        power_connected = 1U;
         HAL_GPIO_WritePin(DIAG_EN1_GPIO_Port, DIAG_EN1_Pin, GPIO_PIN_SET);
         HAL_GPIO_WritePin(DIAG_EN2_GPIO_Port, DIAG_EN2_Pin, GPIO_PIN_SET);
         HAL_GPIO_WritePin(EN1_GPIO_Port, EN1_Pin, GPIO_PIN_SET);
         HAL_GPIO_WritePin(EN2_GPIO_Port, EN2_Pin, GPIO_PIN_SET);
+        apply_pwm_enable();
     } else {
+        power_connected = 0U;
+        /* Remove servo signals before removing their supply to avoid feeding
+         * unpowered servos through the PWM input. No I2C transaction is needed. */
+        apply_pwm_enable();
         HAL_GPIO_WritePin(EN1_GPIO_Port, EN1_Pin, GPIO_PIN_RESET);
         HAL_GPIO_WritePin(EN2_GPIO_Port, EN2_Pin, GPIO_PIN_RESET);
         HAL_GPIO_WritePin(DIAG_EN1_GPIO_Port, DIAG_EN1_Pin, GPIO_PIN_RESET);
         HAL_GPIO_WritePin(DIAG_EN2_GPIO_Port, DIAG_EN2_Pin, GPIO_PIN_RESET);
     }
+    __set_PRIMASK(saved_primask);
 }
 
 static const DigitalPin *find_digital_pin(const char *name)
@@ -74,6 +106,18 @@ BoardIO_Status BoardIO_WriteGPIO(const char *name, uint8_t level, const char **c
     if (!pin->writable) return BOARD_IO_READ_ONLY;
     *canonical = pin->name;
     GPIO_PinState state = level ? GPIO_PIN_SET : GPIO_PIN_RESET;
+    if (pin->port == OE_GPIO_Port && pin->pin == OE_Pin) {
+        uint32_t saved_primask = __get_PRIMASK();
+        __disable_irq();
+        if (level && (!power_connected || !pwm_ready)) {
+            __set_PRIMASK(saved_primask);
+            return BOARD_IO_READ_ONLY;
+        }
+        pwm_requested = level != 0U;
+        apply_pwm_enable();
+        __set_PRIMASK(saved_primask);
+        return BOARD_IO_OK;
+    }
     if ((pin->port == DISPLAY_CS_GPIO_Port && pin->pin == DISPLAY_CS_Pin)
         || (pin->port == DISPLAY_DC_GPIO_Port && pin->pin == DISPLAY_DC_Pin)
         || (pin->port == DISPLAY_RES_GPIO_Port && pin->pin == DISPLAY_RES_Pin)) {
@@ -88,34 +132,16 @@ BoardIO_Status BoardIO_WriteGPIO(const char *name, uint8_t level, const char **c
 
 BoardIO_Status BoardIO_ReadADC(const char *name, const char **canonical, uint16_t *raw)
 {
-    static const struct { const char *name; const char *pin; uint32_t channel; } inputs[] = {
-        {"ADC1", "PA3", ADC_CHANNEL_6},
-        {"ADC2", "PB9", ADC_CHANNEL_10},
-        {"ADC_BAT", "PA5", ADC_CHANNEL_4},
+    static const struct { const char *name; const char *pin; } inputs[] = {
+        {"ADC_BAT", "PA5"}, {"ADC1", "PA3"}, {"ADC2", "PB9"},
     };
-    ADC_ChannelConfTypeDef config = {0};
     size_t i;
     for (i = 0; i < sizeof(inputs) / sizeof(inputs[0]); ++i) {
         if (!strcmp(name, inputs[i].name) || !strcmp(name, inputs[i].pin)) break;
     }
     if (i == sizeof(inputs) / sizeof(inputs[0])) return BOARD_IO_UNKNOWN_PIN;
     *canonical = inputs[i].name;
-    config.Channel = inputs[i].channel;
-    config.Rank = ADC_REGULAR_RANK_1;
-    config.SamplingTime = ADC_SAMPLINGTIME_COMMON_1;
-    if (HAL_ADC_ConfigChannel(&hadc4, &config) != HAL_OK) return BOARD_IO_ADC_ERROR;
-
-    /* Discard the first conversion after selecting the input; sample again
-     * with the long acquisition time for the battery/current-sense networks. */
-    for (unsigned sample = 0; sample < 2; ++sample) {
-        if (HAL_ADC_Start(&hadc4) != HAL_OK || HAL_ADC_PollForConversion(&hadc4, 5U) != HAL_OK) {
-            (void)HAL_ADC_Stop(&hadc4);
-            return BOARD_IO_ADC_ERROR;
-        }
-        *raw = (uint16_t)HAL_ADC_GetValue(&hadc4);
-        if (HAL_ADC_Stop(&hadc4) != HAL_OK) return BOARD_IO_ADC_ERROR;
-    }
-    return BOARD_IO_OK;
+    return ADC_DMA_Read(i, raw) ? BOARD_IO_OK : BOARD_IO_ADC_ERROR;
 }
 
 /* ISR: count edges only. Sensor work remains in its task. */

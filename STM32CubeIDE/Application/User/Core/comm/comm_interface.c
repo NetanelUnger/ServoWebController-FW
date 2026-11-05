@@ -11,6 +11,7 @@
 
 #include "comm_interface.h"
 #include "board_io.h"
+#include "PCA9685/pca9685.h"
 #ifdef ENABLE_VL53L8CX
 #include "VL53L8CX/vl53l8cx_task.h"
 #endif
@@ -28,9 +29,12 @@ static const char comm_help_text[] =
     "OK HELP\n"
     COMM_CMD_HELP "\n"
     COMM_CMD_PING "\n"
+    COMM_CMD_DEMO1 "\n"
+    COMM_CMD_STOP "\n"
     COMM_CMD_GPIO_GET " <pin>\n"
     COMM_CMD_GPIO_SET " <pin> <0|1>\n"
     COMM_CMD_ADC_READ " <pin>\n"
+    COMM_CMD_PWM_GET " <ch>\n"
     COMM_CMD_PCA9685_SET_SERVO_US " <ch> <us>\n"
     COMM_CMD_SERVO_START_MOVE "\n <ch> <us> <ms>\n"
     COMM_CMD_TOF_SET_MIN_MAX "\n <min_mm> <max_mm>\n"
@@ -522,6 +526,32 @@ packetSize_t parser_ProcessOne(uint8_t *payload, packetSize_t req_len, uint8_t *
         return comm_WriteResponseText(res_payload, comm_help_text);
     }
 
+    if (comm_CommandMatches(command, COMM_CMD_STOP, "stop")) {
+        if (*args != '\0') return comm_WriteResponseText(res_payload, "- BAD ARGUMENTS");
+        servo_Stop();
+        return comm_WriteOkEchoNoArgs(res_payload, COMM_CMD_STOP);
+    }
+    if (comm_CommandMatches(command, COMM_CMD_DEMO1, "demo1")) {
+        if (*args != '\0') return comm_WriteResponseText(res_payload, "- BAD ARGUMENTS");
+#if DISABLE_I2C_PCA9685
+        return comm_WriteResponseText(res_payload, "- PCA9685 DISABLED");
+#endif
+        if (servo_StartDemo1() != HAL_OK)
+            return comm_WriteResponseText(res_payload, "- DEMO1 NOT READY");
+        return comm_WriteOkEchoNoArgs(res_payload, COMM_CMD_DEMO1);
+    }
+
+    if (!strcmp(command, COMM_CMD_PWM_GET)) {
+        uint32_t ch;
+        uint16_t on, off;
+        if (!comm_ParseUint(&args, 15, &ch) || *comm_SkipSeparators(args) != '\0')
+            return comm_WriteResponseText(res_payload, "- BAD ARGUMENTS");
+        if (pca9685_ReadPwm((uint8_t)ch, &on, &off) != HAL_OK)
+            return comm_WriteResponseText(res_payload, "- PCA READ ERROR");
+        return (packetSize_t)snprintf((char *)res_payload, COMM_TEXT_RESPONSE_MAX_LEN,
+            "OK PWM_GET %lu %u %u", (unsigned long)ch, on, off);
+    }
+
     if (!strcmp(command, COMM_CMD_GPIO_GET) || !strcmp(command, COMM_CMD_GPIO_SET)
         || !strcmp(command, COMM_CMD_ADC_READ)) {
         return comm_BoardCommand(command, args, res_payload);
@@ -547,7 +577,9 @@ packetSize_t parser_ProcessOne(uint8_t *payload, packetSize_t req_len, uint8_t *
             return comm_WriteResponseText(res_payload, "- BAD ARGUMENTS");
         }
 
-        if (servo_SetServoImmediateValue(channel, value) != HAL_OK)
+        HAL_StatusTypeDef status = servo_SetServoImmediateValue(channel, value);
+        if (status == HAL_BUSY) return comm_WriteResponseText(res_payload, "- DEMO1 ACTIVE: STOP");
+        if (status != HAL_OK)
         {
             return comm_WriteResponseText(res_payload, "- BAD ARGUMENTS");
         }
@@ -567,7 +599,9 @@ packetSize_t parser_ProcessOne(uint8_t *payload, packetSize_t req_len, uint8_t *
             return comm_WriteResponseText(res_payload, "- BAD ARGUMENTS");
         }
 
-        if (servo_StartTimedMove(channel, value, duration_ms) != HAL_OK)
+        HAL_StatusTypeDef status = servo_StartTimedMove(channel, value, duration_ms);
+        if (status == HAL_BUSY) return comm_WriteResponseText(res_payload, "- DEMO1 ACTIVE: STOP");
+        if (status != HAL_OK)
         {
             return comm_WriteResponseText(res_payload, "- BAD ARGUMENTS");
         }
@@ -624,14 +658,13 @@ void comm_Task(void)
 
     if (event_stat != osErrorTimeout)
     {
-        if ((event_stat & COMM_NUS_TX_EVENT) == COMM_NUS_TX_EVENT)
-        {
-            comm_ProcessTxQueue();
-        }
-
         if ((event_stat & COMM_NUS_RX_EVENT) == COMM_NUS_RX_EVENT)
         {
             comm_ProcessRxQueue();
+        }
+        if ((event_stat & COMM_NUS_TX_EVENT) == COMM_NUS_TX_EVENT)
+        {
+            comm_ProcessTxQueue();
         }
     }
 }

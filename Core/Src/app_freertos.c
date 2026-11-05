@@ -36,6 +36,9 @@
 #include "comm/comm_interface.h"
 #include "display/display.h"
 #include "PCA9685/pca9685_diagnostic.h"
+#include "IMU/imu.h"
+#include "adc_ble.h"
+#include "adc_dma.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -120,7 +123,7 @@ const osThreadAttr_t commTask_attributes = {
   .stack_size = sizeof(commTaskBuffer),
   .cb_mem = &commTaskBlock,
   .cb_size = sizeof(commTaskBlock),
-  .priority = (osPriority_t) osPriorityHigh,
+  .priority = (osPriority_t) osPriorityHigh1,
 };
 /* Definitions for servoTask */
 osThreadId_t servoTaskHandle;
@@ -132,13 +135,14 @@ const osThreadAttr_t servoTask_attributes = {
   .stack_size = sizeof(servoTaskBuffer),
   .cb_mem = &servoTaskBlock,
   .cb_size = sizeof(servoTaskBlock),
-  .priority = (osPriority_t) osPriorityAboveNormal,
+  .priority = (osPriority_t) osPriorityHigh2,
 };
 /* Definitions for i2cMutex */
 osMutexId_t i2cMutexHandle;
 osStaticMutexDef_t i2cMutexControlBlock;
 const osMutexAttr_t i2cMutex_attributes = {
   .name = "i2cMutex",
+  .attr_bits = osMutexPrioInherit,
   .cb_mem = &i2cMutexControlBlock,
   .cb_size = sizeof(i2cMutexControlBlock),
 };
@@ -274,6 +278,7 @@ void MX_FREERTOS_Init(void) {
   i2cMutexHandle = osMutexNew(&i2cMutex_attributes);
 
   /* USER CODE BEGIN RTOS_MUTEX */
+  if (i2cMutexHandle == NULL) Error_Handler();
 #if ENABLE_DISPLAY
   displayMutexHandle = osMutexNew(&displayMutex_attributes);
   if (displayMutexHandle == NULL) Error_Handler();
@@ -350,9 +355,12 @@ void StartDefaultTask(void *argument)
 {
   /* USER CODE BEGIN defaultTask */
     PCA9685_DiagnosticInit();
+    ADC_DMA_Init();
 	for(;;)
 	{
-		osDelay(THREAD_WAIT_TIMEOUT_TICKS);
+        osDelay(pdMS_TO_TICKS(20));
+        IMU_Step();
+        ADC_BLE_Step(); /* Telemetry is below motor commands and PWM updates. */
         PCA9685_DiagnosticStep();
 
 		WatchdogFlagClear(WATCHDOG_FLAG_DEFAULT);

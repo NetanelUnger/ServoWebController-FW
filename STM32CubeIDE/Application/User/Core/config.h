@@ -39,6 +39,12 @@
  *  I2C3 stays configured; disabled devices issue no bus transfers.
  *  Build flags may override these defaults.
  *  @{ */
+#ifndef DISABLE_I2C_IMU
+#define DISABLE_I2C_IMU 0
+#endif
+#if DISABLE_I2C_IMU != 0 && DISABLE_I2C_IMU != 1
+#error "DISABLE_I2C_IMU must be 0 or 1"
+#endif
 #ifndef DISABLE_I2C_PCA9685
 #define DISABLE_I2C_PCA9685 0
 #endif

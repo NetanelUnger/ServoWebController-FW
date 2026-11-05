@@ -51,6 +51,13 @@ extern "C" {
 #define TASK_PRIO_PKACTRL                       osPriorityNormal
 
 /* USER CODE BEGIN TASK_Priority_Define */
+/* Dispatch incoming motor writes promptly; keep the radio link layer above all. */
+#undef TASK_PRIO_BLE_HOST
+#undef TASK_PRIO_HCI_ASYNC_EVENT
+#undef TASK_PRIO_BLE_TIMER
+#define TASK_PRIO_BLE_HOST        osPriorityHigh3
+#define TASK_PRIO_HCI_ASYNC_EVENT osPriorityHigh3
+#define TASK_PRIO_BLE_TIMER       osPriorityHigh3
 
 /* USER CODE END TASK_Priority_Define */
 

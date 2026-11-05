@@ -36,6 +36,8 @@ extern HAL_StatusTypeDef pca9685_Init(void);
  * @return `HAL_OK` on success, otherwise `HAL_ERROR`.
  */
 extern HAL_StatusTypeDef pca9685_SetPwm(uint8_t channel, uint16_t on_tick, uint16_t off_tick);
+/* Raw register readback, including bit 12 FULL_ON/FULL_OFF. No writes. */
+HAL_StatusTypeDef pca9685_ReadPwm(uint8_t channel, uint16_t *on, uint16_t *off);
 
 /**
  * @brief Set one channel using a duty cycle expressed in hundredths of a percent.
@@ -54,5 +56,8 @@ extern HAL_StatusTypeDef pca9685_SetDutyCycleX100(uint8_t channel, uint16_t duty
  * @return `HAL_OK` on success, otherwise `HAL_ERROR`.
  */
 extern HAL_StatusTypeDef pca9685_SetServoPulseUs(uint8_t channel, uint16_t pulse_us, uint16_t *off_tick);
+
+/** Write LED0..LED15 in one auto-increment transaction; all latch at I2C STOP. */
+extern HAL_StatusTypeDef pca9685_SetServoPulseFrame(const uint16_t pulse_us[PCA9685_CHANNEL_COUNT]);
 
 #endif /* APPLICATION_USER_CORE_PCA9685_PCA9685_H_ */

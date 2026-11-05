@@ -6,6 +6,7 @@
 #include "pca9685.h"
 #include "config.h"
 #include "main.h"
+#include "../board_io.h"
 #include "../i2c_os/i2c_os.h"
 
 #define PCA9685_I2C_DEFAULT_ADDR_8BIT ((uint16_t)(PCA9685_I2C_7BIT_ADDR << 1))
@@ -23,6 +24,7 @@
 #define PCA9685_MODE1_RESTART 0x80U
 
 #define PCA9685_MODE2_OUTDRV 0x04U
+#define PCA9685_MODE2_OCH 0x08U
 
 #define PCA9685_OSC_HZ 25000000UL
 #define PCA9685_PWM_STEPS 4096UL
@@ -219,6 +221,8 @@ static HAL_StatusTypeDef pca9685_setPwmFrequencyHz(uint16_t freq_hz)
 
 HAL_StatusTypeDef pca9685_Init(void)
 {
+    /* Q6 inverts PA9. Init/retry cannot bypass the BLE-controlled PWM gate. */
+    BoardIO_SetPwmReady(0U);
 #if DISABLE_I2C_PCA9685
     return HAL_ERROR; /* No probing, register access or PWM output. */
 #endif
@@ -226,10 +230,6 @@ HAL_StatusTypeDef pca9685_Init(void)
     uint8_t mode1_readback;
     uint8_t mode2_readback;
     uint8_t led0_regs[4];
-
-    /* Q6 inverts PA9: low disables the PCA's active-low OE input.
-     * Keep outputs disabled until all initialization/readback checks pass. */
-    HAL_GPIO_WritePin(OE_GPIO_Port, OE_Pin, GPIO_PIN_RESET);
 
     /* Find the active PCA9685 I2C address before configuring the chip. */
     if (pca9685_findAddress() != HAL_OK)
@@ -258,7 +258,8 @@ HAL_StatusTypeDef pca9685_Init(void)
     {
         return HAL_ERROR;
     }
-    if ((mode2_readback & PCA9685_MODE2_OUTDRV) == 0U)
+    /* OCH=0 latches all PWM bytes together at the transaction STOP. */
+    if ((mode2_readback & (PCA9685_MODE2_OUTDRV | PCA9685_MODE2_OCH)) != PCA9685_MODE2_OUTDRV)
     {
         return HAL_ERROR;
     }
@@ -296,8 +297,8 @@ HAL_StatusTypeDef pca9685_Init(void)
         }
     }
 
-    /* Normal operation must enable outputs itself; diagnostic mode is optional. */
-    HAL_GPIO_WritePin(OE_GPIO_Port, OE_Pin, GPIO_PIN_SET);
+    /* BLE state owns OE. Finishing init while disconnected keeps PWM off. */
+    BoardIO_SetPwmReady(1U);
     return HAL_OK;
 }
 
@@ -348,16 +349,23 @@ HAL_StatusTypeDef pca9685_SetDutyCycleX100(uint8_t channel, uint16_t duty_x100, 
     return HAL_OK;
 }
 
-HAL_StatusTypeDef pca9685_SetServoPulseUs(uint8_t channel, uint16_t pulse_us, uint16_t *off_tick)
+HAL_StatusTypeDef pca9685_ReadPwm(uint8_t channel, uint16_t *on, uint16_t *off)
+{
+#if DISABLE_I2C_PCA9685
+    return HAL_ERROR;
+#endif
+    uint8_t data[4];
+    if (channel >= PCA9685_CHANNEL_COUNT || !on || !off) return HAL_ERROR;
+    if (pca9685_readRegs(PCA9685_REG_LED0_ON_L + 4U * channel, data, 4) != HAL_OK) return HAL_ERROR;
+    *on = data[0] | ((uint16_t)data[1] << 8);
+    *off = data[2] | ((uint16_t)data[3] << 8);
+    return HAL_OK;
+}
+
+static uint16_t pca9685_PulseToTicks(uint16_t pulse_us)
 {
     uint16_t pulse_limited;
     uint32_t off_calc;
-    uint16_t off;
-
-    if (channel >= PCA9685_CHANNEL_COUNT)
-    {
-        return HAL_ERROR;
-    }
 
     pulse_limited = pulse_us;
     if (pulse_limited < PCA9685_SERVO_MIN_PULSE_US)
@@ -374,7 +382,34 @@ HAL_StatusTypeDef pca9685_SetServoPulseUs(uint8_t channel, uint16_t pulse_us, ui
     {
         off_calc = 4095UL;
     }
-    off = (uint16_t)off_calc;
+    return (uint16_t)off_calc;
+}
+
+HAL_StatusTypeDef pca9685_SetServoPulseFrame(const uint16_t pulse_us[PCA9685_CHANNEL_COUNT])
+{
+#if DISABLE_I2C_PCA9685
+    return HAL_ERROR;
+#endif
+    uint8_t payload[PCA9685_CHANNEL_COUNT * 4U];
+    if (pulse_us == NULL) return HAL_ERROR;
+    for (uint8_t channel = 0U; channel < PCA9685_CHANNEL_COUNT; channel++) {
+        uint16_t off = pca9685_PulseToTicks(pulse_us[channel]);
+        payload[4U * channel] = 0U;
+        payload[4U * channel + 1U] = 0U;
+        payload[4U * channel + 2U] = LO_UINT16(off);
+        payload[4U * channel + 3U] = HI_UINT16(off);
+    }
+    /* MODE1.AI=1, MODE2.OCH=0: one mutex acquisition and one STOP for all
+     * channels; sensors cannot interleave between individual servo updates. */
+    return i2c_writeOS(&PCA9685_I2C_HANDLE, pca9685_i2c_addr_8bit,
+                      PCA9685_REG_LED0_ON_L, I2C_MEMADD_SIZE_8BIT,
+                      payload, (uint16_t)sizeof(payload));
+}
+
+HAL_StatusTypeDef pca9685_SetServoPulseUs(uint8_t channel, uint16_t pulse_us, uint16_t *off_tick)
+{
+    if (channel >= PCA9685_CHANNEL_COUNT) return HAL_ERROR;
+    uint16_t off = pca9685_PulseToTicks(pulse_us);
 
     if (pca9685_SetPwm(channel, 0U, off) != HAL_OK)
     {

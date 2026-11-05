@@ -196,6 +196,7 @@ void NUS_APP_EvtRx(NUS_APP_ConnHandleNotEvt_t *p_Notification)
     /* USER CODE END Service2_APP_EvtRx_Service2_EvtOpcode */
     case NUS_CONN_HANDLE_EVT :
       /* USER CODE BEGIN Service2_APP_CONN_HANDLE_EVT */
+        servo_SetBleConnected(1U);
         BoardIO_SetPowerConnected(1U);
 		NUS_APP_Context.ConnectionHandle = p_Notification->ConnectionHandle;
 		NUS_APP_Context.Tx_Notification_Status = Tx_NOTIFICATION_OFF;
@@ -208,6 +209,7 @@ void NUS_APP_EvtRx(NUS_APP_ConnHandleNotEvt_t *p_Notification)
       /* USER CODE BEGIN Service2_APP_DISCON_HANDLE_EVT */
         if (p_Notification->ConnectionHandle != NUS_APP_Context.ConnectionHandle) break;
         BoardIO_SetPowerConnected(0U);
+        servo_SetBleConnected(0U);
 		NUS_APP_Context.ConnectionHandle = NUS_APP_INVALID_CONN_HANDLE;
     	NUS_APP_Context.Tx_Indication_Status = Tx_INDICATION_OFF;
     	NUS_APP_Context.Tx_Notification_Status = Tx_NOTIFICATION_OFF;
@@ -232,6 +234,7 @@ void NUS_APP_EvtRx(NUS_APP_ConnHandleNotEvt_t *p_Notification)
 void NUS_APP_Init(void)
 {
   BoardIO_SetPowerConnected(0U);
+  servo_SetBleConnected(0U);
   UNUSED(NUS_APP_Context);
   NUS_APP_Context.ConnectionHandle = NUS_APP_INVALID_CONN_HANDLE;
   NUS_APP_Context.Tx_Notification_Status = Tx_NOTIFICATION_OFF;

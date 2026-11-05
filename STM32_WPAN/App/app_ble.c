@@ -43,6 +43,8 @@
 #include "nus_app.h"
 #include "tof.h"
 #include "tof_app.h"
+#include "IMU/imu.h"
+#include "adc_ble.h"
 #include "dis.h"
 #include "dis_app.h"
 /* Private includes ----------------------------------------------------------*/
@@ -425,11 +427,13 @@ void APP_BLE_Init(void)
     OTA_APP_Init();
     NUS_APP_Init();
     TOF_APP_Init();
+    IMU_BLE_Init();
     DIS_APP_Init();
     LOG_INFO_APP("End of Services and Characteristics creation\n");
     LOG_INFO_APP("\n");
 
     /* USER CODE BEGIN APP_BLE_Init_3 */
+    ADC_BLE_Init();
     BLE_InitAdvData();
     APP_BLE_Procedure_Gap_Peripheral(PROC_GAP_PERIPH_ADVERTISE_START_FAST);
     BLE_InitAdvData();
@@ -603,6 +607,7 @@ SVCCTL_UserEvtFlowStatus_t SVCCTL_App_Notification(void *p_Pckt)
       gap_cmd_resp_release();
 
       /* USER CODE BEGIN EVT_DISCONN_COMPLETE_1 */
+      ADC_BLE_Disconnected(p_disconnection_complete_event->Connection_Handle);
 
       /* USER CODE END EVT_DISCONN_COMPLETE_1 */
       OTAHandleNotification.EvtOpcode = OTA_DISCON_HANDLE_EVT;
@@ -616,6 +621,7 @@ SVCCTL_UserEvtFlowStatus_t SVCCTL_App_Notification(void *p_Pckt)
       OTA_APP_EvtRx(&OTAHandleNotification);
       NUS_APP_EvtRx(&NUSHandleNotification);
       TOF_APP_EvtRx(&TOFHandleNotification);
+      IMU_BLE_Disconnected(p_disconnection_complete_event->Connection_Handle);
       DIS_APP_EvtRx(&DISHandleNotification);
       /* USER CODE BEGIN EVT_DISCONN_COMPLETE */
       APP_BLE_Procedure_Gap_Peripheral(PROC_GAP_PERIPH_ADVERTISE_START_FAST);

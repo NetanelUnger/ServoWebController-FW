@@ -435,5 +435,9 @@ void HASH_IRQHandler(void)
 }
 
 /* USER CODE BEGIN 1 */
+void ADC4_IRQHandler(void)
+{
+  HAL_ADC_IRQHandler(&hadc4);
+}
 
 /* USER CODE END 1 */

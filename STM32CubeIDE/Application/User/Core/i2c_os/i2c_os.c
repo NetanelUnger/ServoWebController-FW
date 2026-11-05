@@ -9,12 +9,64 @@
 #define I2C_OS_TIMEOUT_BASE_MS          20U
 #define I2C_OS_TIMEOUT_PER_BYTE_US     200U
 #define I2C_OS_TIMEOUT_MAX_MS        10000U
+#define I2C_OS_ABORT_TIMEOUT_MS         20U
 
 /** @brief Set while an interrupt-driven I2C transfer started by this module is still running. */
 static volatile uint8_t _i2c_busy = 0U;
 
 /** @brief Completion status reported by the most recent I2C interrupt callback. */
 static volatile HAL_StatusTypeDef _i2c_status = HAL_OK;
+static I2C_HandleTypeDef * volatile _i2c_active = NULL;
+
+static uint32_t i2c_os_TimeoutTicks(uint32_t milliseconds)
+{
+	return (uint32_t)(((uint64_t)milliseconds * osKernelGetTickFreq() + 999U) / 1000U);
+}
+
+/* Caller owns i2cMutexHandle. Never return a live transfer/buffer to another
+ * task, even on timeout. Try a STOP first; reset the peripheral if it is stuck. */
+static void i2c_os_AbortLocked(I2C_HandleTypeDef *hi2c, uint16_t address)
+{
+	uint32_t start = osKernelGetTickCount();
+	uint32_t timeout = i2c_os_TimeoutTicks(I2C_OS_ABORT_TIMEOUT_MS);
+	if (_i2c_busy && HAL_I2C_Master_Abort_IT(hi2c, address) == HAL_OK) {
+		while (_i2c_busy && (uint32_t)(osKernelGetTickCount() - start) < timeout)
+			osDelay(1U);
+	}
+	if (_i2c_busy || HAL_I2C_GetState(hi2c) != HAL_I2C_STATE_READY) {
+		uint32_t analog = hi2c->Instance->CR1 & I2C_CR1_ANFOFF;
+		uint32_t digital = (hi2c->Instance->CR1 & I2C_CR1_DNF) >> I2C_CR1_DNF_Pos;
+		uint32_t irq_mask = __get_PRIMASK();
+		__disable_irq();
+		__HAL_I2C_DISABLE_IT(hi2c, I2C_IT_TXI | I2C_IT_RXI | I2C_IT_ADDRI |
+		                    I2C_IT_NACKI | I2C_IT_STOPI | I2C_IT_TCI | I2C_IT_ERRI);
+		__HAL_I2C_DISABLE(hi2c);
+		hi2c->XferISR = NULL;
+		hi2c->pBuffPtr = NULL;
+		hi2c->XferCount = 0U;
+		__set_PRIMASK(irq_mask);
+		/* MSP deinit/init also disables/re-enables the peripheral IRQ lines. */
+		if (HAL_I2C_DeInit(hi2c) != HAL_OK || HAL_I2C_Init(hi2c) != HAL_OK ||
+		    HAL_I2CEx_ConfigAnalogFilter(hi2c, analog) != HAL_OK ||
+		    HAL_I2CEx_ConfigDigitalFilter(hi2c, digital) != HAL_OK)
+			Error_Handler();
+	}
+	_i2c_busy = 0U;
+}
+
+static HAL_StatusTypeDef i2c_os_WaitLocked(I2C_HandleTypeDef *hi2c,
+                                         uint16_t address, uint32_t timeout_ms)
+{
+	uint32_t start = osKernelGetTickCount();
+	uint32_t timeout = i2c_os_TimeoutTicks(timeout_ms);
+	while (_i2c_busy && (uint32_t)(osKernelGetTickCount() - start) < timeout)
+		osDelay(1U);
+	if (_i2c_busy) {
+		i2c_os_AbortLocked(hi2c, address);
+		_i2c_status = HAL_TIMEOUT;
+	}
+	return _i2c_status;
+}
 
 /**
  * @brief Compute a conservative timeout for an interrupt-driven memory transfer.
@@ -75,32 +127,20 @@ HAL_StatusTypeDef i2c_writeOS(I2C_HandleTypeDef *hi2c,
 	if (osMutexAcquire(i2cMutexHandle, osWaitForever) == osOK)
 	{
 		_i2c_status = HAL_BUSY;
+		_i2c_active = hi2c;
 		_i2c_busy = 1U;
 		if (HAL_I2C_Mem_Write_IT(hi2c, DevAddress, MemAddress, MemAddSize, pData, Size) != HAL_OK)
 		{
 			_i2c_status = HAL_ERROR;
 			_i2c_busy = 0U;
+			_i2c_active = NULL;
 			(void)osMutexRelease(i2cMutexHandle);
 
 			return HAL_ERROR;
 		}
 
-		while ((_i2c_busy == 1U) && (t_out > 0U))
-		{
-			osDelay(1U);
-			t_out -= 1U;
-		}
-
-		if (_i2c_busy == 1U)
-		{
-			_i2c_busy = 0U;
-			_i2c_status = HAL_TIMEOUT;
-			(void)osMutexRelease(i2cMutexHandle);
-
-			return HAL_TIMEOUT;
-		}
-
-		status = _i2c_status;
+		status = i2c_os_WaitLocked(hi2c, DevAddress, t_out);
+		_i2c_active = NULL;
 		(void)osMutexRelease(i2cMutexHandle);
 	}
 	else
@@ -141,32 +181,20 @@ HAL_StatusTypeDef i2c_readOS(I2C_HandleTypeDef *hi2c,
 	if (osMutexAcquire(i2cMutexHandle, osWaitForever) == osOK)
 	{
 		_i2c_status = HAL_BUSY;
+		_i2c_active = hi2c;
 		_i2c_busy = 1U;
 		if (HAL_I2C_Mem_Read_IT(hi2c, DevAddress, MemAddress, MemAddSize, pData, Size) != HAL_OK)
 		{
 			_i2c_status = HAL_ERROR;
 			_i2c_busy = 0U;
+			_i2c_active = NULL;
 			(void)osMutexRelease(i2cMutexHandle);
 
 			return HAL_ERROR;
 		}
 
-		while ((_i2c_busy == 1U) && (t_out > 0U))
-		{
-			osDelay(1U);
-			t_out -= 1U;
-		}
-
-		if (_i2c_busy == 1U)
-		{
-			_i2c_busy = 0U;
-			_i2c_status = HAL_TIMEOUT;
-			(void)osMutexRelease(i2cMutexHandle);
-
-			return HAL_TIMEOUT;
-		}
-
-		status = _i2c_status;
+		status = i2c_os_WaitLocked(hi2c, DevAddress, t_out);
+		_i2c_active = NULL;
 		(void)osMutexRelease(i2cMutexHandle);
 	}
 	else
@@ -206,9 +234,7 @@ HAL_StatusTypeDef i2c_isDeviceReadyOS(I2C_HandleTypeDef *hi2c,
  */
 void HAL_I2C_MemTxCpltCallback(I2C_HandleTypeDef *hi2c)
 {
-	(void)hi2c;
-
-	if (_i2c_busy == 1U)
+	if (hi2c == _i2c_active && _i2c_busy == 1U)
 	{
 		_i2c_status = HAL_OK;
 		_i2c_busy = 0U;
@@ -221,9 +247,7 @@ void HAL_I2C_MemTxCpltCallback(I2C_HandleTypeDef *hi2c)
  */
 void HAL_I2C_MemRxCpltCallback(I2C_HandleTypeDef *hi2c)
 {
-	(void)hi2c;
-
-	if (_i2c_busy == 1U)
+	if (hi2c == _i2c_active && _i2c_busy == 1U)
 	{
 		_i2c_status = HAL_OK;
 		_i2c_busy = 0U;
@@ -236,11 +260,17 @@ void HAL_I2C_MemRxCpltCallback(I2C_HandleTypeDef *hi2c)
  */
 void HAL_I2C_ErrorCallback(I2C_HandleTypeDef *hi2c)
 {
-	(void)hi2c;
-
-	if (_i2c_busy == 1U)
+	if (hi2c == _i2c_active && _i2c_busy == 1U)
 	{
 		_i2c_status = HAL_ERROR;
+		_i2c_busy = 0U;
+	}
+}
+
+void HAL_I2C_AbortCpltCallback(I2C_HandleTypeDef *hi2c)
+{
+	if (hi2c == _i2c_active && _i2c_busy == 1U) {
+		_i2c_status = HAL_TIMEOUT;
 		_i2c_busy = 0U;
 	}
 }

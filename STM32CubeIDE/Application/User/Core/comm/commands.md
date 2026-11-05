@@ -1,5 +1,11 @@
 # comm_interface Commands
 
+`PWM_GET <channel>` reads the actual PCA9685 channel registers (0..15). The reply
+is `OK PWM_GET <channel> <on> <off>`; bit 12 represents FULL_ON/FULL_OFF. This is
+read-only diagnostics, also exposed in the Web console. `ADC_READ` now reads the
+latest individual DMA sample; the BLE ADC characteristic contains weighted window
+means instead. See `ADC_RAW.md` and `SERVO_SCHEDULING.md` in the repository root.
+
 ## Protocol Notes
 
 - Commands are plain-text and case-sensitive.
@@ -19,6 +25,8 @@
 | --- | --- | --- | --- |
 | `HELP` | none | List every command, syntax and legacy alias, including commands for disabled devices. | Multiple notifications, from `OK HELP` through `OK HELP END`. |
 | `PING` | none | Connectivity check. | `OK PING` |
+| `DEMO1` | none | All 16 PCA9685 channels start at 500 us and toggle together to 2000 us and back every 2000 ms. Runs in servoTask until STOP or BLE disconnect. Repeating DEMO1 leaves the current phase unchanged. | `OK DEMO1` |
+| `STOP` | none | Cancel DEMO1 and all timed moves, holding the last pulse widths. Safe to repeat. | `OK STOP` |
 | `TOF_SET_MIN_MAX` | `<min_mm> <max_mm>` | Set distance-map scaling; 0 <= min < max <= 4000. Default 0..500 mm. | `OK TOF_SET_MIN_MAX <min_mm> <max_mm>` |
 | `GPIO_GET` | `<signal_or_pin>` | Read the electrical GPIO level. INT_TOF adds its falling-edge counter. | `OK GPIO_GET <signal> <0_or_1>`; INT_TOF adds ` IRQ <count>` |
 | `GPIO_SET` | `<signal_or_pin> <0_or_1>` | Write a board output. The level must be the literal `0` or `1`. | `OK GPIO_SET <signal> <0_or_1>` |
@@ -27,6 +35,15 @@
 | `SET_TIMING` | `<channel> <pulse_us> <duration_ms>` | Linear timed move. The channel moves from its current pulse to `pulse_us` over exactly `duration_ms` milliseconds. A duration of `0` behaves like an immediate move. | `OK SET_TIMING <channel> <pulse_us> <duration_ms>` |
 
 ## Legacy Aliases
+
+`demo1` and `stop` are also accepted in lowercase. Both commands reject arguments.
+DEMO1 requires an active BLE connection and a ready PCA9685; otherwise it replies
+`- DEMO1 NOT READY` (or `- PCA9685 DISABLED`). While DEMO1 owns the outputs,
+SET_DIRECT and SET_TIMING return `- DEMO1 ACTIVE: STOP`, and binary servo writes
+are rejected. Send STOP before manual control. STOP keeps PWM holding its last
+value; disconnect additionally disables PWM and the MPQ power paths. Reconnection
+does not resume DEMO1 or cancelled timed moves. All channels means PCA LED0..LED15,
+including channels wired for RGB/backlight on this board.
 
 - `PCA9685_SET_SERVO_US` is accepted as an alias for `SET_DIRECT`.
 - `servo_StartMove` is accepted as an alias for `SET_TIMING`.
@@ -54,7 +71,7 @@ ADC_READ ADC_BAT
 | EN2 | PB4 | GPIO_GET; BLE-managed, GPIO_SET returns READ ONLY |
 | DIAG_EN1 | PA10 | GPIO_GET; BLE-managed, GPIO_SET returns READ ONLY |
 | DIAG_EN2 | PA11 | GPIO_GET; BLE-managed, GPIO_SET returns READ ONLY |
-| OE | PA9 | GPIO_GET / GPIO_SET (1 enables PCA9685 outputs through Q6) |
+| OE | PA9 | GPIO_GET / GPIO_SET (1 requires BLE connected and PCA ready; otherwise READ ONLY) |
 | DISPLAY_RES | PA2 | GPIO_GET / GPIO_SET |
 | DISPLAY_CS | PA4 | GPIO_GET / GPIO_SET |
 | DISPLAY_DC | PB11 | GPIO_GET / GPIO_SET |
@@ -107,7 +124,11 @@ Hardware correction: GPIO_SET OE 1 enables PCA outputs through inverting Q6; GPI
 
 EN1 (PB5), EN2 (PB4), DIAG_EN1 (PA10), DIAG_EN2 (PA11) start low.
 A successful BLE connection sets all four high; its disconnect event clears
-EN first, then DIAG_EN. Failed connection events cannot enable power.
+OE first, then EN and DIAG_EN. Failed connection events cannot enable power.
+PWM also remains disabled at boot and while disconnected, including after PCA
+initialization/retry. A new connection enables PWM once the PCA is ready.
+GPIO_SET OE 0/1 remains available for diagnostics during a connected session;
+it cannot bypass the BLE/PCA readiness gate. A fresh connection restores OE=1.
 Signal names and physical-pin aliases are read-only through GPIO_SET, so queued
-commands cannot override disconnect shutdown. HELP remains available as 16
-short notifications, ending with OK HELP END.
+commands cannot override disconnect shutdown. HELP is delivered as short
+notifications, ending with OK HELP END.

@@ -72,7 +72,9 @@ typedef enum {
 /******************************************************************************
  * Timer Interface configuration
  ******************************************************************************/
-#define RTC_N_PREDIV_S      (10U)
+/* MX_RTC_Init / .ioc: LSE 32768 Hz, AsynchPrediv=7 => 4096 binary ticks/s.
+ * Keep timer conversions consistent; 1024 Hz made software timers run fast. */
+#define RTC_N_PREDIV_S      (12U)
 #define RTC_PREDIV_S        ( ( 1U << RTC_N_PREDIV_S ) - 1U )
 #define RTC_PREDIV_A        ( ( 1U << ( 15U - RTC_N_PREDIV_S ) ) - 1U )
 

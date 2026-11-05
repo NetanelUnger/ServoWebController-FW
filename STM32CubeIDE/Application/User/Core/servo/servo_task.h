@@ -46,6 +46,8 @@ typedef struct
 {
     /** @brief Indicates whether the PCA9685 was initialized successfully. */
     uint8_t pca9685_ready;
+    /** @brief Non-zero while DEMO1 owns all PWM channels. */
+    uint8_t demo1_active;
     /** @brief Per-channel servo runtime state. */
     servo_state_t servo[SERVO_CHANNEL_COUNT];
 } servos_controller_t;
@@ -61,6 +63,13 @@ typedef void (*servo_ChangeCallback_t)(void);
  */
 extern void servo_Init(void);
 
+/** BLE lifecycle hook; disconnect cancels demo and timed moves without I2C. */
+extern void servo_SetBleConnected(uint8_t connected);
+/** Start all 16 channels at 500 us, toggling 500/2000 us every 2000 ms. */
+extern HAL_StatusTypeDef servo_StartDemo1(void);
+/** Cancel DEMO1 and timed moves, holding the last commanded pulse widths. */
+extern void servo_Stop(void);
+
 /**
  * @brief Periodic worker that initializes the driver and updates timed moves.
  */
@@ -73,7 +82,7 @@ extern void servo_Task(void);
 extern void servo_RegisterChangeCallback(servo_ChangeCallback_t callback);
 
 /**
- * @brief Apply a servo pulse immediately and cancel any active timed move.
+ * @brief Queue a servo pulse for the high-priority worker and cancel any timed move.
  * @param channel Servo channel index in the range `0..15`.
  * @param value Requested pulse width in microseconds.
  * @return `HAL_OK` on success, otherwise `HAL_ERROR`.
@@ -81,7 +90,7 @@ extern void servo_RegisterChangeCallback(servo_ChangeCallback_t callback);
 extern HAL_StatusTypeDef servo_SetServoImmediateValue(uint8_t channel, uint16_t value);
 
 /**
- * @brief Apply pulse widths to every servo channel and cancel all active timed moves.
+ * @brief Queue all pulse widths atomically and cancel all active timed moves.
  * @param values Requested pulse widths in microseconds, indexed by channel `0..15`.
  * @return `HAL_OK` on success, otherwise `HAL_ERROR`.
  */
