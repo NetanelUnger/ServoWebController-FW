@@ -1,0 +1,13 @@
+{
+  "mtu": 251,
+  "bytes": 91384,
+  "checks": [
+    "upload_commit",
+    "readback_exact",
+    "show_completed"
+  ],
+  "upload_seconds": 26.13,
+  "read_seconds": 33.96,
+  "show_seconds": 0.344,
+  "status": "PASS"
+}

@@ -11,6 +11,7 @@
 
 #include "comm_interface.h"
 #include "board_io.h"
+#include "tof_app.h"
 #include "PCA9685/pca9685.h"
 #ifdef ENABLE_VL53L8CX
 #include "VL53L8CX/vl53l8cx_task.h"
@@ -27,7 +28,6 @@
  * because they remain recognized by the parser, and preserve legacy aliases. */
 static const char comm_help_text[] =
     "OK HELP\n"
-    COMM_CMD_HELP "\n"
     COMM_CMD_PING "\n"
     COMM_CMD_DEMO1 "\n"
     COMM_CMD_STOP "\n"
@@ -37,9 +37,10 @@ static const char comm_help_text[] =
     COMM_CMD_PWM_GET " <ch>\n"
     COMM_CMD_PCA9685_SET_SERVO_US " <ch> <us>\n"
     COMM_CMD_SERVO_START_MOVE "\n <ch> <us> <ms>\n"
-    COMM_CMD_TOF_SET_MIN_MAX "\n <min_mm> <max_mm>\n"
-    COMM_CMD_LEGACY_PCA9685_SET_SERVO_US "\n = " COMM_CMD_PCA9685_SET_SERVO_US "\n"
-    COMM_CMD_LEGACY_SERVO_START_MOVE "\n = " COMM_CMD_SERVO_START_MOVE "\n"
+    COMM_CMD_TOF_MODE " <0|1|3>\n"
+    COMM_CMD_TOF_SET_MIN_MAX "\n <min> <max>\n"
+    COMM_CMD_LEGACY_PCA9685_SET_SERVO_US "\n=" COMM_CMD_PCA9685_SET_SERVO_US "\n"
+    COMM_CMD_LEGACY_SERVO_START_MOVE "\n=" COMM_CMD_SERVO_START_MOVE "\n"
     "OK HELP END";
 _Static_assert(sizeof(comm_help_text) <= COMM_TEXT_RESPONSE_MAX_LEN,
                "HELP must fit the response buffer and uint8_t queue length");
@@ -607,6 +608,15 @@ packetSize_t parser_ProcessOne(uint8_t *payload, packetSize_t req_len, uint8_t *
         }
 
         return comm_WriteOkEchoChannelValueU32(res_payload, COMM_CMD_SERVO_START_MOVE, channel, value, duration_ms);
+    }
+
+    if (strcmp(command, COMM_CMD_TOF_MODE) == 0) {
+        uint32_t mode;
+        if (!comm_ParseUint(&args, 3U, &mode) || *comm_SkipSeparators(args) != '\0' ||
+            !TOF_APP_SetMode((uint8_t)mode))
+            return comm_WriteResponseText(res_payload, "- BAD ARGUMENTS");
+        return comm_WriteResponseText(res_payload, mode == 3U ? "OK TOF_MODE 3" :
+                                      mode == 1U ? "OK TOF_MODE 1" : "OK TOF_MODE 0");
     }
 
 #ifdef ENABLE_VL53L8CX

@@ -39,6 +39,7 @@
 /** @brief Backward-compatible alias for `SET_TIMING`. */
 #define COMM_CMD_LEGACY_SERVO_START_MOVE "servo_StartMove"
 /** @brief TOF distance encoding range command. */
+#define COMM_CMD_TOF_MODE "TOF_MODE"
 #define COMM_CMD_TOF_SET_MIN_MAX "TOF_SET_MIN_MAX"
 
 /** @brief Serialized packet length type used by the command parser. */

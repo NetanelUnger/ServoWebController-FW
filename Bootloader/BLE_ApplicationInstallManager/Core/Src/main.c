@@ -308,6 +308,15 @@ static uint8_t CheckFwAppValidity( uint8_t page_idx )
   uint32_t magic_keyword_address;
   uint32_t last_user_flash_address;
 
+  if(page_idx != CFG_ACTIVE_SLOT_START_SECTOR_INDEX && page_idx != DOWNLOAD_SLOT_START_SECTOR_INDEX) return 0;
+  uint32_t candidate=FLASH_BASE+page_idx*FLASH_PAGE_SIZE;
+  uint32_t active=FLASH_BASE+CFG_ACTIVE_SLOT_START_SECTOR_INDEX*FLASH_PAGE_SIZE;
+  uint32_t stack=*(const uint32_t *)candidate, reset=*(const uint32_t *)(candidate+4U);
+  uint32_t tag=*(const uint32_t *)(candidate+KEYWORD_ADDRESS_OFFSET);
+  if(stack<SRAM1_BASE || stack>SRAM1_BASE+128U*1024U || (stack&7U) || !(reset&1U) ||
+     (reset&~1U)<active || (reset&~1U)>=active+APP_SLOT_PAGE_SIZE*FLASH_PAGE_SIZE ||
+     (tag&3U) || tag<active+KEYWORD_ADDRESS_OFFSET+4U || tag>active+APP_SLOT_PAGE_SIZE*FLASH_PAGE_SIZE-4U) return 0;
+
   magic_keyword_address = *(uint32_t*)(FLASH_BASE + (page_idx * FLASH_PAGE_SIZE + KEYWORD_ADDRESS_OFFSET));
 
   if(page_idx != CFG_ACTIVE_SLOT_START_SECTOR_INDEX)

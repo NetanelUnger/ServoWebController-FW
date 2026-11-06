@@ -9,6 +9,8 @@
 #include "app_common.h"
 #include "tof_app.h"
 #include "tof.h"
+#include "display/display.h"
+#include "config.h"
 
 #define TOF_APP_INVALID_CONN_HANDLE 0xFFFFU
 #define TOF_APP_DISTANCE_MAP_LEN    64U
@@ -26,6 +28,20 @@ typedef struct
 } TOF_APP_Context_t;
 
 static TOF_APP_Context_t TOF_APP_Context;
+static volatile uint8_t tof_mode = 1U;
+
+uint8_t TOF_APP_SetMode(uint8_t mode)
+{
+    if (mode != 0U && mode != 1U && mode != 3U) return 0U;
+#if !ENABLE_DISPLAY || DISABLE_I2C_VL53L8CX
+    if (mode == 3U) return 0U;
+#endif
+    Display_SetDepthEnabled(mode == 3U);
+    tof_mode = mode;
+    return 1U;
+}
+
+uint8_t TOF_APP_GetMode(void) { return tof_mode; }
 
 void TOF_Notification(TOF_NotificationEvt_t *p_Notification)
 {
@@ -37,6 +53,7 @@ void TOF_Notification(TOF_NotificationEvt_t *p_Notification)
 
     case TOF_DISTANCE_NOTIFY_DISABLED_EVT:
       TOF_APP_Context.DistanceNotificationStatus = TOF_NOTIFICATION_OFF;
+      (void)TOF_APP_SetMode(1U);
       break;
 
     default:
@@ -51,11 +68,13 @@ void TOF_APP_EvtRx(TOF_APP_ConnHandleNotEvt_t *p_Notification)
     case TOF_CONN_HANDLE_EVT:
       TOF_APP_Context.ConnectionHandle = p_Notification->ConnectionHandle;
       TOF_APP_Context.DistanceNotificationStatus = TOF_NOTIFICATION_OFF;
+      (void)TOF_APP_SetMode(1U);
       break;
 
     case TOF_DISCON_HANDLE_EVT:
       TOF_APP_Context.ConnectionHandle = TOF_APP_INVALID_CONN_HANDLE;
       TOF_APP_Context.DistanceNotificationStatus = TOF_NOTIFICATION_OFF;
+      (void)TOF_APP_SetMode(1U);
       break;
 
     default:
@@ -67,6 +86,7 @@ void TOF_APP_Init(void)
 {
   TOF_APP_Context.ConnectionHandle = TOF_APP_INVALID_CONN_HANDLE;
   TOF_APP_Context.DistanceNotificationStatus = TOF_NOTIFICATION_OFF;
+  (void)TOF_APP_SetMode(1U);
   TOF_Init();
 }
 

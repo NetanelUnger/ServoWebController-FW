@@ -15,6 +15,7 @@
 #include "log_module.h"
 #include "i2c_os/i2c_os.h"
 #include "tof_app.h"
+#include "display/display.h"
 
 #define VL53L8CX_I2C_HANDLE hi2c3
 
@@ -67,7 +68,8 @@ void vl53l8cx_Task(void)
 #endif
     int32_t status;
 
-    if (TOF_APP_IsNotificationEnabled() == 0U)
+    if (TOF_APP_GetMode() == 0U ||
+        (TOF_APP_GetMode() != 3U && TOF_APP_IsNotificationEnabled() == 0U))
     {
         if (g_vl53l8cx_runtime.ranging_active != 0U)
         {
@@ -152,6 +154,7 @@ void vl53l8cx_Task(void)
         taskEXIT_CRITICAL();
 
         (void)TOF_APP_NotifyDistanceMap(ble_payload, (uint8_t)sizeof(ble_payload));
+        if (TOF_APP_GetMode() == 3U) (void)Display_DrawDepthMap(distance_mm);
     }
     else if (status != VL53L8CX_TIMEOUT)
     {

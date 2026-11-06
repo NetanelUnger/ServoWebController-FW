@@ -28,6 +28,10 @@ typedef struct
   uint16_t ConnectionHandle;
 } TOF_APP_ConnHandleNotEvt_t;
 
+/* 0 off, 1 legacy BLE subscription mode (default), 3 local depth + BLE.
+ * Mode 2 is reserved. Mode 3 ranges without a map subscriber while connected. */
+uint8_t TOF_APP_SetMode(uint8_t mode);
+uint8_t TOF_APP_GetMode(void);
 void TOF_APP_Init(void);
 void TOF_APP_EvtRx(TOF_APP_ConnHandleNotEvt_t *p_Notification);
 uint8_t TOF_APP_IsNotificationEnabled(void);

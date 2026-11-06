@@ -320,3 +320,51 @@ See the [display protocol, wiring and future Web integration contract](STM32Cube
 `ENABLE_DISPLAY` and `DISPLAY_ROTATION` are configured in `config.h`.
 Send `HELP` over BLE NUS for every command, its syntax and legacy aliases.
 The reply uses short notifications from `OK HELP` through `OK HELP END`.
+
+Image storage now shares the OTA download slot with explicit ownership. Five
+fixed round RGB565 image slots are uploaded once and shown by ID without a
+framebuffer. The optional d0 image-memory BLE service and the matching Web
+controls support save/read/show/list/delete. See the full protocol, memory map,
+OTA invalidation and recovery rules in
+`STM32CubeIDE/Application/User/Core/display/README.md`.
+Install the application and the updated BLE_ApplicationInstallManager bootloader;
+both were built and flashed with verification during this change. ARM tests pass
+for storage/CRC/interruption/boot guards. Physical BLE round-trip now passes: 91,384 bytes uploaded, read back exactly,
+shown, retained across software reset, then the test slot deleted. Upload took
+26.13 s, readback 33.96 s, and SHOW completion 0.315-0.344 s. The real reset test
+exposed unconditional OTA_APP_Init download-slot erasure; this was removed and
+the corrected firmware rebuilt, flashed and retested. No physical power-cut or
+OTA installation test was performed.
+
+
+## TOF depth learning mode
+
+`TOF_MODE 3` enables sensor-driven rendering without uploading pixels over BLE.
+`TOF_MODE 1` returns to normal subscription-gated ranging; `TOF_MODE 0` stops
+ranging. Mode 2 is reserved. Disconnect or disabling TOF notifications exits
+mode 3. Commands acknowledge the requested mode, not sensor initialization or
+successful SPI drawing. Inspect sensor faults/display status during diagnostics.
+
+The existing TOF task borrows its current 64-element millimeter array for a
+synchronous `Display_DrawDepthMap` call. No pointer escapes and no new frame,
+queue, task stack or heap allocation is needed. A nonblocking display mutex
+skips frames when busy. 64 solid 21x21 fills reuse the driver's existing 480-byte
+scratch buffer. The panel is cleared black once on entry; the 168x168 map begins
+at (36,36), fully inside the round 240px screen. 180px would clip the corners.
+
+RGB565 is calculated with integer arithmetic, no palette: 0 mm red, 4400 mm
+yellow, 8800 mm green, clamped above 8800; UINT16_MAX invalid is black. The
+requested 8.8 m color scale does NOT extend the VL53L8CX rated range of 4 m:
+https://www.st.com/resource/en/datasheet/vl53l8cx.pdf . It is independent of
+TOF_SET_MIN_MAX, which remains limited to 4000 mm for the existing BLE protocol.
+
+Depth mode rejects remote rectangle/row and stored-image draws with BUSY. Exit
+mode 3 first. A stop/disconnect cancels at a tile boundary; a started SPI write
+finishes under the display lock. The last view remains visible after exit.
+
+Validation: ARM-emulated real display C tests cover red/yellow/green, invalid
+and clipped ranges, all 64 tile bounds, one-time clear, mutex busy, SPI failure
+recovery and return to BLE drawing. Production build adds 644 bytes to the
+application binary and 4 bytes of linked static RAM versus the pre-change local
+build (338448 -> 339092 bytes Flash image; data+bss 119308 -> 119312 bytes).
+No task stack sizes or driver buffers changed. Physical rendering not yet tested.

@@ -34,6 +34,7 @@
 #include "stm32_timer.h"
 #include "flash_driver.h"
 #include "flash_manager.h"
+#include "display/image_store.h"
 
 /* USER CODE END Includes */
 
@@ -109,6 +110,8 @@ uint8_t a_OTA_UpdateCharData[247];
 /* USER CODE BEGIN PV */
 static uint32_t size_left;
 static uint32_t address_offset;
+static uint32_t accepted_end;
+static bool upload_accepted;
 
 /* USER CODE END PV */
 
@@ -116,7 +119,6 @@ static uint32_t address_offset;
 static void OTA_Conf_SendIndication(void);
 
 /* USER CODE BEGIN PFP */
-static void DeleteSlot( uint8_t page_idx );
 static void FM_WriteCallback (FM_FlashOp_Status_t Status);
 static void OTA_APP_ClearSemaphore(osSemaphoreId_t semaphore);
 /* Flag for write status  */
@@ -198,13 +200,18 @@ void OTA_Notification(OTA_NotificationEvt_t *p_Notification)
     case OTA_BASE_ADR_WRITE_NO_RESP_EVT:
       /* USER CODE BEGIN Service1Char1_WRITE_NO_RESP_EVT */
       {
+        if(p_Notification->DataTransfered.Length < 1) break;
+        uint8_t command = p_Notification->DataTransfered.p_Payload[0];
+        if((command == OTA_APPLICATION_UPLOAD || command == OTA_USER_CONF_UPLOAD) && p_Notification->DataTransfered.Length < 4) break;
         switch( ((OTA_Base_Addr_Event_Format_t*)(p_Notification->DataTransfered.p_Payload))->Command )
         {
           case OTA_STOP_ALL_UPLOAD:
+            upload_accepted=false;
             break;
 
           case OTA_USER_CONF_UPLOAD:
             {
+              upload_accepted=false; address_offset=0;
               uint32_t first_valid_address;
               FM_Cmd_Status_t error = FM_ERROR;
 
@@ -222,6 +229,7 @@ void OTA_Notification(OTA_NotificationEvt_t *p_Notification)
                 OTA_APP_Context.sectors = 0;
               }
               
+              if(OTA_APP_Context.sectors==0) OTA_APP_Context.sectors = OTA_APP_Context.file_type==FILE_TYPE_FW_APP ? APP_SLOT_PAGE_SIZE : CFG_USER_DATA_SECTORS_NB;
               OTA_APP_Context.write_value_index = 0;
               OTA_APP_Context.Conf_Indication_Status = OTA_APP_Ready_Pending;
               first_valid_address = USER_CFG_SLOT_START_SECTOR_INDEX * FLASH_PAGE_SIZE + FLASH_BASE;
@@ -280,6 +288,8 @@ void OTA_Notification(OTA_NotificationEvt_t *p_Notification)
                 } /* while(error != FM_OK) */
 
               /* Flash zone tagetted has been erased, now ready to receive a file to write it */
+                accepted_end=OTA_APP_Context.base_address+OTA_APP_Context.sectors*FLASH_PAGE_SIZE;
+                upload_accepted=true;
                 a_OTA_UpdateCharData[0] = OTA_READY_TO_RECEIVE_FILE;
                 msg_conf.p_Payload = a_OTA_UpdateCharData;
                 msg_conf.Length = 1;
@@ -299,6 +309,7 @@ void OTA_Notification(OTA_NotificationEvt_t *p_Notification)
 
           case OTA_APPLICATION_UPLOAD:
             {
+              upload_accepted=false; address_offset=0;
               uint32_t first_valid_address;
               FM_Cmd_Status_t error = FM_ERROR;
               
@@ -319,14 +330,21 @@ void OTA_Notification(OTA_NotificationEvt_t *p_Notification)
                 OTA_APP_Context.sectors = APP_SLOT_PAGE_SIZE;
               }
               
+              if(OTA_APP_Context.sectors==0) OTA_APP_Context.sectors = OTA_APP_Context.file_type==FILE_TYPE_FW_APP ? APP_SLOT_PAGE_SIZE : CFG_USER_DATA_SECTORS_NB;
               OTA_APP_Context.write_value_index = 0;
               OTA_APP_Context.Conf_Indication_Status = OTA_APP_Ready_Pending;
               first_valid_address = ((CFG_ACTIVE_SLOT_START_SECTOR_INDEX + APP_SLOT_PAGE_SIZE) * FLASH_PAGE_SIZE) + FLASH_BASE;
               if(((OTA_APP_Context.base_address & 0xF) == 0) &&
                  (OTA_APP_Context.sectors <= APP_SLOT_PAGE_SIZE) &&
-                 (OTA_APP_Context.base_address >= first_valid_address) &&
+                 (OTA_APP_Context.base_address == first_valid_address) &&
                  ((OTA_APP_Context.base_address + ((OTA_APP_Context.sectors) * FLASH_PAGE_SIZE)) <= (first_valid_address + (APP_SLOT_PAGE_SIZE * FLASH_PAGE_SIZE))))
               { /* Download address is 128 bits aligned */
+                if(!ImageStore_ClaimOTA()) {
+                  a_OTA_UpdateCharData[0]=OTA_NOT_READY_TO_RECEIVE_FILE;
+                  msg_conf.p_Payload=a_OTA_UpdateCharData;msg_conf.Length=1;
+                  OTA_UpdateValue(OTA_CONF,&msg_conf);break;
+                }
+
                 /* Size of file to download fit in download slot */
                 /* Download address is in the download area */
                 /* End download address fit in the download area */
@@ -381,6 +399,8 @@ void OTA_Notification(OTA_NotificationEvt_t *p_Notification)
 
               /* Flash zone tagetted has been erased, now ready to receive a file to write it */
 
+                accepted_end=OTA_APP_Context.base_address+OTA_APP_Context.sectors*FLASH_PAGE_SIZE;
+                upload_accepted=true;
                 a_OTA_UpdateCharData[0] = OTA_READY_TO_RECEIVE_FILE;
                 msg_conf.p_Payload = a_OTA_UpdateCharData;
                 msg_conf.Length = 1;
@@ -400,7 +420,7 @@ void OTA_Notification(OTA_NotificationEvt_t *p_Notification)
 
           case OTA_UPLOAD_FINISHED:
             {
-              if(OTA_APP_Context.file_type == FILE_TYPE_FW_APP)
+              if(upload_accepted && address_offset>0 && OTA_APP_Context.file_type == FILE_TYPE_FW_APP)
               { /* Reboot only after new application download */
                 OTA_APP_Context.Conf_Indication_Status = OTA_APP_Pending;
                 a_OTA_UpdateCharData[0] = OTA_REBOOT_CONFIRMED;
@@ -413,6 +433,7 @@ void OTA_Notification(OTA_NotificationEvt_t *p_Notification)
 
           case OTA_CANCEL_UPLOAD:
           {
+            upload_accepted=false;
             LOG_INFO_APP("OTA_CANCEL_UPLOAD\n");
           }
           break;
@@ -445,6 +466,8 @@ void OTA_Notification(OTA_NotificationEvt_t *p_Notification)
          * Write in Flash the data received in the BLE packet
          */
         size_left = p_Notification->DataTransfered.Length;
+        if(!upload_accepted || !size_left || size_left>sizeof(OTA_APP_Context.write_value) || (size_left & 15U) ||
+           OTA_APP_Context.base_address+address_offset>accepted_end || size_left>accepted_end-(OTA_APP_Context.base_address+address_offset)) break;
         
         /**
          * For the flash manager the address of the data to be stored in FLASH shall be 32bits aligned
@@ -531,6 +554,7 @@ void OTA_APP_EvtRx(OTA_APP_ConnHandleNotEvt_t *p_Notification)
 
     case OTA_DISCON_HANDLE_EVT :
       /* USER CODE BEGIN Service1_APP_DISCON_HANDLE_EVT */
+      upload_accepted=false;
 
       /* USER CODE END Service1_APP_DISCON_HANDLE_EVT */
       break;
@@ -555,7 +579,10 @@ void OTA_APP_Init(void)
   OTA_Init();
 
   /* USER CODE BEGIN Service1_APP_Init */
-  DeleteSlot(DOWNLOAD_SLOT_START_SECTOR_INDEX); /* Erase download slot */
+  /* Shared image/OTA Flash must survive normal startup. Only an accepted
+   * OTA upload may claim and erase it (ImageStore_ClaimOTA above). */
+  upload_accepted = false;
+  accepted_end = 0;
   FM_WriteStatus = FM_OPERATION_AVAILABLE;
   size_left = 0;
   address_offset = 0;
@@ -570,65 +597,6 @@ void OTA_APP_Init(void)
 uint8_t OTA_APP_GetConfStatus(void)
 {
   return(OTA_APP_Context.Conf_Indication_Status);
-}
-
-/**
- * Erase active or download slot
- */
-static void DeleteSlot( uint8_t page_idx )
-{
-
-  /**
-   * The number of sectors to erase is read from SRAM1.
-   * It shall be checked whether the number of sectors to erase does not overlap on the secured Flash
-   * The limit can be read from the SFSA option byte which provides the first secured sector address.
-   */
-
-	LOG_INFO_APP("DeleteSlot: page_idx %d\n", page_idx);
-  uint32_t last_page_idx = page_idx + APP_SLOT_PAGE_SIZE - 1;
-  FLASH_EraseInitTypeDef p_erase_init;
-  uint32_t page_error;
-  uint32_t NbrOfPageToBeErased = (uint32_t)APP_SLOT_PAGE_SIZE;
-
-  if(page_idx < CFG_ACTIVE_SLOT_START_SECTOR_INDEX)
-  {
-    /**
-     * Something has been wrong as there is no case we should delete the BLE_BootMngr application
-     * Reboot on the active firmware application
-     */
-    CFG_OTA_REBOOT_VAL_MSG = REBOOT_ON_FW_APP;
-    NVIC_SystemReset(); /* it waits until reset */
-  }
-
-  if ((page_idx + NbrOfPageToBeErased - 1) > last_page_idx)
-  {
-    NbrOfPageToBeErased = last_page_idx - page_idx + 1;
-  }
-
-  p_erase_init.TypeErase = FLASH_TYPEERASE_PAGES;
-  p_erase_init.NbPages = NbrOfPageToBeErased;
-  p_erase_init.Page = (uint32_t)(page_idx & (FLASH_PAGE_NB - 1u));
-
-#if defined(FLASH_DBANK_SUPPORT)
-  if ((FLASH_PAGE_NB & page_idx) ^ (1u & READ_BIT (FLASH->OPTR, FLASH_OPTR_SWAP_BANK_Msk)))
-  {
-    p_erase_init.Banks = FLASH_BANK_2;
-  }
-  else
-  {
-    p_erase_init.Banks = FLASH_BANK_1;
-  }
-#endif
-
-  __HAL_FLASH_CLEAR_FLAG(FLASH_FLAG_ALL_ERRORS); /* Clear all Flash flags before write operation*/
-
-  HAL_FLASH_Unlock();
-
-  HAL_FLASHEx_Erase(&p_erase_init, &page_error);
-
-  HAL_FLASH_Lock();
-
-  return;
 }
 
 static void FM_WriteCallback (FM_FlashOp_Status_t Status)

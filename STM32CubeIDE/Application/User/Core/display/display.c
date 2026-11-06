@@ -1,4 +1,5 @@
 #include "display.h"
+#include "image_store.h"
 #include "gc9a01.h"
 #include "config.h"
 #include "app_freertos.h"
@@ -14,6 +15,50 @@ volatile uint32_t g_display_frame_count;
 /* State and all panel writes are protected by displayMutex. */
 static bool running = true;
 static bool needs_init = true;
+static volatile uint8_t depth_enabled;
+static volatile uint8_t depth_clear;
+
+void Display_SetDepthEnabled(uint8_t enabled)
+{
+    if (enabled) depth_clear = 1U;
+    depth_enabled = enabled;
+}
+
+/* Integer RGB565 red -> yellow -> green, with no color LUT in Flash. */
+static uint16_t depth_color(uint16_t mm)
+{
+    if (mm == UINT16_MAX) return GC9A01_BLACK;
+    if (mm > 8800U) mm = 8800U;
+    uint16_t red = mm <= 4400U ? 31U : (8800U - mm) * 31U / 4400U;
+    uint16_t green = mm >= 4400U ? 63U : (uint32_t)mm * 63U / 4400U;
+    return (red << 11) | (green << 5);
+}
+
+uint8_t Display_DrawDepthMap(const uint16_t *distance_mm)
+{
+    if (!distance_mm || !depth_enabled || displayMutexHandle == NULL ||
+        osMutexAcquire(displayMutexHandle, 0U) != osOK) return 0x81U;
+    if (!running || needs_init || g_display_boot_status != HAL_OK) {
+        osMutexRelease(displayMutexHandle); return 0x81U;
+    }
+    HAL_StatusTypeDef status = HAL_OK;
+    GC9A01_SetTransferTimeout(100U);
+    if (depth_clear) {
+        status = GC9A01_FillRect(0, 0, 240, 240, GC9A01_BLACK);
+        if (status == HAL_OK) depth_clear = 0U;
+    }
+    /* 168x168 at (36,36): every corner fits inside the round 240px panel.
+     * Reuse the driver's bounded solid-fill scratch space, 64 calls per frame. */
+    for (uint8_t zone = 0; zone < 64U && status == HAL_OK && depth_enabled; ++zone)
+        status = GC9A01_FillRect(36U + (zone % 8U) * 21U,
+                                36U + (zone / 8U) * 21U,
+                                21U, 21U, depth_color(distance_mm[zone]));
+    GC9A01_SetTransferTimeout(1000U);
+    g_display_frame_status = status;
+    if (status == HAL_OK && depth_enabled) ++g_display_frame_count;
+    osMutexRelease(displayMutexHandle);
+    return status == HAL_OK ? 0U : 0x82U;
+}
 
 static HAL_StatusTypeDef show_welcome(void)
 {
@@ -95,7 +140,7 @@ uint8_t Display_WritePacket(const uint8_t *p, uint16_t length)
     if (w == 0U || h == 0U || x + w > 240U || y + h > 240U) return 0x80U;
     if (displayMutexHandle == NULL || osMutexAcquire(displayMutexHandle, 0U) != osOK)
         return 0x81U;
-    if (!running || needs_init || g_display_boot_status != HAL_OK) {
+    if (depth_enabled || !running || needs_init || g_display_boot_status != HAL_OK) {
         (void)osMutexRelease(displayMutexHandle);
         return 0x81U;
     }
@@ -116,6 +161,22 @@ uint8_t Display_WritePacket(const uint8_t *p, uint16_t length)
     return status == HAL_OK ? 0U : 0x82U;
 }
 
+uint8_t Display_ShowStored(const uint8_t *pixels)
+{
+    if(osMutexAcquire(displayMutexHandle,0U)!=osOK) return 0x81;
+    if(depth_enabled || !running || needs_init || g_display_boot_status!=HAL_OK) {osMutexRelease(displayMutexHandle);return 0x81;}
+    HAL_StatusTypeDef status=HAL_OK;
+    GC9A01_SetTransferTimeout(100U);
+    for(uint16_t y=0;y<240 && status==HAL_OK;y++) {
+        uint16_t x=ImageStore_RowLeft(y), width=240U-2U*x;
+        status=GC9A01_BlitWire(x,y,width,1,pixels);pixels+=2U*width;
+    }
+    GC9A01_SetTransferTimeout(1000U);
+    g_display_frame_status=status;if(status==HAL_OK) ++g_display_frame_count;
+    osMutexRelease(displayMutexHandle);
+    return status==HAL_OK?0:0x82;
+}
+
 void Display_Task(void *argument)
 {
     UNUSED(argument);
@@ -128,10 +189,14 @@ void Display_Task(void *argument)
             if (g_display_boot_status != HAL_OK) running = false;
         }
         (void)osMutexRelease(displayMutexHandle);
+        ImageStore_Process();
         (void)osThreadFlagsWait(DISPLAY_WAKE, osFlagsWaitAny, osWaitForever);
     }
 }
 #else
+void Display_SetDepthEnabled(uint8_t e) { UNUSED(e); }
+uint8_t Display_DrawDepthMap(const uint16_t *p) { UNUSED(p); return 0x83U; }
+uint8_t Display_ShowStored(const uint8_t *p) { UNUSED(p); return 0x83U; }
 uint8_t Display_WritePacket(const uint8_t *p, uint16_t n) { UNUSED(p); UNUSED(n); return 0x83U; }
 osStatus_t Display_Start(void) { return osErrorResource; }
 osStatus_t Display_Stop(void) { return osOK; }

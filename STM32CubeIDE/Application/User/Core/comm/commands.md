@@ -27,6 +27,7 @@ means instead. See `ADC_RAW.md` and `SERVO_SCHEDULING.md` in the repository root
 | `PING` | none | Connectivity check. | `OK PING` |
 | `DEMO1` | none | All 16 PCA9685 channels start at 500 us and toggle together to 2000 us and back every 2000 ms. Runs in servoTask until STOP or BLE disconnect. Repeating DEMO1 leaves the current phase unchanged. | `OK DEMO1` |
 | `STOP` | none | Cancel DEMO1 and all timed moves, holding the last pulse widths. Safe to repeat. | `OK STOP` |
+| `TOF_MODE` | `<0|1|3>` | 0 off; 1 range while BLE subscribed (default); 3 live depth on screen plus optional BLE. 2 reserved. Disconnect/unsubscribe returns to 1. | `OK TOF_MODE <mode>` |
 | `TOF_SET_MIN_MAX` | `<min_mm> <max_mm>` | Set distance-map scaling; 0 <= min < max <= 4000. Default 0..500 mm. | `OK TOF_SET_MIN_MAX <min_mm> <max_mm>` |
 | `GPIO_GET` | `<signal_or_pin>` | Read the electrical GPIO level. INT_TOF adds its falling-edge counter. | `OK GPIO_GET <signal> <0_or_1>`; INT_TOF adds ` IRQ <count>` |
 | `GPIO_SET` | `<signal_or_pin> <0_or_1>` | Write a board output. The level must be the literal `0` or `1`. | `OK GPIO_SET <signal> <0_or_1>` |

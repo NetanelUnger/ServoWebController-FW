@@ -141,7 +141,7 @@ work must retain a valid buffer; never queue this borrowed pointer after returni
    The new page can provide image upload, pixels and rectangles later.
 
 When regenerating CubeMX/IDE files, retain the display_service.c linked source,
-service initialization, 10 GATT services, 76 attributes, 1856 value-array bytes,
+service initialization, 11 GATT services, 84 attributes, 2560 value-array bytes,
 and 8 service callback slots. These custom service settings are maintained in
 app_conf.h, ble_conf.h and STM32CubeIDE/.project.
 
@@ -194,3 +194,139 @@ callback for the duration of the SPI operation (roughly 0.3 s wire time at
 3.125 MHz, plus overhead). SPI timeout remains 100 ms per scanline call, not
 for the complete rectangle. No framebuffer or deferred payload storage.
 The Web sender requires this firmware update for background-first transfers.
+
+## Persistent image cache (2026-11-06)
+
+The image cache shares ONLY the OTA download interval [0x08080000,0x080FA000).
+It never uses active application, bootloader, DATA or NVM pages. Catalog page:
+0x08080000, 8 KiB. Slots 1-5 start at 0x08082000, 0x0809A000, 0x080B2000,
+0x080CA000 and 0x080E2000, each 96 KiB (12 erase pages).
+
+Format version 1 stores 91,384 RGB565 big-endian bytes, concatenated visible row
+spans. ImageStore_RowLeft and Web visibleRow implement the same pixel-square
+intersection with the radius-120 aperture. No JPEG decoding or framebuffer.
+Slot header (16 bytes, four LE uint32 values) is written LAST: magic 0x31544C53,
+length 91384, CRC-32/ISO-HDLC (reflected 0xEDB88320, init/final xor FFFFFFFF),
+format 1. Payload starts at slot+32. A final 8-byte tail is padded with FF to a
+16-byte Flash programming unit; CRC excludes padding. Each upload erases that
+slot first; replacing an image does not preserve its old copy on failure.
+
+Catalog header: magic 0x31474D49, version 1, payload length, slot count 5.
+Catalog+16..31 is the OTA invalidation quadword, initially all FF. The firmware
+boot tag location at catalog+0x160 remains erased. No image payload occupies
+this page. Initial creation is allowed ONLY when the entire download region is
+erased. Unknown/incomplete OTA content is never automatically reclaimed.
+Startup validates each committed slot CRC. An interrupted upload is not visible.
+Playback is read-only and does not consume Flash erase cycles.
+
+Image service UUID: 91bad4d0-b950-4226-aa2b-4ede9fa42f59.
+Command d1: WRITE with response, max 12 bytes. Data d2: WRITE with response,
+max 228 bytes. Status d3: READ, max 240 bytes. Suffix remains identical.
+Status is polled (no Capabilities and no notification subscription required).
+A GATT write response means accepted into the single-job mailbox, NOT durable
+completion. Poll matching sequence/opcode/id until DONE or ERROR. One upload
+lease per BLE connection prevents interleaving; disconnect releases it after
+any already accepted Flash operation finishes. No unbounded queue.
+
+All command integers are little endian. Command prefix: op:u8, id:u8,
+sequence:u16 (nonzero). IDs 1-5; LIST uses 0.
+
+| Op | Name | Additional bytes |
+|---|---|---|
+| 1 | BEGIN | length:u32, crc:u32 |
+| 2 | COMMIT | none |
+| 3 | SHOW | none |
+| 4 | DELETE | none |
+| 5 | READ | byte offset:u32 |
+| 6 | LIST | none |
+| 7 | ABORT | none |
+
+Data packet: sequence:u16, offset/16:u16, up to 224 payload bytes. It belongs
+to the active upload and produces status opcode 8. All chunks are multiples of
+16 bytes except the final 8-byte tail. The Web falls back to 16-byte payloads
+(20-byte packets) on size rejection. Offsets must be exactly sequential; do not
+blindly retry a failed/unknown write. Abort/reconnect and restart instead.
+
+Status: version:u8=1, state:u8 (1 BUSY, 2 DONE, 3 ERROR), op:u8, id:u8,
+sequence:u16, error:u8, valid-slot mask:u8, progress-or-read-offset:u32,
+committed-slot CRC:u32, followed by up to 224 READ bytes. The read cursor is
+explicit; reads do not advance it. SHOW DONE follows all SPI transfers. READ CRC
+and offsets let the Web reject corrupt/mixed downloads before replacing pixels.
+Errors: 80 malformed, 81 busy, 82 Flash/SPI, 83 display disabled, 84 OTA/unknown
+region owns storage, 85 upload state/offset, 86 incomplete/CRC, 87 missing slot,
+88 disconnect. Immediate rejection uses the corresponding ATT application error.
+
+The display task executes storage work. It copies at most one small BLE packet
+into a static mailbox and uses aligned static Flash scratch space. Accepted FM
+operations retain their buffer until callback completion, including on disconnect.
+FM_BUSY callbacks are awaited before retry. A stuck Flash manager keeps the job
+owned; the client times out rather than reporting success or reusing its buffer.
+SHOW holds the display mutex and streams Flash rows directly through BlitWire.
+Manual drawing fails BUSY rather than interleaving. No animation scheduler yet.
+
+OTA must claim ownership before erasing. It refuses while an image job/upload
+is active, then durably invalidates the catalog before touching firmware bytes.
+Images remain unavailable for that boot after OTA starts, including cancellation.
+After reboot, interrupted/unknown OTA bytes keep the region locked until a proper
+OTA recovery/update clears it. Successful OTA installation erases the download
+slot using the existing bootloader flow; the Web project remains the backup.
+The updated bootloader accepts only active/download slot starts, valid RAM stack
+and active-slot reset vectors, and aligned in-slot tag pointers BEFORE relocation.
+This prevents image catalogs/arbitrary bytes from being interpreted as firmware.
+OTA raw writes now require an accepted bounded upload and 16-byte alignment;
+firmware uploads must start at the download-slot base. Install BOTH bootloader
+and application for the complete guard; service use requires updated application.
+
+Verification: tools/check_image_store.py executes real storage C on ARM/Unicorn
+with strict simulated Flash; tools/check_boot_image_guard.py executes the actual
+boot candidate check; tools/check_display_animation.py covers display regression.
+Hardware checker uses only an empty slot 5, then can verify across reset and delete
+its exact test pattern. These simulations do not establish real Flash/RF timing.
+
+Hardware verification after closing connected Web clients (2026-11-06):
+91,384 bytes uploaded to empty slot 5, committed, read back byte-for-byte and
+shown. Upload: 26.13 s; read: 33.96 s; SHOW: 0.344 s. After software reset the
+same bytes were read back exactly, SHOW completed in 0.315 s, and only slot 5
+was deleted; other slot validity bits were unchanged. MTU was 251.
+
+The first reset test caught the legacy OTA_APP_Init unconditional DeleteSlot.
+It erased images on every application startup. That call and unused direct-HAL
+erase helper were removed: normal OTA service initialization now leaves Flash
+untouched. Accepted OTA uploads still claim ownership and erase via Flash
+Manager. The actual initializer is also exercised in check_boot_image_guard.py.
+The corrected application was built, flashed and the full reset test repeated.
+These checks confirm Flash content and driver completion, not visual inspection
+of panel output; physical power-cut and end-to-end OTA installation remain untested.
+
+
+## TOF depth learning mode
+
+`TOF_MODE 3` enables sensor-driven rendering without uploading pixels over BLE.
+`TOF_MODE 1` returns to normal subscription-gated ranging; `TOF_MODE 0` stops
+ranging. Mode 2 is reserved. Disconnect or disabling TOF notifications exits
+mode 3. Commands acknowledge the requested mode, not sensor initialization or
+successful SPI drawing. Inspect sensor faults/display status during diagnostics.
+
+The existing TOF task borrows its current 64-element millimeter array for a
+synchronous `Display_DrawDepthMap` call. No pointer escapes and no new frame,
+queue, task stack or heap allocation is needed. A nonblocking display mutex
+skips frames when busy. 64 solid 21x21 fills reuse the driver's existing 480-byte
+scratch buffer. The panel is cleared black once on entry; the 168x168 map begins
+at (36,36), fully inside the round 240px screen. 180px would clip the corners.
+
+RGB565 is calculated with integer arithmetic, no palette: 0 mm red, 4400 mm
+yellow, 8800 mm green, clamped above 8800; UINT16_MAX invalid is black. The
+requested 8.8 m color scale does NOT extend the VL53L8CX rated range of 4 m:
+https://www.st.com/resource/en/datasheet/vl53l8cx.pdf . It is independent of
+TOF_SET_MIN_MAX, which remains limited to 4000 mm for the existing BLE protocol.
+
+Depth mode rejects remote rectangle/row and stored-image draws with BUSY. Exit
+mode 3 first. A stop/disconnect cancels at a tile boundary; a started SPI write
+finishes under the display lock. The last view remains visible after exit.
+
+Validation: ARM-emulated real display C tests cover red/yellow/green, invalid
+and clipped ranges, all 64 tile bounds, one-time clear, mutex busy, SPI failure
+recovery and return to BLE drawing. Production build adds 644 bytes to the
+application binary and 4 bytes of linked static RAM versus the pre-change local
+build (338448 -> 339092 bytes Flash image; data+bss 119308 -> 119312 bytes).
+No task stack sizes or driver buffers changed. Physical rendering not yet tested.

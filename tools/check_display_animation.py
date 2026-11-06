@@ -44,6 +44,10 @@ uint32_t osThreadFlagsSet(osThreadId_t, uint32_t);
 uint32_t osThreadFlagsWait(uint32_t, uint32_t, uint32_t);
 uint32_t osKernelGetTickCount(void);
 ''',
+    'ble_types.h': '#pragma once\n#include <stdint.h>\ntypedef uint8_t tBleStatus;\n#define BLE_STATUS_INVALID_PARAMS 0x12\n',
+    'ble_core.h': '#pragma once\n',
+    'svc_ctl.h': '#pragma once\n',
+    'app_common.h': '#pragma once\n',
     'app_freertos.h': '''#pragma once
 #include "cmsis_os2.h"
 extern osThreadId_t displayTaskHandle;
@@ -53,6 +57,9 @@ extern osMutexId_t displayMutexHandle;
     'stubs.c': '''#include "display/display.h"
 #include "display/gc9a01.h"
 #include "app_freertos.h"
+#include "tof.h"
+void TOF_Init(void) {}
+tBleStatus TOF_UpdateValue(TOF_CharOpcode_t op, TOF_Data_t *p) { return 0; }
 osThreadId_t displayTaskHandle = (void *)1;
 osMutexId_t displayMutexHandle = (void *)2;
 sFONT Font24 = {0, 17, 24};
@@ -64,6 +71,8 @@ osStatus_t osMutexAcquire(osMutexId_t m, uint32_t t) { return 0; }
 osStatus_t osMutexRelease(osMutexId_t m) { return 0; }
 uint32_t osThreadFlagsSet(osThreadId_t t, uint32_t f) { return f; }
 uint32_t osThreadFlagsWait(uint32_t f, uint32_t o, uint32_t t) { return 0; }
+void ImageStore_Process(void) {}
+uint16_t ImageStore_RowLeft(uint16_t y) { return 0; }
 void GC9A01_SetTransferTimeout(uint32_t t) {}
 HAL_StatusTypeDef GC9A01_BlitWire(uint16_t x,uint16_t y,uint16_t w,uint16_t h,const uint8_t *p) { return HAL_OK; }
 HAL_StatusTypeDef GC9A01_Init(void) { return HAL_OK; }
@@ -257,6 +266,55 @@ def verify(elf, output):
     m.call('Display_Start')
     m.task_step()
     assert send(raw) == 0
+    # Run the real depth renderer: 64 borrowed uint16 distances, no framebuffer.
+    values = [0, 4400, 8800, 65535, 9000] + [2200] * 59
+    m.uc.mem_write(address + 512, struct.pack('<64H', *values))
+    m.call('Display_SetDepthEnabled', 1)
+    assert send(raw) == 0x81, 'Remote drawing must not overwrite depth mode'
+    m.calls.clear()
+    assert m.call('Display_DrawDepthMap', address + 512) == 0
+    fills = [args for name, args in m.calls if name == 'GC9A01_FillRect']
+    assert len(fills) == 65 and fills[0] == [0, 0, 240, 240]
+    assert fills[1] == [36, 36, 21, 21] and fills[-1] == [183, 183, 21, 21]
+    assert m.image.getpixel((36,36)) == (255,0,0)
+    assert m.image.getpixel((57,36)) == (255,255,0)
+    assert m.image.getpixel((78,36)) == (0,255,0)
+    assert m.image.getpixel((99,36)) == (0,0,0)
+    assert m.image.getpixel((120,36)) == (0,255,0)
+    assert m.image.getpixel((35,36)) == (0,0,0)
+    for x,y in [(36,36),(203,36),(36,203),(203,203)]:
+        assert (x-119.5)**2+(y-119.5)**2 < 120**2
+    m.calls.clear()
+    assert m.call('Display_DrawDepthMap', address + 512) == 0
+    assert len(m.calls) == 64, 'Repeated frames must not clear the background'
+    m.mutex_busy = True
+    assert m.call('Display_DrawDepthMap', address + 512) == 0x81
+    m.mutex_busy = False
+    m.fail_next = True
+    assert m.call('Display_DrawDepthMap', address + 512) == 0x82
+    assert m.call('Display_DrawDepthMap', address + 512) == 0
+    m.call('Display_SetDepthEnabled', 0)
+    m.calls.clear()
+    assert m.call('Display_DrawDepthMap', address + 512) == 0x81 and not m.calls
+    assert send(raw) == 0
+    print('PASS: depth colors, clipping, invalid targets, square geometry, bounded writes, ownership, busy/SPI recovery, exit')
+    m.call('TOF_APP_Init')
+    assert m.call('TOF_APP_GetMode') == 1
+    assert m.call('TOF_APP_SetMode', 3) == 1
+    assert m.call('TOF_APP_SetMode', 2) == 0 and m.call('TOF_APP_GetMode') == 3
+    assert m.call('TOF_APP_SetMode', 4) == 0
+    assert send(raw) == 0x81
+    assert m.call('TOF_APP_SetMode', 0) == 1 and send(raw) == 0
+    m.call('TOF_APP_SetMode', 3)
+    # Notification-disabled event (enum 1) releases the panel.
+    m.uc.mem_write(address + 256, struct.pack('<4I', 1, 0, 0, 0))
+    m.call('TOF_Notification', address + 256)
+    assert m.call('TOF_APP_GetMode') == 1 and send(raw) == 0
+    m.call('TOF_APP_SetMode', 3)
+    # Disconnect (enum 1) also resets mode even without a subscriber.
+    m.call('TOF_APP_EvtRx', address + 256)
+    assert m.call('TOF_APP_GetMode') == 1 and send(raw) == 0
+    print('PASS: real TOF mode state, invalid mode rejection, unsubscribe/disconnect ownership release')
     m.call('Display_WriteControlPin', 0x1234, 4, 0)
     assert send(raw) == 0x81
     print('PASS: one-shot startup, idle, rectangle/row boundaries, exact lengths, maximum packet, stop/start, GPIO ownership, SPI failure and recovery')
@@ -273,8 +331,8 @@ def main():
             (tmp / name).write_text(content)
         elf = tmp / 'display.elf'
         subprocess.run([args.cc, '-mcpu=cortex-m3', '-mthumb', '-O1', '-g', '-ffreestanding', '-nostdlib',
-                        '-I' + str(tmp), '-I' + str(APP), '-I' + str(ROOT / 'Utilities/Fonts'),
-                        str(APP / 'display/display.c'), str(tmp / 'stubs.c'),
+                        '-I' + str(tmp), '-I' + str(APP), '-I' + str(ROOT / 'STM32_WPAN/App'), '-I' + str(ROOT / 'Utilities/Fonts'),
+                        str(APP / 'display/display.c'), str(ROOT / 'STM32_WPAN/App/tof_app.c'), str(tmp / 'stubs.c'),
                         '-Wl,-Ttext=0x10000,-Tdata=0x20000000,-e,Display_Task', '-lgcc', '-o', str(elf)], check=True)
         verify(elf, args.output)
 
