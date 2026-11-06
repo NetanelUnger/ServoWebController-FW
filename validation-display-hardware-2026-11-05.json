@@ -1,0 +1,15 @@
+{
+  "utc": "2026-11-05T20:28:52.532433+00:00",
+  "address": "00:80:E1:2A:26:24",
+  "checks": [
+    "row_one_pixel",
+    "rectangle_pixels",
+    "fill_120",
+    "odd_row_payload_rejected",
+    "row_overflow_rejected",
+    "raw_rows_8"
+  ],
+  "writes": 245,
+  "seconds": 30.21,
+  "status": "PASS"
+}

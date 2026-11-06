@@ -15,21 +15,12 @@
 /* Keep the fixed-pulse diagnostic off while normal servo control owns the PCA. */
 #define ENABLE_PCA9685_DIAGNOSTIC 0
 
-/** GC9A01 worker: welcome screen, then color face animation. */
+/** GC9A01 worker: one-shot NatiLab startup mark, then BLE updates. */
 #ifndef ENABLE_DISPLAY
 #define ENABLE_DISPLAY 1
 #endif
 #ifndef DISPLAY_ROTATION
 #define DISPLAY_ROTATION 0
-#endif
-#ifndef DISPLAY_WELCOME_MS
-#define DISPLAY_WELCOME_MS 2000U
-#endif
-#ifndef DISPLAY_FRAME_PERIOD_MS
-#define DISPLAY_FRAME_PERIOD_MS 50U
-#endif
-#if DISPLAY_WELCOME_MS < 1 || DISPLAY_WELCOME_MS > 60000 || DISPLAY_FRAME_PERIOD_MS < 20 || DISPLAY_FRAME_PERIOD_MS > 1000
-#error "Invalid display timing"
 #endif
 #if (ENABLE_DISPLAY != 0 && ENABLE_DISPLAY != 1) || (DISPLAY_ROTATION < 0 || DISPLAY_ROTATION > 3)
 #error "Invalid display configuration"

@@ -23,4 +23,8 @@ HAL_StatusTypeDef GC9A01_DrawText(uint16_t x, uint16_t y, const char *text,
 HAL_StatusTypeDef GC9A01_BlitRGB565(uint16_t x, uint16_t y, uint16_t w, uint16_t h,
                                 const uint16_t *pixels);
 
+/* Serialized callers only. Wire pixels are RGB565 high byte first. */
+void GC9A01_SetTransferTimeout(uint32_t timeout_ms);
+HAL_StatusTypeDef GC9A01_BlitWire(uint16_t x, uint16_t y, uint16_t w, uint16_t h, const uint8_t *pixels);
+
 #endif

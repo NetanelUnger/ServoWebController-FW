@@ -1,4 +1,4 @@
-"""Run the real display/face C modules on an emulated ARM CPU, without hardware.
+"""Run the real display packet/task C module on an emulated ARM CPU, without hardware.
 
 Requires arm-none-eabi-gcc, pyelftools, unicorn and Pillow. HAL/RTOS boundaries
 are mocked; this does not simulate SPI timing, the RTOS scheduler or a real panel.
@@ -64,6 +64,8 @@ osStatus_t osMutexAcquire(osMutexId_t m, uint32_t t) { return 0; }
 osStatus_t osMutexRelease(osMutexId_t m) { return 0; }
 uint32_t osThreadFlagsSet(osThreadId_t t, uint32_t f) { return f; }
 uint32_t osThreadFlagsWait(uint32_t f, uint32_t o, uint32_t t) { return 0; }
+void GC9A01_SetTransferTimeout(uint32_t t) {}
+HAL_StatusTypeDef GC9A01_BlitWire(uint16_t x,uint16_t y,uint16_t w,uint16_t h,const uint8_t *p) { return HAL_OK; }
 HAL_StatusTypeDef GC9A01_Init(void) { return HAL_OK; }
 HAL_StatusTypeDef GC9A01_SetRotation(uint8_t r) { return HAL_OK; }
 HAL_StatusTypeDef GC9A01_SetDisplayEnabled(bool e) { return HAL_OK; }
@@ -91,7 +93,7 @@ class Machine:
         self.hooks = {self.symbols[name] & ~1: name for name in [
             'HAL_GetTick', 'osKernelGetTickCount', 'HAL_GPIO_WritePin', 'Error_Handler',
             'osMutexAcquire', 'osMutexRelease', 'osThreadFlagsSet', 'osThreadFlagsWait',
-            'GC9A01_Init', 'GC9A01_SetRotation', 'GC9A01_SetDisplayEnabled',
+            'GC9A01_SetTransferTimeout', 'GC9A01_BlitWire', 'GC9A01_Init', 'GC9A01_SetRotation', 'GC9A01_SetDisplayEnabled',
             'GC9A01_FillRect', 'GC9A01_BlitRGB565', 'GC9A01_DrawText']}
         self.image = Image.new('RGB', (240, 240), 'white')
         self.now = 0
@@ -101,6 +103,9 @@ class Machine:
         self.wait = None
         self.fail_next = False
         self.task_context = None
+        self.mutex_busy = False
+        self.wire_pointer = None
+        self.spi_timeout = 1000
         self.uc.hook_add(UC_HOOK_CODE, self.hook)
 
     def args(self):
@@ -121,6 +126,9 @@ class Machine:
         if name in ('HAL_GetTick', 'osKernelGetTickCount'):
             self.ret(self.now)
         elif name == 'osMutexAcquire':
+            if self.mutex_busy:
+                self.ret(-3)
+                return
             assert not self.locked, 'Recursive/unserialized panel ownership'
             self.locked = True
             self.ret()
@@ -135,6 +143,11 @@ class Machine:
             self.wait = a[2]
             self.ret()
             uc.emu_stop()
+        elif name == 'GC9A01_SetTransferTimeout':
+            assert self.locked
+            assert a[0] > 10, 'SPI timeout must exceed the 10 ms HAL tick quantum'
+            self.spi_timeout = a[0]
+            self.ret()
         elif name == 'Error_Handler':
             raise AssertionError('Unexpected Error_Handler')
         else:
@@ -145,6 +158,8 @@ class Machine:
                 self.fail_next = False
                 self.ret(1)
                 return
+            if name == 'GC9A01_BlitWire':
+                self.wire_pointer = struct.unpack('<I', uc.mem_read(uc.reg_read(UC_ARM_REG_SP), 4))[0]
             if name in ('GC9A01_FillRect', 'GC9A01_BlitRGB565'):
                 x, y, w, h = a
                 assert 0 < w <= 240 - x and 0 < h <= 240 - y, 'Out-of-panel write'
@@ -189,85 +204,62 @@ def rgb565(color):
 
 def verify(elf, output):
     m = Machine(elf)
+    address = 0x20018000
+    def send(data):
+        m.uc.mem_write(address, bytes(data))
+        return m.call('Display_WritePacket', address, len(data))
+    valid = [1, 0, 0, 120, 1, 0xf8, 0]
+    assert send(valid) == 0x81, 'Drawing before initialization'
     m.task_step()
-    assert m.wait == 2000
+    assert m.wait == 0xffffffff
     assert any(c[0] == 'GC9A01_DrawText' for c in m.calls)
-    m.now = 1999
     m.calls.clear()
     m.task_step()
-    assert m.wait == 1 and not m.calls, 'Welcome duration was shortened'
-    m.now = 2000
-    m.task_step()
-    assert any(c[0] == 'GC9A01_BlitRGB565' for c in m.calls)
-    assert m.call('Display_Stop') == 0
-    m.calls.clear()
-    m.task_step()
-    assert m.wait == 0xffffffff and not m.calls, 'Stopped task still polls or draws'
-    assert m.call('Display_WriteControlPin', 0x1234, 4, 0) == 0
-    assert m.calls[-1][0] == 'HAL_GPIO_WritePin'
-    m.calls.clear()
-    assert m.call('Display_Start') == 0
-    m.task_step()
-    assert m.calls[0][0] == 'GC9A01_Init', 'Resume did not recover panel configuration'
-    m.call('Display_Stop')
-    m.call('Display_Start')
-    m.fail_next = True
-    m.task_step()
-    assert m.wait == 0xffffffff, 'SPI failure caused a retry spin'
-    m.call('Display_Start')
-    m.task_step()
-    assert m.wait == 2000, 'Could not recover from a transfer failure'
-
-    m = Machine(elf)
-    assert m.call('FaceAnimation_Init', 0) == 0
-    initial = m.image.copy()
-    assert len(initial.getcolors(57600)) > 100, 'Color artwork was lost'
-    m.calls.clear()
-    m.call('FaceAnimation_Update', 500)
-    assert not m.calls, 'Unchanged pose generated transfers'
-    m.call('FaceAnimation_Init', 0)
-    frames = []
-    total_pixels = 0
-    for now in range(0, 12001, 50):
+    assert not m.calls, 'Idle task redraws the panel'
+    assert send(valid) == 0
+    assert m.calls[-1][0] == 'GC9A01_FillRect'
+    assert send([1,0,0,240,240,0xff,0xff]) == 0
+    assert m.calls[-1] == ('GC9A01_FillRect', [0, 0, 240, 240])
+    raw = [2, 239, 239, 1, 1, 0x07, 0xe0]
+    assert send(raw) == 0
+    assert m.calls[-1][0] == 'GC9A01_BlitWire'
+    assert m.wire_pointer == address + 5, 'Pixel payload was copied'
+    m.mutex_busy = True
+    assert send(raw) == 0x81
+    m.mutex_busy = False
+    assert m.call('Display_WritePacket', 0, 7) == 0x80
+    for data in ([], [1], [1,0,0,0,1,0,0], [1,239,0,2,1,0,0],
+                 [1,1,0,240,240,0,0], [2,0,0,2,1,0,0],
+                 [4,0,0,1,1,0,0], valid+[0], raw[:-1]):
         m.calls.clear()
-        m.call('FaceAnimation_Update', now)
-        total_pixels += sum(a[2]*a[3] for name,a in m.calls if name == 'GC9A01_BlitRGB565')
-        frames.append(m.image.copy())
-    assert frames[0].tobytes() == frames[-1].tobytes(), 'Loop boundary drift'
-    assert frames[0].tobytes() != frames[32].tobytes(), 'Eyes never moved'
-    bright = lambda im: sum(count for count,(r,g,b) in im.crop((44,80,112,140)).getcolors(57600) if r>150 and g>170 and b>170)
-    assert bright(frames[83]) < bright(initial) / 3, 'Eyes did not close during blink'
-    assert frames[156].crop((44,56,112,144)).tobytes() == initial.crop((44,56,112,144)).tobytes(), 'Wink closed both eyes'
-    assert frames[156].crop((128,56,196,144)).tobytes() != initial.crop((128,56,196,144)).tobytes(), 'Wink did not close right eye'
-    assert frames[108].crop((88,153,152,193)).tobytes() != initial.crop((88,153,152,193)).tobytes(), 'Surprised mouth missing'
-    assert frames[136].crop((88,153,152,193)).tobytes() != frames[108].crop((88,153,152,193)).tobytes(), 'Happy mouth missing'
-    # Repainting a dirty rectangle must fully erase a previous wide-open eye.
-    fresh = Machine(elf)
-    fresh.call('FaceAnimation_Init', 0)
-    fresh.call('FaceAnimation_Update', 4150)
-    assert fresh.image.tobytes() == frames[83].tobytes(), 'Eye movement left trails'
-    # Every performance pose must match a fresh render, independent of history.
-    for time in (1250, 2900, 4350, 5050, 5700, 6750, 7900, 8550, 10250, 11000):
-        fresh.call('FaceAnimation_Init', 0)
-        fresh.call('FaceAnimation_Update', time)
-        assert fresh.image.tobytes() == frames[time//50].tobytes(), f'Dirty rectangle artifact at {time} ms'
-    wrapped = Machine(elf)
-    wrapped.call('FaceAnimation_Init', 0xffffff00)
-    wrapped.call('FaceAnimation_Update', (0xffffff00 + 1600) & 0xffffffff)
-    assert wrapped.image.tobytes() == frames[32].tobytes(), 'Clock rollover changed animation'
-    # Exercise all packed rows, including any poses skipped by the timeline.
-    for asset in range(30):
-        for row in range(240 if asset == 0 else 88 if asset < 27 else 40):
-            assert m.call('decode_row', asset, row, 0x20017000) == 0
-    if output:
-        output.mkdir(parents=True, exist_ok=True)
-        mask = Image.new('L', (240, 240))
-        ImageDraw.Draw(mask).ellipse((0, 0, 239, 239), fill=255)
-        previews = [Image.composite(frame, Image.new('RGB', (240, 240), '#30343b'), mask).resize((480, 480)) for frame in frames[:-1]]
-        previews[0].save(output / 'face-preview.png')
-        previews[0].save(output / 'face-preview.gif', save_all=True, append_images=previews[1:], duration=50, loop=0)
-    print('PASS: welcome timing, stop/resume, GPIO ownership, fault recovery, colors, gaze, blink, wink, expressions, all packed rows, dirty regions, idle frames and timer wrap')
-    print(f'12-second cycle: {total_pixels:,} transmitted pixels; {total_pixels*2/12:,.0f} pixel bytes/second average (excluding SPI commands)')
+        assert send(data) == 0x80 and not m.calls, data
+    assert send([2,0,0,120,1]+[0x12,0x34]*120) == 0
+    row = [3, 10, 20, 0xf8, 0, 0x07, 0xe0]
+    assert send(row) == 0
+    assert m.calls[-1] == ('GC9A01_BlitWire', [10, 20, 2, 1])
+    assert m.wire_pointer == address + 3, 'Row payload was copied'
+    assert send([3, 118, 239] + [0x12, 0x34]*122) == 0
+    assert m.calls[-1] == ('GC9A01_BlitWire', [118, 239, 122, 1])
+    assert send([3, 239, 239, 0xff, 0xff]) == 0
+    for data in ([3,0,0], [3,0,0,0], [3,0,0,0,0,0],
+                 [3,239,0,0,0,0,0], [3,0,240,0,0],
+                 [3,119,0]+[0,0]*122, [3,0,0]+[0,0]*123):
+        m.calls.clear()
+        assert send(data) == 0x80 and not m.calls, data
+    assert m.call('Display_Stop') == 0
+    assert send(valid) == 0x81
+    assert m.call('Display_Start') == 0
+    assert send(valid) == 0x81
+    m.task_step()
+    m.fail_next = True
+    assert send(raw) == 0x82
+    assert send(raw) == 0, 'Transient SPI fault permanently disabled remote drawing'
+    m.call('Display_Start')
+    m.task_step()
+    assert send(raw) == 0
+    m.call('Display_WriteControlPin', 0x1234, 4, 0)
+    assert send(raw) == 0x81
+    print('PASS: one-shot startup, idle, rectangle/row boundaries, exact lengths, maximum packet, stop/start, GPIO ownership, SPI failure and recovery')
 
 
 def main():
@@ -275,15 +267,14 @@ def main():
     parser.add_argument('--cc', required=True)
     parser.add_argument('--output', type=Path)
     args = parser.parse_args()
-    with tempfile.TemporaryDirectory(prefix='servo-face-test-') as tmp:
+    with tempfile.TemporaryDirectory(prefix='servo-display-test-') as tmp:
         tmp = Path(tmp)
         for name, content in STUBS.items():
             (tmp / name).write_text(content)
         elf = tmp / 'display.elf'
         subprocess.run([args.cc, '-mcpu=cortex-m3', '-mthumb', '-O1', '-g', '-ffreestanding', '-nostdlib',
                         '-I' + str(tmp), '-I' + str(APP), '-I' + str(ROOT / 'Utilities/Fonts'),
-                        str(APP / 'display/display.c'), str(APP / 'display/face_animation.c'),
-                        str(APP / 'display/face_assets.c'), str(tmp / 'stubs.c'),
+                        str(APP / 'display/display.c'), str(tmp / 'stubs.c'),
                         '-Wl,-Ttext=0x10000,-Tdata=0x20000000,-e,Display_Task', '-lgcc', '-o', str(elf)], check=True)
         verify(elf, args.output)
 

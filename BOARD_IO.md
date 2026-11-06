@@ -109,7 +109,7 @@ analog input; no MISO pin is configured. `DISPLAY_SPI` names `hspi3`. The GC9A01
 worker draws a white welcome screen with black text after scheduler startup,
 then starts color face playback after two seconds. Manual writes to CS/DC/RES
 pause that worker under a shared mutex before changing the pin. Reads do not
-pause animation and may observe control levels during SPI transfers.
+disable remote drawing and may observe control levels during SPI transfers.
 See [the display driver](STM32CubeIDE/Application/User/Core/display/README.md).
 
 ADC4 uses 12-bit right-aligned, TIM2-triggered scans at 1 kHz, HCLK / 8 and

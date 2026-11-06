@@ -44,3 +44,13 @@ For a new characteristic:
 - Wire service init and connection/disconnection events through `app_ble.c` when needed.
 - Update the Web `BleProvider` to request the service and resolve the characteristic.
 - Keep BLE callbacks short; move parsing, retries, and long work into RTOS tasks.
+
+## Display service
+
+`display_service.c` exposes the v1 binary rectangle service. Its bounded synchronous
+write path borrows the event buffer only until callback return. Use ordinary writes
+with response; do not queue the pointer. Contract and Web integration:
+`STM32CubeIDE/Application/User/Core/display/README.md`. Web helpers own packet
+chunking and size-rejection fallback. The first display write per connection
+requests a 7.5-15 ms interval and 251-byte data length; central acceptance is
+not guaranteed. Preserve acknowledged drawing and the borrowed-buffer lifetime.

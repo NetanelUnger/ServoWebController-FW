@@ -15,6 +15,9 @@ volatile struct {
 } g_display_spi_diagnostic;
 
 /* This buffer replaces a 115200-byte framebuffer. Calls must be serialized. */
+static uint32_t transfer_timeout_ms = 1000U;
+void GC9A01_SetTransferTimeout(uint32_t timeout_ms) { transfer_timeout_ms = timeout_ms; }
+
 static uint8_t scanline[GC9A01_WIDTH * 2U];
 
 static void select_panel(bool selected)
@@ -31,7 +34,7 @@ static HAL_StatusTypeDef transmit(const uint8_t *data, uint16_t length)
     uint32_t start = osKernelGetTickCount();
     /* This worker is lower priority than BLE and I2C bring-up. HAL's timeout
      * includes time spent preempted, not just time driving SPI clocks. */
-    HAL_StatusTypeDef status = HAL_SPI_Transmit(&DISPLAY_SPI, data, length, 1000U);
+    HAL_StatusTypeDef status = HAL_SPI_Transmit(&DISPLAY_SPI, data, length, transfer_timeout_ms);
     g_display_spi_diagnostic.end_ms = HAL_GetTick();
     g_display_spi_diagnostic.status = status;
     g_display_spi_diagnostic.spi_sr = DISPLAY_SPI.Instance->SR;
@@ -186,6 +189,19 @@ HAL_StatusTypeDef GC9A01_DrawText(uint16_t x, uint16_t y, const char *text,
         }
         status = transmit(scanline, 2U * width);
     }
+    end_pixels();
+    return status;
+}
+
+/* Direct SPI transmission from the BLE event buffer; no staging or byte swap. */
+HAL_StatusTypeDef GC9A01_BlitWire(uint16_t x, uint16_t y, uint16_t w, uint16_t h,
+                                const uint8_t *pixels)
+{
+    uint32_t bytes=(uint32_t)w*h*2U;
+    if (pixels == NULL || !valid_rect(x,y,w,h) || bytes > 65535U) return HAL_ERROR;
+    HAL_StatusTypeDef status=begin_pixels(x,y,w,h);
+    if (status != HAL_OK) return status;
+    status=transmit(pixels,(uint16_t)bytes);
     end_pixels();
     return status;
 }

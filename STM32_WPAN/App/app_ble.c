@@ -43,6 +43,7 @@
 #include "nus_app.h"
 #include "tof.h"
 #include "tof_app.h"
+#include "display_service.h"
 #include "IMU/imu.h"
 #include "adc_ble.h"
 #include "dis.h"
@@ -427,6 +428,7 @@ void APP_BLE_Init(void)
     OTA_APP_Init();
     NUS_APP_Init();
     TOF_APP_Init();
+    DISPLAY_SERVICE_Init();
     IMU_BLE_Init();
     DIS_APP_Init();
     LOG_INFO_APP("End of Services and Characteristics creation\n");

@@ -30,6 +30,9 @@ names = {line.split()[-1] for line in symbols.splitlines() if line.split()}
 assert {'ADC_BLE_Init', 'ADC_BLE_Step', 'BoardIO_ReadADC'} <= names, 'ADC RAW service missing'
 assert {'ADC_DMA_Init', 'HAL_ADC_Start_DMA', 'ADC4_IRQHandler'} <= names, 'ADC DMA sampler missing'
 assert 'vl53l5cx_init' not in names, 'Obsolete VL53L5CX firmware linked'
+assert int(re.search(r'BLE_CFG_SVC_MAX_NBR_CB\s+\((\d+)\)', (root / 'STM32_WPAN/App/ble_conf.h').read_text()).group(1)) >= 8, 'Display callback table too small'
+assert {'DISPLAY_SERVICE_Init', 'Display_WritePacket', 'GC9A01_BlitWire'} <= names, 'Display service missing'
+assert 'FaceAnimation_Update' not in names and 'FaceAnimation_Init' not in names, 'Local animation linked'
 config = (root / 'STM32CubeIDE/Application/User/Core/config.h').read_text()
 if '#define DISABLE_I2C_VL53L8CX 0' in config:
     assert {'vl53l8cx_Task', 'vl53l8cx_init', 'VL53L8CX_FIRMWARE'} <= names

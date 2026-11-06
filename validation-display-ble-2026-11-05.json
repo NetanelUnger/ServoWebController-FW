@@ -1,0 +1,46 @@
+{
+  "date": "2026-11-05",
+  "firmware": "ServoWebController-FW",
+  "build": {
+    "configuration": "Debug",
+    "errors": 0,
+    "warnings": 0
+  },
+  "offline_tests": {
+    "arm_emulation": "passed",
+    "packet_bounds_and_lengths": "passed",
+    "borrowed_pixel_pointer_identity": "passed",
+    "busy_lock_and_stop_start": "passed",
+    "spi_failure_recovery": "passed",
+    "no_periodic_redraw": "passed",
+    "ota_and_linked_symbols": "passed",
+    "no_linked_face_animation": "passed",
+    "write_row_length_bounds_and_borrowed_pointer": "passed"
+  },
+  "hardware_tested": true,
+  "flashed": true,
+  "web_changes": "deferred per user request",
+  "startup_asset": "NatiLab typographic mark using existing Font24",
+  "display_service_uuid": "91bad4c0-b950-4226-aa2b-4ede9fa42f59",
+  "display_command_uuid": "91bad4c1-b950-4226-aa2b-4ede9fa42f59",
+  "command_opcodes": {
+    "1": "FILL_RECT",
+    "2": "WRITE_RECT",
+    "3": "WRITE_ROW"
+  },
+  "max_command_bytes": 247,
+  "capabilities_characteristic": false,
+  "hardware_validation": {
+    "firmware_flash_verified": true,
+    "root_cause": "10 ms SPI timeout equal to HAL 100 Hz tick quantum; transient timeout latched running=false",
+    "fix": "100 ms SPI timeout and keep remote drawing enabled after a transfer failure",
+    "full_frame_fill_writes": 480,
+    "full_frame_fill_seconds": 56.12,
+    "full_frame_size": [
+      240,
+      240
+    ],
+    "raw_and_validation_report": "validation-display-hardware-2026-11-05.json",
+    "physical_panel_visual_confirmation": false
+  }
+}

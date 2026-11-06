@@ -10,11 +10,13 @@ extern volatile uint32_t g_display_frame_count;
 
 /* Task-context APIs only. Stop waits for the in-flight draw, then prevents any
  * more SPI work and leaves the last image visible. The task blocks indefinitely;
- * its static stack stays allocated. Start reinitializes the panel and scene.
+ * its static stack stays allocated. Start reinitializes the panel and startup mark.
  * Use these APIs, never externally suspend/delete displayTask mid-transfer. */
 osStatus_t Display_Start(void);
 osStatus_t Display_Stop(void);
 void Display_Task(void *argument);
+/* Packet is borrowed until return; result is a protocol ATT error or zero. */
+uint8_t Display_WritePacket(const uint8_t *packet, uint16_t length);
 
 /* Board diagnostics only: pause under the display lock before writing CS/DC/RST.
  * GPIO_GET is passive. A manual write leaves playback stopped until Start/reset. */
