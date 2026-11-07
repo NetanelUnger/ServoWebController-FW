@@ -821,7 +821,7 @@ rtos.0.mutexes.0=allocationType,Static;controlBlockName,i2cMutexControlBlock;nam
 rtos.0.mutexes.1=allocationType,Static;controlBlockName,displayMutexControlBlock;name,displayMutex
 rtos.0.queues.0=allocationType,Static;bufferName,NusTxQueueBuffer;controlBlockName,NusTxQueueControlBlock;itemNumber,5;itemSize,NUS_APP_QueueItem_t;name,commTxQueue
 rtos.0.queues.1=allocationType,Static;bufferName,NusRxQueueBuffer;controlBlockName,NusRxQueueControlBlock;itemNumber,5;itemSize,NUS_APP_QueueItem_t;name,commRxQueue
-rtos.0.tasks.0=allocationType,Static;bufferName,defaultTaskBuffer;codeGen,Default;controlBlockName,defaultTaskBlocTask;entry,StartDefaultTask;name,defaultTask;parameter,NULL;priority,osPriorityNormal;stackSize,4096
+rtos.0.tasks.0=allocationType,Static;bufferName,defaultTaskBuffer;codeGen,Default;controlBlockName,defaultTaskBlocTask;entry,StartDefaultTask;name,defaultTask;parameter,NULL;priority,osPriorityNormal;stackSize,1536
 rtos.0.tasks.1=allocationType,Static;bufferName,commTaskBuffer;codeGen,Default;controlBlockName,commTaskBlock;entry,commTask_Entry;name,commTask;parameter,NULL;priority,osPriorityHigh1;stackSize,2048
 rtos.0.tasks.2=allocationType,Static;bufferName,displayTaskBuffer;codeGen,Default;controlBlockName,displayTaskBlock;entry,displayTask_Entry;name,displayTask;parameter,NULL;priority,osPriorityBelowNormal;stackSize,512
 
@@ -848,3 +848,7 @@ ADC4.SamplingTime-4\#ChannelRegularConversion=ADC_SAMPLINGTIME_COMMON_1
 ADC4.Channel-5\#ChannelRegularConversion=ADC_CHANNEL_10
 ADC4.Rank-5\#ChannelRegularConversion=6
 ADC4.SamplingTime-5\#ChannelRegularConversion=ADC_SAMPLINGTIME_COMMON_1
+
+rtos.0.tasks.5=allocationType,Static;bufferName,bleTxTaskBuffer;codeGen,Default;controlBlockName,bleTxTaskBlock;entry,BLE_TX_Task;name,bleTxTask;parameter,NULL;priority,osPriorityHigh2;stackSize,1024
+rtos.0.events.2=allocationType,Static;controlBlockName,servoEventControlBlock;name,servoEvent
+rtos.0.events.3=allocationType,Static;controlBlockName,bleTxEventControlBlock;name,bleTxEvent

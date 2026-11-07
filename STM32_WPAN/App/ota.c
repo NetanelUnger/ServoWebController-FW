@@ -1,3 +1,4 @@
+#include "ble_tx.h"
 /* USER CODE BEGIN Header */
 /**
   ******************************************************************************
@@ -308,6 +309,7 @@ static SVCCTL_EvtAckStatus_t OTA_EventHandler(void *p_Event)
           UNUSED(p_server_confirmation);
 
           /* USER CODE BEGIN ACI_GATT_SERVER_CONFIRMATION_VSEVT_CODE */
+          if (!BLE_TX_ConfirmationIsOta(p_server_confirmation->Connection_Handle)) break;
           OTA_Conf_Status = (OTA_Confirmation_Status_t)OTA_APP_GetConfStatus();
           if( OTA_Conf_Status == OTA_Pending)
           {
@@ -516,6 +518,7 @@ void OTA_Init(void)
   /* USER CODE END SVCCTL_InitService1Char3 */
 
   /* USER CODE BEGIN SVCCTL_InitService1Svc_2 */
+  BLE_TX_Register(BLE_TX_OTA,OTA_Context.OtaSvcHdle,OTA_Context.ConfCharHdle);
   OTA_Conf_Status = OTA_No_Pending;
   /* USER CODE END SVCCTL_InitService1Svc_2 */
 
@@ -557,11 +560,7 @@ tBleStatus OTA_UpdateValue(OTA_CharOpcode_t CharOpcode, OTA_Data_t *pData)
       break;
 
     case OTA_CONF:
-      ret = aci_gatt_update_char_value(OTA_Context.OtaSvcHdle,
-                                       OTA_Context.ConfCharHdle,
-                                       0, /* charValOffset */
-                                       pData->Length, /* charValueLen */
-                                       (uint8_t *)pData->p_Payload);
+      ret = BLE_TX_Ordered(BLE_TX_OTA,pData->p_Payload,pData->Length);
       if (ret != BLE_STATUS_SUCCESS)
       {
         LOG_INFO_BLE("  Fail   : aci_gatt_update_char_value CONF command, error code: 0x%02X\n", ret);

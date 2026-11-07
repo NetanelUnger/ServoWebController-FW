@@ -31,6 +31,7 @@ extern "C" {
 #include "ble_core.h"
 /* USER CODE BEGIN Includes */
 #include "config.h"
+#include "ble_tx.h"
 #include "comm/comm_interface.h"
 /* USER CODE END Includes */
 
@@ -57,11 +58,7 @@ typedef struct
   /* USER CODE END NUS_APP_ConnHandleNotEvt_t */
 } NUS_APP_ConnHandleNotEvt_t;
 /* USER CODE BEGIN ET */
-typedef struct
-{
-  packetSize_t Length;
-  uint8_t *Payload;
-} NUS_APP_QueueItem_t;
+typedef BLE_TX_Item NUS_APP_QueueItem_t;
 /* USER CODE END ET */
 
 /* Exported constants --------------------------------------------------------*/
@@ -83,10 +80,10 @@ typedef struct
 void NUS_APP_Init(void);
 void NUS_APP_EvtRx(NUS_APP_ConnHandleNotEvt_t *p_Notification);
 /* USER CODE BEGIN EFP */
-extern void NusTxTask(NUS_APP_QueueItem_t *item);
 extern void NusRxTask(NUS_APP_QueueItem_t *item);
 extern tBleStatus NUS_APP_WriteAllChannelDcPayload(const uint8_t *pData, uint8_t length);
 extern tBleStatus NUS_APP_SyncAllChannelDcCharacteristic(void);
+extern tBleStatus NUS_APP_RefreshAllChannelDcRead(void);
 /* USER CODE END EFP */
 
 #ifdef __cplusplus

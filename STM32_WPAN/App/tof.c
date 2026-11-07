@@ -1,3 +1,4 @@
+#include "ble_tx.h"
 /**
   ******************************************************************************
   * @file    tof.c
@@ -112,7 +113,7 @@ void TOF_Init(void)
                           TOF_DISTANCE_MAP_LEN,
                           CHAR_PROP_NOTIFY,
                           ATTR_PERMISSION_NONE,
-                          GATT_NOTIFY_ATTRIBUTE_WRITE,
+                          GATT_NOTIFY_ATTRIBUTE_WRITE | GATT_NOTIFY_NOTIFICATION_COMPLETION,
                           0x10,
                           CHAR_VALUE_LEN_VARIABLE,
                           &(TOF_Context.DistanceCharHdle));
@@ -120,6 +121,7 @@ void TOF_Init(void)
   {
     LOG_INFO_BLE("Fail: TOF char add 0x%02X\n", ret);
   }
+  BLE_TX_Register(BLE_TX_TOF,TOF_Context.TofSvcHdle,TOF_Context.DistanceCharHdle);
 }
 
 tBleStatus TOF_UpdateValue(TOF_CharOpcode_t CharOpcode, TOF_Data_t *pData)
@@ -129,9 +131,5 @@ tBleStatus TOF_UpdateValue(TOF_CharOpcode_t CharOpcode, TOF_Data_t *pData)
     return BLE_STATUS_INVALID_PARAMS;
   }
 
-  return aci_gatt_update_char_value(TOF_Context.TofSvcHdle,
-                                    TOF_Context.DistanceCharHdle,
-                                    0U,
-                                    pData->Length,
-                                    pData->p_Payload);
+  return BLE_TX_Latest(BLE_TX_TOF,pData->p_Payload,pData->Length);
 }

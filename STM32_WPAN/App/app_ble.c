@@ -1,3 +1,4 @@
+#include "ble_tx.h"
 /* USER CODE BEGIN Header */
 /**
   ******************************************************************************
@@ -246,14 +247,17 @@ const osThreadAttr_t BleHostTask_attributes = {
 osThreadId_t            HciAsyncEvtTaskHandle;
 osSemaphoreId_t         HciAsyncEvtSemaphore;
 
+/* Keep the enlarged dispatch stack static: preserve scarce event heap capacity. */
+static StackType_t HciAsyncEvtStack[TASK_STACK_SIZE_HCI_ASYNC_EVENT/sizeof(StackType_t)];
+static StaticTask_t HciAsyncEvtControlBlock;
 const osThreadAttr_t HciAsyncEvtTask_attributes = {
   .name         = "HCI async Event Task",
   .priority     = TASK_PRIO_HCI_ASYNC_EVENT,
   .stack_size   = TASK_STACK_SIZE_HCI_ASYNC_EVENT,
   .attr_bits    = TASK_DEFAULT_ATTR_BITS,
-  .cb_mem       = TASK_DEFAULT_CB_MEM,
-  .cb_size      = TASK_DEFAULT_CB_SIZE,
-  .stack_mem    = TASK_DEFAULT_STACK_MEM
+  .cb_mem       = &HciAsyncEvtControlBlock,
+  .cb_size      = sizeof(HciAsyncEvtControlBlock),
+  .stack_mem    = HciAsyncEvtStack
 };
 
 const osSemaphoreAttr_t HciAsyncEvtSemaphore_attributes = {
@@ -1016,7 +1020,11 @@ SVCCTL_UserEvtFlowStatus_t SVCCTL_App_Notification(void *p_Pckt)
           break;
         }
         /* USER CODE BEGIN ECODE_1 */
-
+        case ACI_GATT_NOTIFICATION_COMPLETE_VSEVT_CODE:
+        case ACI_GATT_TX_POOL_AVAILABLE_VSEVT_CODE:
+          /* BLE_TX_Event consumed these before service dispatch. Do not log
+           * every successful notification as an unhandled vendor event. */
+          break;
         /* USER CODE END ECODE_1 */
         default:
         {
@@ -1063,6 +1071,7 @@ void Ble_UserEvtRx( void)
 
   LST_remove_head ( &BleAsynchEventQueue, (tListNode **)&phcievt );
 
+  BLE_TX_Event((void *)&(phcievt->evtserial));
   svctl_return_status = SVCCTL_UserEvtRx((void *)&(phcievt->evtserial));
 
   if (svctl_return_status != SVCCTL_UserEvtFlowDisable)
@@ -1073,6 +1082,8 @@ void Ble_UserEvtRx( void)
   {
     LST_insert_head ( &BleAsynchEventQueue, (tListNode *)phcievt );
   }
+
+  if (LST_is_empty(&BleAsynchEventQueue) != FALSE) BLE_TX_EventsDrained();
 
   if ((LST_is_empty(&BleAsynchEventQueue) == FALSE) && (svctl_return_status != SVCCTL_UserEvtFlowDisable) )
   {

@@ -444,3 +444,10 @@ ARM checks verify the conversion including 3112 -> 7830, rounding and 12-bit
 boundaries. Web decode checks cover v1/v2, validity, frame lengths and offsets.
 FW and Web production builds passed; this calibration has not been flashed or
 verified against a new physical voltage measurement.
+
+## BLE transport backpressure
+
+Application notifications and indications have a dedicated, static TX owner.
+Servo reads refresh locally without producing notifications; command writes reject
+overload with ATT0x11 rather than silently dropping work. See [BLE_TRANSPORT.md](BLE_TRANSPORT.md)
+for completion semantics, bounded queues, reconnect assumptions and BLE_STATS diagnostics.

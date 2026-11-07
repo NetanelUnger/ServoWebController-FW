@@ -1,6 +1,6 @@
-"""Verify restored servo-data BLE interface with normal PCA control disabled.
+"""Verify servo READ never emits telemetry and current-value writes preserve state.
 
-Requires bleak. Valid writes are expected to be rejected by the device switch.
+Requires bleak. Use --pca-disabled for a build that rejects all servo writes.
 """
 import asyncio
 import struct
@@ -15,6 +15,7 @@ async def main():
     import argparse
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--address', required=True)
+    parser.add_argument('--pca-disabled', action='store_true')
     args = parser.parse_args()
     device = await BleakScanner.find_device_by_address(args.address, timeout=15)
     assert device, 'Board not advertising'
@@ -29,18 +30,23 @@ async def main():
         notices, replies, frames = asyncio.Queue(), asyncio.Queue(), asyncio.Queue()
         await client.start_notify(SERVO, lambda _, data: notices.put_nowait(bytes(data)))
         assert bytes(await client.read_gatt_char(SERVO)) == before
-        assert await asyncio.wait_for(notices.get(), 5) == before
+        await asyncio.sleep(0.3)
+        assert notices.empty(), "Servo READ unexpectedly emitted a notification"
         for payload in (b'\x00', before):
             try:
                 await client.write_gatt_char(SERVO, payload, response=True)
             except Exception as error:
+                assert payload == b'\x00' or args.pca_disabled, str(error)
                 assert '0x80' in str(error) or '0x0D' in str(error), str(error)
             else:
-                raise AssertionError('Write unexpectedly accepted with PCA disabled')
+                assert payload == before and not args.pca_disabled, 'Malformed or disabled write accepted'
         assert bytes(await client.read_gatt_char(SERVO)) == before
         await client.start_notify(TX, lambda _, data: replies.put_nowait(bytes(data).decode()))
         await client.write_gatt_char(RX, b'HELP', response=True)
-        lines = [await asyncio.wait_for(replies.get(), 5) for _ in range(16)]
+        lines = []
+        while not lines or lines[-1] != "OK HELP END":
+            assert len(lines) < 40, "Unterminated HELP response"
+            lines.append(await asyncio.wait_for(replies.get(), 5))
         assert lines[0] == 'OK HELP' and lines[-1] == 'OK HELP END'
         await client.write_gatt_char(RX, b'PING', response=True)
         assert await asyncio.wait_for(replies.get(), 5) == 'OK PING'
@@ -48,7 +54,7 @@ async def main():
         for i in range(4):
             frame = await asyncio.wait_for(frames.get(), 35 if i == 0 else 3)
             assert len(frame) == 64
-        print('PASS: servo read/notify, disabled and malformed write rejection, HELP, PING, TOF', flush=True)
+        print('PASS: non-notifying servo READ, valid/disabled and malformed writes, HELP, PING, TOF', flush=True)
 
 if __name__ == '__main__':
     asyncio.run(main())

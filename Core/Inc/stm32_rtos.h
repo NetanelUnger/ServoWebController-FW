@@ -80,6 +80,9 @@ extern "C" {
 #define TASK_STACK_SIZE_BLE_TIMER               RTOS_STACK_SIZE_REDUCED
 #define TASK_STACK_SIZE_PKACTRL                 RTOS_STACK_SIZE_REDUCED
 /* USER CODE BEGIN TASK_Size_Define */
+/* Inline, bounded transport work needs headroom in the serialized dispatcher. */
+#undef TASK_STACK_SIZE_HCI_ASYNC_EVENT
+#define TASK_STACK_SIZE_HCI_ASYNC_EVENT 2048U
 
 /* USER CODE END TASK_Size_Define */
 

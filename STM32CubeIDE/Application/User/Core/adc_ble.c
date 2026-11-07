@@ -1,3 +1,4 @@
+#include "ble_tx.h"
 #include "adc_ble.h"
 #include "adc_dma.h"
 #include "battery_calibration.h"
@@ -60,10 +61,11 @@ void ADC_BLE_Init(void)
     uuid.Char_UUID_128[12] = 0xb1;
     if (aci_gatt_add_char(service, UUID_TYPE_128, &uuid, ADC_BLE_RAW_LENGTH,
             CHAR_PROP_READ | CHAR_PROP_NOTIFY, ATTR_PERMISSION_NONE,
-            GATT_NOTIFY_ATTRIBUTE_WRITE, 0x10, CHAR_VALUE_LEN_CONSTANT,
+            GATT_NOTIFY_ATTRIBUTE_WRITE | GATT_NOTIFY_NOTIFICATION_COMPLETION, 0x10, CHAR_VALUE_LEN_CONSTANT,
             &raw_char) != BLE_STATUS_SUCCESS) return;
     available = 1;
-    (void)aci_gatt_update_char_value(service, raw_char, 0, sizeof(empty), (uint8_t *)empty);
+    BLE_TX_Register(BLE_TX_ADC,service,raw_char);
+    (void)BLE_TX_Local(service,raw_char,empty,sizeof(empty));
 }
 
 /* SVCCTL routes GAP disconnects to app_ble.c, not registered service handlers. */
@@ -91,7 +93,7 @@ void ADC_BLE_Step(void)
     if (!ADC_BLE_Enabled()) {
         if (streaming) {
             /* Do not retain apparently valid readings from a previous session. */
-            (void)aci_gatt_update_char_value(service, raw_char, 0, sizeof(payload), payload);
+            (void)BLE_TX_Local(service,raw_char,payload,sizeof(payload));
         }
         streaming = 0;
         return;
@@ -108,5 +110,5 @@ void ADC_BLE_Step(void)
         payload[9] = (uint8_t)(battery_mv >> 8);
     }
     /* On transport congestion, drop this frame and publish the next fresh one. */
-    (void)aci_gatt_update_char_value(service, raw_char, 0, sizeof(payload), payload);
+    (void)BLE_TX_Latest(BLE_TX_ADC,payload,sizeof(payload));
 }

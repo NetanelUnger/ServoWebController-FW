@@ -55,8 +55,9 @@ extern volatile uint32_t s_threadWatchdogFlags;
 
 /* Private define ------------------------------------------------------------*/
 /* USER CODE BEGIN PD */
-extern osStatus_t NUS_APP_EnqueueTX(const uint8_t *pData, uint8_t length);
-extern osStatus_t NUS_APP_EnqueueRX(const uint8_t *pData, uint8_t length);
+extern osStatus_t NUS_APP_EnqueueRX(uint16_t connection, const uint8_t *pData, uint16_t length);
+extern osThreadId_t bleTxTaskHandle;
+extern osEventFlagsId_t bleTxEventHandle;
 extern void WatchdogFlagClear(uint32_t flagMask);
 /* USER CODE END PD */
 

@@ -1,0 +1,10 @@
+PASS stop/write/start/read mode=1 in 0.330s
+PASS stop/write/start/read mode=2 in 0.780s
+PASS stop/write/start/read mode=0 in 0.780s
+PASS stop/write/start/read mode=1 in 0.709s
+PASS stop/write/start/read mode=0 in 0.721s
+PASS stop/write/start/read mode=2 in 0.704s
+PASS stop/write/start/read mode=1 in 0.781s
+PASS stop/write/start/read mode=2 in 0.720s
+PASS stop/write/start/read mode=0 in 0.720s
+PASS reconnect reads OFF; pending unsubscribed request was cleared

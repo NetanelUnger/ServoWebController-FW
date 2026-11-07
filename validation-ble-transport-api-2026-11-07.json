@@ -1,0 +1,5740 @@
+{
+  "test": "direct_bleak_api_load_not_browser_reproduction",
+  "started_utc": "2026-11-07T13:24:18.913695+00:00",
+  "duration_requested": 310.0,
+  "timeline": [
+    {
+      "channel": 0,
+      "value": 1250,
+      "targetAtMs": 0,
+      "durationMs": 0,
+      "motion": "jump"
+    },
+    {
+      "channel": 0,
+      "value": 1050,
+      "targetAtMs": 3000,
+      "durationMs": 3000,
+      "motion": "smooth"
+    },
+    {
+      "channel": 0,
+      "value": 1250,
+      "targetAtMs": 5000,
+      "durationMs": 2000,
+      "motion": "smooth"
+    },
+    {
+      "channel": 0,
+      "value": 1450,
+      "targetAtMs": 8000,
+      "durationMs": 3000,
+      "motion": "smooth"
+    },
+    {
+      "channel": 0,
+      "value": 1250,
+      "targetAtMs": 10000,
+      "durationMs": 2000,
+      "motion": "smooth"
+    },
+    {
+      "channel": 1,
+      "value": 1250,
+      "targetAtMs": 0,
+      "durationMs": 0,
+      "motion": "jump"
+    },
+    {
+      "channel": 1,
+      "value": 1450,
+      "targetAtMs": 3000,
+      "durationMs": 3000,
+      "motion": "smooth"
+    },
+    {
+      "channel": 1,
+      "value": 1250,
+      "targetAtMs": 5000,
+      "durationMs": 2000,
+      "motion": "smooth"
+    },
+    {
+      "channel": 1,
+      "value": 1050,
+      "targetAtMs": 8000,
+      "durationMs": 3000,
+      "motion": "smooth"
+    },
+    {
+      "channel": 1,
+      "value": 1250,
+      "targetAtMs": 10000,
+      "durationMs": 2000,
+      "motion": "smooth"
+    },
+    {
+      "channel": 2,
+      "value": 1250,
+      "targetAtMs": 0,
+      "durationMs": 0,
+      "motion": "jump"
+    },
+    {
+      "channel": 2,
+      "value": 1450,
+      "targetAtMs": 3000,
+      "durationMs": 3000,
+      "motion": "smooth"
+    },
+    {
+      "channel": 2,
+      "value": 1250,
+      "targetAtMs": 5000,
+      "durationMs": 2000,
+      "motion": "smooth"
+    },
+    {
+      "channel": 2,
+      "value": 1050,
+      "targetAtMs": 8000,
+      "durationMs": 3000,
+      "motion": "smooth"
+    },
+    {
+      "channel": 2,
+      "value": 1250,
+      "targetAtMs": 10000,
+      "durationMs": 2000,
+      "motion": "smooth"
+    },
+    {
+      "channel": 3,
+      "value": 1250,
+      "targetAtMs": 0,
+      "durationMs": 0,
+      "motion": "jump"
+    },
+    {
+      "channel": 3,
+      "value": 1050,
+      "targetAtMs": 3000,
+      "durationMs": 3000,
+      "motion": "smooth"
+    },
+    {
+      "channel": 3,
+      "value": 1250,
+      "targetAtMs": 5000,
+      "durationMs": 2000,
+      "motion": "smooth"
+    },
+    {
+      "channel": 3,
+      "value": 1450,
+      "targetAtMs": 8000,
+      "durationMs": 3000,
+      "motion": "smooth"
+    },
+    {
+      "channel": 3,
+      "value": 1250,
+      "targetAtMs": 10000,
+      "durationMs": 2000,
+      "motion": "smooth"
+    },
+    {
+      "channel": 4,
+      "value": 1250,
+      "targetAtMs": 0,
+      "durationMs": 0,
+      "motion": "jump"
+    },
+    {
+      "channel": 4,
+      "value": 1250,
+      "targetAtMs": 3000,
+      "durationMs": 3000,
+      "motion": "smooth"
+    },
+    {
+      "channel": 4,
+      "value": 1250,
+      "targetAtMs": 5000,
+      "durationMs": 2000,
+      "motion": "smooth"
+    },
+    {
+      "channel": 4,
+      "value": 1250,
+      "targetAtMs": 8000,
+      "durationMs": 3000,
+      "motion": "smooth"
+    },
+    {
+      "channel": 4,
+      "value": 1250,
+      "targetAtMs": 10000,
+      "durationMs": 2000,
+      "motion": "smooth"
+    },
+    {
+      "channel": 5,
+      "value": 1250,
+      "targetAtMs": 0,
+      "durationMs": 0,
+      "motion": "jump"
+    },
+    {
+      "channel": 5,
+      "value": 1250,
+      "targetAtMs": 3000,
+      "durationMs": 3000,
+      "motion": "smooth"
+    },
+    {
+      "channel": 5,
+      "value": 1250,
+      "targetAtMs": 5000,
+      "durationMs": 2000,
+      "motion": "smooth"
+    },
+    {
+      "channel": 5,
+      "value": 1250,
+      "targetAtMs": 8000,
+      "durationMs": 3000,
+      "motion": "smooth"
+    },
+    {
+      "channel": 5,
+      "value": 1250,
+      "targetAtMs": 10000,
+      "durationMs": 2000,
+      "motion": "smooth"
+    },
+    {
+      "channel": 6,
+      "value": 1250,
+      "targetAtMs": 0,
+      "durationMs": 0,
+      "motion": "jump"
+    },
+    {
+      "channel": 6,
+      "value": 1250,
+      "targetAtMs": 3000,
+      "durationMs": 3000,
+      "motion": "smooth"
+    },
+    {
+      "channel": 6,
+      "value": 1250,
+      "targetAtMs": 5000,
+      "durationMs": 2000,
+      "motion": "smooth"
+    },
+    {
+      "channel": 6,
+      "value": 1250,
+      "targetAtMs": 8000,
+      "durationMs": 3000,
+      "motion": "smooth"
+    },
+    {
+      "channel": 6,
+      "value": 1250,
+      "targetAtMs": 10000,
+      "durationMs": 2000,
+      "motion": "smooth"
+    },
+    {
+      "channel": 7,
+      "value": 1250,
+      "targetAtMs": 0,
+      "durationMs": 0,
+      "motion": "jump"
+    },
+    {
+      "channel": 7,
+      "value": 1250,
+      "targetAtMs": 3000,
+      "durationMs": 3000,
+      "motion": "smooth"
+    },
+    {
+      "channel": 7,
+      "value": 1250,
+      "targetAtMs": 5000,
+      "durationMs": 2000,
+      "motion": "smooth"
+    },
+    {
+      "channel": 7,
+      "value": 1250,
+      "targetAtMs": 8000,
+      "durationMs": 3000,
+      "motion": "smooth"
+    },
+    {
+      "channel": 7,
+      "value": 1250,
+      "targetAtMs": 10000,
+      "durationMs": 2000,
+      "motion": "smooth"
+    },
+    {
+      "channel": 8,
+      "value": 1250,
+      "targetAtMs": 0,
+      "durationMs": 0,
+      "motion": "jump"
+    },
+    {
+      "channel": 8,
+      "value": 1250,
+      "targetAtMs": 3000,
+      "durationMs": 3000,
+      "motion": "smooth"
+    },
+    {
+      "channel": 8,
+      "value": 1250,
+      "targetAtMs": 5000,
+      "durationMs": 2000,
+      "motion": "smooth"
+    },
+    {
+      "channel": 8,
+      "value": 1250,
+      "targetAtMs": 8000,
+      "durationMs": 3000,
+      "motion": "smooth"
+    },
+    {
+      "channel": 8,
+      "value": 1250,
+      "targetAtMs": 10000,
+      "durationMs": 2000,
+      "motion": "smooth"
+    },
+    {
+      "channel": 9,
+      "value": 1250,
+      "targetAtMs": 0,
+      "durationMs": 0,
+      "motion": "jump"
+    },
+    {
+      "channel": 9,
+      "value": 1250,
+      "targetAtMs": 3000,
+      "durationMs": 3000,
+      "motion": "smooth"
+    },
+    {
+      "channel": 9,
+      "value": 1250,
+      "targetAtMs": 5000,
+      "durationMs": 2000,
+      "motion": "smooth"
+    },
+    {
+      "channel": 9,
+      "value": 1250,
+      "targetAtMs": 8000,
+      "durationMs": 3000,
+      "motion": "smooth"
+    },
+    {
+      "channel": 9,
+      "value": 1250,
+      "targetAtMs": 10000,
+      "durationMs": 2000,
+      "motion": "smooth"
+    }
+  ],
+  "browser_validated": false,
+  "physical_motion_observed": false,
+  "operations": [
+    {
+      "operation": "read_servo",
+      "at": 20998.4595083,
+      "ms": 30.13930000088294
+    },
+    {
+      "operation": "read_mode",
+      "at": 20998.4896702,
+      "ms": 28.49390000119456
+    },
+    {
+      "operation": "subscribe_nus",
+      "at": 20998.5181793,
+      "ms": 31.019199999718694
+    },
+    {
+      "operation": "write_nus",
+      "at": 20998.5492351,
+      "ms": 29.35599999909755
+    },
+    {
+      "operation": "reply_nus",
+      "at": 20998.5785983,
+      "ms": 0.08610000077169389
+    },
+    {
+      "operation": "write_nus",
+      "at": 20998.5786931,
+      "ms": 29.39659999901778
+    },
+    {
+      "operation": "write_nus",
+      "at": 20998.608097,
+      "ms": 47.31330000140588
+    },
+    {
+      "operation": "reply_nus",
+      "at": 20998.6554178,
+      "ms": 0.020799998310394585
+    },
+    {
+      "operation": "reply_nus",
+      "at": 20998.6554409,
+      "ms": 0.005800000508315861
+    },
+    {
+      "operation": "reply_nus",
+      "at": 20998.655448,
+      "ms": 0.008199996955227107
+    },
+    {
+      "operation": "reply_nus",
+      "at": 20998.655457,
+      "ms": 0.005599998985417187
+    },
+    {
+      "operation": "reply_nus",
+      "at": 20998.6554631,
+      "ms": 0.0034000004234258085
+    },
+    {
+      "operation": "reply_nus",
+      "at": 20998.6554672,
+      "ms": 0.0032000025385059416
+    },
+    {
+      "operation": "reply_nus",
+      "at": 20998.6554709,
+      "ms": 0.0031999989005271345
+    },
+    {
+      "operation": "reply_nus",
+      "at": 20998.6554745,
+      "ms": 0.0031000017770566046
+    },
+    {
+      "operation": "reply_nus",
+      "at": 20998.655478,
+      "ms": 0.0031999989005271345
+    },
+    {
+      "operation": "reply_nus",
+      "at": 20998.6554818,
+      "ms": 0.0035000011848751456
+    },
+    {
+      "operation": "reply_nus",
+      "at": 20998.655486,
+      "ms": 0.0036000019463244826
+    },
+    {
+      "operation": "reply_nus",
+      "at": 20998.6554902,
+      "ms": 0.0032999996619764715
+    },
+    {
+      "operation": "reply_nus",
+      "at": 20998.655494,
+      "ms": 0.004400000761961564
+    },
+    {
+      "operation": "reply_nus",
+      "at": 20998.6554989,
+      "ms": 0.0029000002541579306
+    },
+    {
+      "operation": "reply_nus",
+      "at": 20998.6555023,
+      "ms": 0.0027999994927085936
+    },
+    {
+      "operation": "reply_nus",
+      "at": 20998.6555056,
+      "ms": 0.005000001692678779
+    },
+    {
+      "operation": "reply_nus",
+      "at": 20998.6555112,
+      "ms": 0.0032000025385059416
+    },
+    {
+      "operation": "reply_nus",
+      "at": 20998.6555153,
+      "ms": 0.0035999983083456755
+    },
+    {
+      "operation": "reply_nus",
+      "at": 20998.6555196,
+      "ms": 0.004999998054699972
+    },
+    {
+      "operation": "reply_nus",
+      "at": 20998.6555316,
+      "ms": 11.942499997530831
+    },
+    {
+      "operation": "write_nus",
+      "at": 20998.9276162,
+      "ms": 25.426800002605887
+    },
+    {
+      "operation": "reply_nus",
+      "at": 20998.9530488,
+      "ms": 0.024800003302516416
+    },
+    {
+      "operation": "reply_nus",
+      "at": 20998.9530777,
+      "ms": 0.22589999935007654
+    },
+    {
+      "operation": "reply_nus",
+      "at": 20998.9533064,
+      "ms": 0.5075000008218922
+    },
+    {
+      "operation": "reply_nus",
+      "at": 20998.9538159,
+      "ms": 0.5443999980343506
+    },
+    {
+      "operation": "reply_nus",
+      "at": 20998.9543624,
+      "ms": 0.8349000017915387
+    },
+    {
+      "operation": "reply_nus",
+      "at": 20998.9551995,
+      "ms": 12.146400000347057
+    },
+    {
+      "operation": "reply_nus",
+      "at": 20998.9673495,
+      "ms": 0.3572000023268629
+    },
+    {
+      "operation": "reply_nus",
+      "at": 20998.9677084,
+      "ms": 0.5423000002338085
+    },
+    {
+      "operation": "reply_nus",
+      "at": 20998.9682524,
+      "ms": 0.5549999987124465
+    },
+    {
+      "operation": "reply_nus",
+      "at": 20998.9688094,
+      "ms": 0.5955999986326788
+    },
+    {
+      "operation": "reply_nus",
+      "at": 20998.969407,
+      "ms": 12.935200000356417
+    },
+    {
+      "operation": "reply_nus",
+      "at": 20998.9823456,
+      "ms": 0.3935999993700534
+    },
+    {
+      "operation": "reply_nus",
+      "at": 20998.9827419,
+      "ms": 0.525999999808846
+    },
+    {
+      "operation": "reply_nus",
+      "at": 20998.983271,
+      "ms": 0.5686000004061498
+    },
+    {
+      "operation": "reply_nus",
+      "at": 20998.9838416,
+      "ms": 0.5869000015081838
+    },
+    {
+      "operation": "reply_nus",
+      "at": 20998.98443,
+      "ms": 0.8192999994207639
+    },
+    {
+      "operation": "reply_nus",
+      "at": 20998.9852509,
+      "ms": 42.395599997689715
+    },
+    {
+      "operation": "reply_nus",
+      "at": 20999.0276516,
+      "ms": 0.16909999976633117
+    },
+    {
+      "operation": "reply_nus",
+      "at": 20999.0278227,
+      "ms": 0.8120999991660938
+    },
+    {
+      "operation": "subscribe_servo",
+      "at": 20999.0291204,
+      "ms": 119.2834000030416
+    },
+    {
+      "operation": "subscribe_adc",
+      "at": 20999.1484145,
+      "ms": 119.73009999928763
+    },
+    {
+      "operation": "subscribe_imu",
+      "at": 20999.2681506,
+      "ms": 120.34950000088429
+    },
+    {
+      "operation": "subscribe_tof",
+      "at": 20999.3885104,
+      "ms": 119.84269999811659
+    },
+    {
+      "operation": "write_mode",
+      "at": 20999.5083622,
+      "ms": 180.36620000202674
+    },
+    {
+      "operation": "read_mode",
+      "at": 21008.9659768,
+      "ms": 82.82540000072913
+    },
+    {
+      "operation": "write_servo",
+      "at": 21009.0488417,
+      "ms": 119.75519999759854
+    },
+    {
+      "operation": "read_servo",
+      "at": 21009.6762595,
+      "ms": 93.256799998926
+    },
+    {
+      "operation": "read_servo",
+      "at": 21009.7695338,
+      "ms": 119.44769999900018
+    },
+    {
+      "operation": "read_servo",
+      "at": 21009.8889938,
+      "ms": 121.40890000227955
+    },
+    {
+      "operation": "read_servo",
+      "at": 21010.0104134,
+      "ms": 118.84500000087428
+    },
+    {
+      "operation": "read_servo",
+      "at": 21010.1292707,
+      "ms": 120.24269999892567
+    },
+    {
+      "operation": "read_servo",
+      "at": 21010.2495257,
+      "ms": 179.14319999908912
+    },
+    {
+      "operation": "read_servo",
+      "at": 21010.4286814,
+      "ms": 122.03260000023874
+    },
+    {
+      "operation": "read_servo",
+      "at": 21010.5507292,
+      "ms": 118.6597999985679
+    },
+    {
+      "operation": "read_servo",
+      "at": 21010.6694041,
+      "ms": 120.00690000058967
+    },
+    {
+      "operation": "read_servo",
+      "at": 21010.7894236,
+      "ms": 120.06409999958123
+    },
+    {
+      "operation": "read_servo",
+      "at": 21010.9095029,
+      "ms": 120.16630000289297
+    },
+    {
+      "operation": "read_servo",
+      "at": 21011.0296808,
+      "ms": 178.85089999981574
+    },
+    {
+      "operation": "read_servo",
+      "at": 21011.2085428,
+      "ms": 122.42150000020047
+    },
+    {
+      "operation": "read_servo",
+      "at": 21011.3309742,
+      "ms": 120.00670000270475
+    },
+    {
+      "operation": "read_servo",
+      "at": 21011.4509903,
+      "ms": 177.69910000060918
+    },
+    {
+      "operation": "read_servo",
+      "at": 21011.6287006,
+      "ms": 123.62110000321991
+    },
+    {
+      "operation": "read_servo",
+      "at": 21011.7523327,
+      "ms": 117.0916999981273
+    },
+    {
+      "operation": "read_servo",
+      "at": 21011.8694357,
+      "ms": 121.5267000006861
+    },
+    {
+      "operation": "read_servo",
+      "at": 21011.9909746,
+      "ms": 118.44439999913448
+    },
+    {
+      "operation": "read_servo",
+      "at": 21012.1094312,
+      "ms": 60.096400000475114
+    },
+    {
+      "operation": "write_nus",
+      "at": 21012.7392122,
+      "ms": 89.57530000043334
+    },
+    {
+      "operation": "reply_nus",
+      "at": 21012.8287926,
+      "ms": 0.0213999992411118
+    },
+    {
+      "operation": "reply_nus",
+      "at": 21012.8288164,
+      "ms": 0.08349999916390516
+    },
+    {
+      "operation": "reply_nus",
+      "at": 21012.8289031,
+      "ms": 0.42690000191214494
+    },
+    {
+      "operation": "reply_nus",
+      "at": 21012.8293317,
+      "ms": 0.5191000018385239
+    },
+    {
+      "operation": "reply_nus",
+      "at": 21012.8298524,
+      "ms": 0.5794000026071444
+    },
+    {
+      "operation": "reply_nus",
+      "at": 21012.830434,
+      "ms": 1.0866000011446886
+    },
+    {
+      "operation": "reply_nus",
+      "at": 21012.8315236,
+      "ms": 56.70609999651788
+    },
+    {
+      "operation": "reply_nus",
+      "at": 21012.8882339,
+      "ms": 60.26650000057998
+    },
+    {
+      "operation": "reply_nus",
+      "at": 21012.9485047,
+      "ms": 0.2539999986765906
+    },
+    {
+      "operation": "reply_nus",
+      "at": 21012.9487609,
+      "ms": 0.17909999951370992
+    },
+    {
+      "operation": "reply_nus",
+      "at": 21012.9489427,
+      "ms": 0.47279999853344634
+    },
+    {
+      "operation": "reply_nus",
+      "at": 21012.9494175,
+      "ms": 0.5478999992192257
+    },
+    {
+      "operation": "reply_nus",
+      "at": 21012.9499672,
+      "ms": 0.562600002012914
+    },
+    {
+      "operation": "reply_nus",
+      "at": 21012.9505316,
+      "ms": 0.8025999995879829
+    },
+    {
+      "operation": "reply_nus",
+      "at": 21012.9513358,
+      "ms": 56.87559999933001
+    },
+    {
+      "operation": "reply_nus",
+      "at": 21013.0082189,
+      "ms": 0.23800000053597614
+    },
+    {
+      "operation": "reply_nus",
+      "at": 21013.008459,
+      "ms": 0.40639999861014076
+    },
+    {
+      "operation": "reply_nus",
+      "at": 21013.0088673,
+      "ms": 0.49330000183545053
+    },
+    {
+      "operation": "reply_nus",
+      "at": 21013.0093661,
+      "ms": 0.629599999228958
+    },
+    {
+      "operation": "read_servo",
+      "at": 21013.0100583,
+      "ms": 240.5633000016678
+    },
+    {
+      "operation": "write_servo",
+      "at": 21013.2506432,
+      "ms": 298.03349999929196
+    },
+    {
+      "operation": "write_nus",
+      "at": 21013.5486887,
+      "ms": 122.17619999864837
+    },
+    {
+      "operation": "write_nus",
+      "at": 21013.6708769,
+      "ms": 237.85119999956805
+    },
+    {
+      "operation": "write_nus",
+      "at": 21013.908738,
+      "ms": 242.1401000028709
+    },
+    {
+      "operation": "write_nus",
+      "at": 21014.1508869,
+      "ms": 358.0809000013687
+    },
+    {
+      "operation": "write_nus",
+      "at": 21014.5089784,
+      "ms": 242.49289999715984
+    },
+    {
+      "operation": "write_nus",
+      "at": 21014.7514802,
+      "ms": 480.2479999998468
+    },
+    {
+      "operation": "write_nus",
+      "at": 21015.2317401,
+      "ms": 479.8491000001377
+    },
+    {
+      "operation": "write_nus",
+      "at": 21015.7115983,
+      "ms": 537.5844999980472
+    },
+    {
+      "operation": "write_nus",
+      "at": 21016.2491957,
+      "ms": 479.5799000021361
+    },
+    {
+      "operation": "write_nus",
+      "at": 21016.7287848,
+      "ms": 300.3731999997399
+    },
+    {
+      "operation": "reply_nus",
+      "at": 21017.0291632,
+      "ms": 0.021500000002561137
+    },
+    {
+      "operation": "reply_nus",
+      "at": 21017.029188,
+      "ms": 0.00549999822396785
+    },
+    {
+      "operation": "reply_nus",
+      "at": 21017.029195,
+      "ms": 0.004400000761961564
+    },
+    {
+      "operation": "reply_nus",
+      "at": 21017.0292016,
+      "ms": 0.0042000028770416975
+    },
+    {
+      "operation": "reply_nus",
+      "at": 21017.0292066,
+      "ms": 0.004500001523410901
+    },
+    {
+      "operation": "reply_nus",
+      "at": 21017.0292118,
+      "ms": 0.0035000011848751456
+    },
+    {
+      "operation": "reply_nus",
+      "at": 21017.029216,
+      "ms": 0.0030000010156072676
+    },
+    {
+      "operation": "reply_nus",
+      "at": 21017.0292196,
+      "ms": 0.0031999989005271345
+    },
+    {
+      "operation": "reply_nus",
+      "at": 21017.0292234,
+      "ms": 0.0030999981390777975
+    },
+    {
+      "operation": "reply_nus",
+      "at": 21017.0292273,
+      "ms": 0.0031999989005271345
+    },
+    {
+      "operation": "read_servo",
+      "at": 21017.0293039,
+      "ms": 240.2622000008705
+    },
+    {
+      "operation": "read_servo",
+      "at": 21017.2695775,
+      "ms": 62.866700001904974
+    },
+    {
+      "operation": "write_servo",
+      "at": 21017.3324626,
+      "ms": 119.08490000132588
+    },
+    {
+      "operation": "read_servo",
+      "at": 21017.4515558,
+      "ms": 118.2172000007995
+    },
+    {
+      "operation": "write_servo",
+      "at": 21017.5697883,
+      "ms": 118.96560000241152
+    },
+    {
+      "operation": "write_nus",
+      "at": 21017.688768,
+      "ms": 179.90410000129486
+    },
+    {
+      "operation": "write_nus",
+      "at": 21017.8686816,
+      "ms": 240.1499999978114
+    },
+    {
+      "operation": "write_nus",
+      "at": 21018.1088403,
+      "ms": 181.87830000169924
+    },
+    {
+      "operation": "write_nus",
+      "at": 21018.2907272,
+      "ms": 238.63989999881596
+    },
+    {
+      "operation": "write_nus",
+      "at": 21018.5293769,
+      "ms": 181.49579999953858
+    },
+    {
+      "operation": "write_nus",
+      "at": 21018.7108832,
+      "ms": 298.39759999958915
+    },
+    {
+      "operation": "write_nus",
+      "at": 21019.0092918,
+      "ms": 240.03330000050482
+    },
+    {
+      "operation": "write_nus",
+      "at": 21019.2493357,
+      "ms": 360.80300000321586
+    },
+    {
+      "operation": "write_nus",
+      "at": 21019.61015,
+      "ms": 419.0608999997494
+    },
+    {
+      "operation": "write_nus",
+      "at": 21020.0292211,
+      "ms": 300.04769999868586
+    },
+    {
+      "operation": "reply_nus",
+      "at": 21020.3292746,
+      "ms": 0.024199998733820394
+    },
+    {
+      "operation": "reply_nus",
+      "at": 21020.3293015,
+      "ms": 0.008899998647393659
+    },
+    {
+      "operation": "reply_nus",
+      "at": 21020.329312,
+      "ms": 0.007299997378140688
+    },
+    {
+      "operation": "reply_nus",
+      "at": 21020.3293209,
+      "ms": 0.007899998308857903
+    },
+    {
+      "operation": "reply_nus",
+      "at": 21020.3293303,
+      "ms": 0.007400001777568832
+    },
+    {
+      "operation": "reply_nus",
+      "at": 21020.3293391,
+      "ms": 0.006800000846851617
+    },
+    {
+      "operation": "reply_nus",
+      "at": 21020.3293471,
+      "ms": 0.00670000008540228
+    },
+    {
+      "operation": "reply_nus",
+      "at": 21020.3293551,
+      "ms": 0.00660000296193175
+    },
+    {
+      "operation": "reply_nus",
+      "at": 21020.329363,
+      "ms": 0.005699999746866524
+    },
+    {
+      "operation": "reply_nus",
+      "at": 21020.3293694,
+      "ms": 0.1609999999345746
+    },
+    {
+      "operation": "read_servo",
+      "at": 21020.329546,
+      "ms": 360.081299997546
+    },
+    {
+      "operation": "read_servo",
+      "at": 21020.6896478,
+      "ms": 359.4054999994114
+    },
+    {
+      "operation": "write_servo",
+      "at": 21021.0490751,
+      "ms": 240.80709999907413
+    },
+    {
+      "operation": "read_servo",
+      "at": 21021.2898901,
+      "ms": 119.79369999971823
+    },
+    {
+      "operation": "write_servo",
+      "at": 21021.4096982,
+      "ms": 60.6127999999444
+    },
+    {
+      "operation": "write_nus",
+      "at": 21021.4703222,
+      "ms": 119.47990000044229
+    },
+    {
+      "operation": "write_nus",
+      "at": 21021.5898121,
+      "ms": 181.21650000102818
+    },
+    {
+      "operation": "write_nus",
+      "at": 21021.7710393,
+      "ms": 297.78449999867007
+    },
+    {
+      "operation": "write_nus",
+      "at": 21022.0688381,
+      "ms": 183.81130000125268
+    },
+    {
+      "operation": "write_nus",
+      "at": 21022.2526592,
+      "ms": 536.177800000587
+    },
+    {
+      "operation": "write_nus",
+      "at": 21022.7888461,
+      "ms": 1081.5031999991334
+    },
+    {
+      "operation": "write_nus",
+      "at": 21023.8703584,
+      "ms": 602.1024000001489
+    },
+    {
+      "operation": "write_nus",
+      "at": 21024.4724716,
+      "ms": 598.6889000014344
+    },
+    {
+      "operation": "write_nus",
+      "at": 21025.0711695,
+      "ms": 359.5721000019694
+    },
+    {
+      "operation": "write_nus",
+      "at": 21025.4307513,
+      "ms": 298.57620000257157
+    },
+    {
+      "operation": "reply_nus",
+      "at": 21025.7293367,
+      "ms": 0.01880000127130188
+    },
+    {
+      "operation": "reply_nus",
+      "at": 21025.7293574,
+      "ms": 0.00540000110049732
+    },
+    {
+      "operation": "reply_nus",
+      "at": 21025.7293637,
+      "ms": 0.008200000593205914
+    },
+    {
+      "operation": "reply_nus",
+      "at": 21025.7293728,
+      "ms": 0.004300000000512227
+    },
+    {
+      "operation": "reply_nus",
+      "at": 21025.7293778,
+      "ms": 0.004400000761961564
+    },
+    {
+      "operation": "reply_nus",
+      "at": 21025.729383,
+      "ms": 0.0036999990697950125
+    },
+    {
+      "operation": "reply_nus",
+      "at": 21025.7293874,
+      "ms": 0.0032999996619764715
+    },
+    {
+      "operation": "reply_nus",
+      "at": 21025.7293914,
+      "ms": 0.0029000002541579306
+    },
+    {
+      "operation": "reply_nus",
+      "at": 21025.729395,
+      "ms": 0.0026000016077887267
+    },
+    {
+      "operation": "reply_nus",
+      "at": 21025.7293982,
+      "ms": 0.0025999979698099196
+    },
+    {
+      "operation": "read_servo",
+      "at": 21025.7294339,
+      "ms": 240.50139999962994
+    },
+    {
+      "operation": "read_servo",
+      "at": 21025.9699456,
+      "ms": 180.38499999966007
+    },
+    {
+      "operation": "write_servo",
+      "at": 21026.1503466,
+      "ms": 182.3647000019264
+    },
+    {
+      "operation": "read_servo",
+      "at": 21026.3327201,
+      "ms": 236.17229999945266
+    },
+    {
+      "operation": "write_servo",
+      "at": 21026.5689092,
+      "ms": 121.19570000140811
+    },
+    {
+      "operation": "write_nus",
+      "at": 21026.6901145,
+      "ms": 59.04039999950328
+    },
+    {
+      "operation": "write_nus",
+      "at": 21026.7491642,
+      "ms": 181.92960000305902
+    },
+    {
+      "operation": "write_nus",
+      "at": 21026.9311061,
+      "ms": 179.49619999853894
+    },
+    {
+      "operation": "write_nus",
+      "at": 21027.110612,
+      "ms": 238.92219999834197
+    },
+    {
+      "operation": "write_nus",
+      "at": 21027.3495474,
+      "ms": 180.30419999922742
+    },
+    {
+      "operation": "write_nus",
+      "at": 21027.5298606,
+      "ms": 182.8416999996989
+    },
+    {
+      "operation": "write_nus",
+      "at": 21027.7127132,
+      "ms": 297.78580000129296
+    },
+    {
+      "operation": "write_nus",
+      "at": 21028.0105091,
+      "ms": 301.22909999772673
+    },
+    {
+      "operation": "write_nus",
+      "at": 21028.3117482,
+      "ms": 358.7244999980612
+    },
+    {
+      "operation": "write_nus",
+      "at": 21028.670483,
+      "ms": 418.6137999968196
+    },
+    {
+      "operation": "reply_nus",
+      "at": 21029.0891015,
+      "ms": 0.020799998310394585
+    },
+    {
+      "operation": "reply_nus",
+      "at": 21029.0891246,
+      "ms": 0.006599999323952943
+    },
+    {
+      "operation": "reply_nus",
+      "at": 21029.0891324,
+      "ms": 0.005300000339047983
+    },
+    {
+      "operation": "reply_nus",
+      "at": 21029.0891389,
+      "ms": 0.005000001692678779
+    },
+    {
+      "operation": "reply_nus",
+      "at": 21029.0891448,
+      "ms": 0.005199999577598646
+    },
+    {
+      "operation": "reply_nus",
+      "at": 21029.0891512,
+      "ms": 0.00549999822396785
+    },
+    {
+      "operation": "reply_nus",
+      "at": 21029.0891575,
+      "ms": 0.00960000033956021
+    },
+    {
+      "operation": "reply_nus",
+      "at": 21029.0891682,
+      "ms": 0.004800000169780105
+    },
+    {
+      "operation": "reply_nus",
+      "at": 21029.0891738,
+      "ms": 0.0040000013541430235
+    },
+    {
+      "operation": "reply_nus",
+      "at": 21029.0891786,
+      "ms": 0.0039000005926936865
+    },
+    {
+      "operation": "read_servo",
+      "at": 21029.0892237,
+      "ms": 361.97379999794066
+    },
+    {
+      "operation": "read_servo",
+      "at": 21029.4512069,
+      "ms": 480.0753999988956
+    },
+    {
+      "operation": "write_servo",
+      "at": 21029.9312955,
+      "ms": 301.80079999990994
+    },
+    {
+      "operation": "read_servo",
+      "at": 21030.2331032,
+      "ms": 298.2846000013524
+    },
+    {
+      "operation": "write_servo",
+      "at": 21030.5314026,
+      "ms": 181.56399999861605
+    },
+    {
+      "operation": "write_nus",
+      "at": 21030.7129761,
+      "ms": 356.10520000045653
+    },
+    {
+      "operation": "write_nus",
+      "at": 21031.0690956,
+      "ms": 243.6679999991611
+    },
+    {
+      "operation": "write_nus",
+      "at": 21031.3127735,
+      "ms": 357.11299999820767
+    },
+    {
+      "operation": "write_nus",
+      "at": 21031.6698953,
+      "ms": 302.1288999989338
+    },
+    {
+      "operation": "write_nus",
+      "at": 21031.9720334,
+      "ms": 477.7254999971774
+    },
+    {
+      "operation": "write_nus",
+      "at": 21032.4497713,
+      "ms": 542.1391000018048
+    },
+    {
+      "operation": "write_nus",
+      "at": 21032.9919195,
+      "ms": 657.7305999999226
+    },
+    {
+      "operation": "write_nus",
+      "at": 21033.6496612,
+      "ms": 483.4752999995544
+    },
+    {
+      "operation": "write_nus",
+      "at": 21034.1331462,
+      "ms": 360.03839999830234
+    },
+    {
+      "operation": "write_nus",
+      "at": 21034.4931941,
+      "ms": 416.53750000114087
+    },
+    {
+      "operation": "reply_nus",
+      "at": 21034.909739,
+      "ms": 0.03380000271135941
+    },
+    {
+      "operation": "reply_nus",
+      "at": 21034.9097756,
+      "ms": 0.006300000677583739
+    },
+    {
+      "operation": "reply_nus",
+      "at": 21034.9097834,
+      "ms": 0.005100002454128116
+    },
+    {
+      "operation": "reply_nus",
+      "at": 21034.9097898,
+      "ms": 0.005000001692678779
+    },
+    {
+      "operation": "reply_nus",
+      "at": 21034.9097957,
+      "ms": 0.004699999408330768
+    },
+    {
+      "operation": "reply_nus",
+      "at": 21034.9098013,
+      "ms": 0.008099999831756577
+    },
+    {
+      "operation": "reply_nus",
+      "at": 21034.90981,
+      "ms": 0.0037999998312443495
+    },
+    {
+      "operation": "reply_nus",
+      "at": 21034.9098148,
+      "ms": 0.0036999990697950125
+    },
+    {
+      "operation": "reply_nus",
+      "at": 21034.9098197,
+      "ms": 0.005900001269765198
+    },
+    {
+      "operation": "reply_nus",
+      "at": 21034.9098263,
+      "ms": 119.03579999852809
+    },
+    {
+      "operation": "read_servo",
+      "at": 21035.0288851,
+      "ms": 360.3609999991022
+    },
+    {
+      "operation": "read_servo",
+      "at": 21035.3892567,
+      "ms": 361.8072999997821
+    },
+    {
+      "operation": "write_servo",
+      "at": 21035.7510778,
+      "ms": 298.5244000010425
+    },
+    {
+      "operation": "read_servo",
+      "at": 21036.0496128,
+      "ms": 361.1371999977564
+    },
+    {
+      "operation": "write_servo",
+      "at": 21036.4107642,
+      "ms": 238.73029999958817
+    },
+    {
+      "operation": "write_nus",
+      "at": 21036.6495049,
+      "ms": 300.2794999993057
+    },
+    {
+      "operation": "write_nus",
+      "at": 21036.9497949,
+      "ms": 419.8571999986598
+    },
+    {
+      "operation": "write_nus",
+      "at": 21037.3696617,
+      "ms": 599.4629000015266
+    },
+    {
+      "operation": "write_nus",
+      "at": 21037.9691343,
+      "ms": 1203.310999997484
+    },
+    {
+      "operation": "write_nus",
+      "at": 21039.1724544,
+      "ms": 598.1476000015391
+    },
+    {
+      "operation": "write_nus",
+      "at": 21039.7706117,
+      "ms": 481.13889999876847
+    },
+    {
+      "operation": "write_nus",
+      "at": 21040.2517604,
+      "ms": 360.138600000937
+    },
+    {
+      "operation": "write_nus",
+      "at": 21040.6119084,
+      "ms": 357.5094000007084
+    },
+    {
+      "operation": "write_nus",
+      "at": 21040.9694286,
+      "ms": 360.0925999999163
+    },
+    {
+      "operation": "write_nus",
+      "at": 21041.3295309,
+      "ms": 179.8625000010361
+    },
+    {
+      "operation": "reply_nus",
+      "at": 21041.5093984,
+      "ms": 0.020299998141126707
+    },
+    {
+      "operation": "reply_nus",
+      "at": 21041.5094207,
+      "ms": 0.00540000110049732
+    },
+    {
+      "operation": "reply_nus",
+      "at": 21041.5094291,
+      "ms": 0.004400000761961564
+    },
+    {
+      "operation": "reply_nus",
+      "at": 21041.5094344,
+      "ms": 0.00419999923906289
+    },
+    {
+      "operation": "reply_nus",
+      "at": 21041.5094395,
+      "ms": 0.0034999975468963385
+    },
+    {
+      "operation": "reply_nus",
+      "at": 21041.5094439,
+      "ms": 0.0031000017770566046
+    },
+    {
+      "operation": "reply_nus",
+      "at": 21041.5094477,
+      "ms": 0.0031000017770566046
+    },
+    {
+      "operation": "reply_nus",
+      "at": 21041.5094517,
+      "ms": 0.0030000010156072676
+    },
+    {
+      "operation": "reply_nus",
+      "at": 21041.5094554,
+      "ms": 0.0029000002541579306
+    },
+    {
+      "operation": "reply_nus",
+      "at": 21041.5094589,
+      "ms": 0.07170000026235357
+    },
+    {
+      "operation": "read_servo",
+      "at": 21041.509559,
+      "ms": 242.78490000142483
+    },
+    {
+      "operation": "read_servo",
+      "at": 21041.7523564,
+      "ms": 180.1746999990428
+    },
+    {
+      "operation": "write_servo",
+      "at": 21041.9325446,
+      "ms": 118.76349999874947
+    },
+    {
+      "operation": "read_servo",
+      "at": 21042.0513147,
+      "ms": 301.666600000317
+    },
+    {
+      "operation": "write_servo",
+      "at": 21042.3529961,
+      "ms": 236.89240000021528
+    },
+    {
+      "operation": "write_nus",
+      "at": 21042.589898,
+      "ms": 300.67410000265227
+    },
+    {
+      "operation": "write_nus",
+      "at": 21042.8905813,
+      "ms": 538.8091000022541
+    },
+    {
+      "operation": "write_nus",
+      "at": 21043.4293995,
+      "ms": 481.07099999833736
+    },
+    {
+      "operation": "write_nus",
+      "at": 21043.9104793,
+      "ms": 658.9471999977832
+    },
+    {
+      "operation": "write_nus",
+      "at": 21044.5694375,
+      "ms": 541.9486000027973
+    },
+    {
+      "operation": "write_nus",
+      "at": 21045.1113957,
+      "ms": 780.3262999987055
+    },
+    {
+      "operation": "write_nus",
+      "at": 21045.891732,
+      "ms": 537.7188999991631
+    },
+    {
+      "operation": "write_nus",
+      "at": 21046.4294603,
+      "ms": 300.46459999721264
+    },
+    {
+      "operation": "write_nus",
+      "at": 21046.7299337,
+      "ms": 242.00009999913163
+    },
+    {
+      "operation": "write_nus",
+      "at": 21046.9719438,
+      "ms": 181.3956000005419
+    },
+    {
+      "operation": "reply_nus",
+      "at": 21047.1533437,
+      "ms": 0.0197000008483883
+    },
+    {
+      "operation": "reply_nus",
+      "at": 21047.1533652,
+      "ms": 0.005199999577598646
+    },
+    {
+      "operation": "reply_nus",
+      "at": 21047.1533718,
+      "ms": 0.00419999923906289
+    },
+    {
+      "operation": "reply_nus",
+      "at": 21047.1533768,
+      "ms": 0.004400000761961564
+    },
+    {
+      "operation": "reply_nus",
+      "at": 21047.153382,
+      "ms": 0.0036999990697950125
+    },
+    {
+      "operation": "reply_nus",
+      "at": 21047.1533865,
+      "ms": 0.0037000027077738196
+    },
+    {
+      "operation": "reply_nus",
+      "at": 21047.1533913,
+      "ms": 0.0032000025385059416
+    },
+    {
+      "operation": "reply_nus",
+      "at": 21047.1533953,
+      "ms": 0.0031000017770566046
+    },
+    {
+      "operation": "reply_nus",
+      "at": 21047.153399,
+      "ms": 0.0029000002541579306
+    },
+    {
+      "operation": "reply_nus",
+      "at": 21047.1534024,
+      "ms": 56.55730000216863
+    },
+    {
+      "operation": "read_servo",
+      "at": 21047.2099791,
+      "ms": 120.36340000122436
+    },
+    {
+      "operation": "read_servo",
+      "at": 21047.3303572,
+      "ms": 179.2256999979145
+    },
+    {
+      "operation": "write_servo",
+      "at": 21047.5095974,
+      "ms": 60.98289999863482
+    },
+    {
+      "operation": "read_servo",
+      "at": 21047.5706371,
+      "ms": 179.18309999731719
+    },
+    {
+      "operation": "write_servo",
+      "at": 21047.7498388,
+      "ms": 119.53610000273329
+    },
+    {
+      "operation": "write_nus",
+      "at": 21047.8693889,
+      "ms": 121.151600000303
+    },
+    {
+      "operation": "write_nus",
+      "at": 21047.9905497,
+      "ms": 119.46069999976316
+    },
+    {
+      "operation": "write_nus",
+      "at": 21048.1100199,
+      "ms": 181.61640000107582
+    },
+    {
+      "operation": "write_nus",
+      "at": 21048.2916458,
+      "ms": 298.13450000074226
+    },
+    {
+      "operation": "write_nus",
+      "at": 21048.5897892,
+      "ms": 359.9510999993072
+    },
+    {
+      "operation": "write_nus",
+      "at": 21048.9497531,
+      "ms": 359.941799997614
+    },
+    {
+      "operation": "write_nus",
+      "at": 21049.3097059,
+      "ms": 480.41709999961313
+    },
+    {
+      "operation": "write_nus",
+      "at": 21049.7901356,
+      "ms": 479.576999998244
+    },
+    {
+      "operation": "write_nus",
+      "at": 21050.2697229,
+      "ms": 481.1077000013029
+    },
+    {
+      "operation": "write_nus",
+      "at": 21050.7508502,
+      "ms": 540.8340000030876
+    },
+    {
+      "operation": "reply_nus",
+      "at": 21051.2916884,
+      "ms": 0.018700000509852543
+    },
+    {
+      "operation": "reply_nus",
+      "at": 21051.2917087,
+      "ms": 0.005600002623395994
+    },
+    {
+      "operation": "reply_nus",
+      "at": 21051.291716,
+      "ms": 0.006099999154685065
+    },
+    {
+      "operation": "reply_nus",
+      "at": 21051.2917236,
+      "ms": 0.010399999155197293
+    },
+    {
+      "operation": "reply_nus",
+      "at": 21051.2917354,
+      "ms": 0.005700003384845331
+    },
+    {
+      "operation": "reply_nus",
+      "at": 21051.2917417,
+      "ms": 0.0032999996619764715
+    },
+    {
+      "operation": "reply_nus",
+      "at": 21051.2917457,
+      "ms": 0.0030000010156072676
+    },
+    {
+      "operation": "reply_nus",
+      "at": 21051.2917495,
+      "ms": 0.0029000002541579306
+    },
+    {
+      "operation": "reply_nus",
+      "at": 21051.2917532,
+      "ms": 0.0027000023692380637
+    },
+    {
+      "operation": "reply_nus",
+      "at": 21051.2917565,
+      "ms": 0.13580000086221844
+    },
+    {
+      "operation": "read_servo",
+      "at": 21051.2919119,
+      "ms": 418.7444000017422
+    },
+    {
+      "operation": "read_servo",
+      "at": 21051.7106672,
+      "ms": 181.28209999849787
+    },
+    {
+      "operation": "write_servo",
+      "at": 21051.8919633,
+      "ms": 239.8713000002317
+    },
+    {
+      "operation": "read_servo",
+      "at": 21052.1318417,
+      "ms": 238.6311999980535
+    },
+    {
+      "operation": "write_servo",
+      "at": 21052.3704898,
+      "ms": 239.52279999866732
+    },
+    {
+      "operation": "write_nus",
+      "at": 21052.6100236,
+      "ms": 120.6813000026159
+    },
+    {
+      "operation": "write_nus",
+      "at": 21052.7307141,
+      "ms": 60.998800003289944
+    },
+    {
+      "operation": "write_nus",
+      "at": 21052.7917218,
+      "ms": 177.81860000104643
+    },
+    {
+      "operation": "write_nus",
+      "at": 21052.9695496,
+      "ms": 240.27490000298712
+    },
+    {
+      "operation": "write_nus",
+      "at": 21053.2098332,
+      "ms": 359.94080000091344
+    },
+    {
+      "operation": "write_nus",
+      "at": 21053.5697833,
+      "ms": 1020.2073999971617
+    },
+    {
+      "operation": "write_nus",
+      "at": 21054.5900006,
+      "ms": 482.66229999717325
+    },
+    {
+      "operation": "write_nus",
+      "at": 21055.0726745,
+      "ms": 597.1568999993906
+    },
+    {
+      "operation": "write_nus",
+      "at": 21055.6698418,
+      "ms": 420.26459999760846
+    },
+    {
+      "operation": "write_nus",
+      "at": 21056.0901183,
+      "ms": 359.77140000250074
+    },
+    {
+      "operation": "reply_nus",
+      "at": 21056.4498952,
+      "ms": 0.02260000110254623
+    },
+    {
+      "operation": "reply_nus",
+      "at": 21056.4499203,
+      "ms": 0.007599999662488699
+    },
+    {
+      "operation": "reply_nus",
+      "at": 21056.4499293,
+      "ms": 0.006199999916134402
+    },
+    {
+      "operation": "reply_nus",
+      "at": 21056.449939,
+      "ms": 0.005800000508315861
+    },
+    {
+      "operation": "reply_nus",
+      "at": 21056.4499459,
+      "ms": 0.00670000008540228
+    },
+    {
+      "operation": "reply_nus",
+      "at": 21056.4499539,
+      "ms": 0.006400001439033076
+    },
+    {
+      "operation": "reply_nus",
+      "at": 21056.4499615,
+      "ms": 0.011800002539530396
+    },
+    {
+      "operation": "reply_nus",
+      "at": 21056.4499747,
+      "ms": 0.006899997970322147
+    },
+    {
+      "operation": "reply_nus",
+      "at": 21056.449983,
+      "ms": 0.005600002623395994
+    },
+    {
+      "operation": "reply_nus",
+      "at": 21056.4499896,
+      "ms": 0.005599998985417187
+    },
+    {
+      "operation": "read_servo",
+      "at": 21056.4500461,
+      "ms": 182.02670000027865
+    },
+    {
+      "operation": "read_servo",
+      "at": 21056.6320818,
+      "ms": 237.56730000241078
+    },
+    {
+      "operation": "write_servo",
+      "at": 21056.8696642,
+      "ms": 60.40479999865056
+    },
+    {
+      "operation": "read_servo",
+      "at": 21056.9300786,
+      "ms": 180.42229999991832
+    },
+    {
+      "operation": "write_servo",
+      "at": 21057.1105165,
+      "ms": 239.49179999908665
+    },
+    {
+      "operation": "write_nus",
+      "at": 21057.3500188,
+      "ms": 180.7823000017379
+    },
+    {
+      "operation": "write_nus",
+      "at": 21057.5308101,
+      "ms": 238.8065999984974
+    },
+    {
+      "operation": "write_nus",
+      "at": 21057.7696266,
+      "ms": 243.79970000154572
+    },
+    {
+      "operation": "write_nus",
+      "at": 21058.0134354,
+      "ms": 239.01069999919855
+    },
+    {
+      "operation": "write_nus",
+      "at": 21058.2524549,
+      "ms": 358.3178999979282
+    },
+    {
+      "operation": "write_nus",
+      "at": 21058.6107822,
+      "ms": 358.8748000001942
+    },
+    {
+      "operation": "write_nus",
+      "at": 21058.9696694,
+      "ms": 422.24889999852167
+    },
+    {
+      "operation": "write_nus",
+      "at": 21059.3919288,
+      "ms": 478.8098999997601
+    },
+    {
+      "operation": "write_nus",
+      "at": 21059.8707478,
+      "ms": 480.8401000009326
+    },
+    {
+      "operation": "write_nus",
+      "at": 21060.3515993,
+      "ms": 478.26960000020335
+    },
+    {
+      "operation": "reply_nus",
+      "at": 21060.8298737,
+      "ms": 0.022500000341096893
+    },
+    {
+      "operation": "reply_nus",
+      "at": 21060.8298983,
+      "ms": 0.00670000008540228
+    },
+    {
+      "operation": "reply_nus",
+      "at": 21060.8299061,
+      "ms": 0.005199999577598646
+    },
+    {
+      "operation": "reply_nus",
+      "at": 21060.8299123,
+      "ms": 0.004699999408330768
+    },
+    {
+      "operation": "reply_nus",
+      "at": 21060.829918,
+      "ms": 0.005099998816149309
+    },
+    {
+      "operation": "reply_nus",
+      "at": 21060.829924,
+      "ms": 0.004999998054699972
+    },
+    {
+      "operation": "reply_nus",
+      "at": 21060.8299299,
+      "ms": 0.00540000110049732
+    },
+    {
+      "operation": "reply_nus",
+      "at": 21060.8299365,
+      "ms": 0.01049999991664663
+    },
+    {
+      "operation": "reply_nus",
+      "at": 21060.8299483,
+      "ms": 0.004599998646881431
+    },
+    {
+      "operation": "reply_nus",
+      "at": 21060.8299539,
+      "ms": 0.006800000846851617
+    },
+    {
+      "operation": "read_servo",
+      "at": 21060.8300049,
+      "ms": 540.6949999996868
+    },
+    {
+      "operation": "read_servo",
+      "at": 21061.3707153,
+      "ms": 419.8203000014473
+    },
+    {
+      "operation": "write_servo",
+      "at": 21061.7905509,
+      "ms": 240.84619999848655
+    },
+    {
+      "operation": "write_nus",
+      "at": 21062.0314072,
+      "ms": 238.34979999810457
+    },
+    {
+      "operation": "write_nus",
+      "at": 21062.269762,
+      "ms": 300.0428000013926
+    },
+    {
+      "operation": "reply_nus",
+      "at": 21062.5698089,
+      "ms": 0.01759999940986745
+    },
+    {
+      "operation": "reply_nus",
+      "at": 21062.5698277,
+      "ms": 0.005999998393235728
+    },
+    {
+      "operation": "reply_nus",
+      "at": 21062.5698346,
+      "ms": 0.004400000761961564
+    },
+    {
+      "operation": "reply_nus",
+      "at": 21062.5698397,
+      "ms": 0.00419999923906289
+    },
+    {
+      "operation": "reply_nus",
+      "at": 21062.5698446,
+      "ms": 0.0039000005926936865
+    },
+    {
+      "operation": "reply_nus",
+      "at": 21062.5698492,
+      "ms": 0.0034999975468963385
+    },
+    {
+      "operation": "reply_nus",
+      "at": 21062.5698533,
+      "ms": 0.0036000019463244826
+    },
+    {
+      "operation": "reply_nus",
+      "at": 21062.5698592,
+      "ms": 0.004099998477613553
+    },
+    {
+      "operation": "reply_nus",
+      "at": 21062.569864,
+      "ms": 0.0035999983083456755
+    },
+    {
+      "operation": "reply_nus",
+      "at": 21062.5698683,
+      "ms": 0.0035999983083456755
+    },
+    {
+      "operation": "reply_nus",
+      "at": 21062.5698724,
+      "ms": 0.0034000004234258085
+    },
+    {
+      "operation": "reply_nus",
+      "at": 21062.5698763,
+      "ms": 0.0031000017770566046
+    },
+    {
+      "operation": "reply_nus",
+      "at": 21062.5698799,
+      "ms": 0.0032000025385059416
+    },
+    {
+      "operation": "reply_nus",
+      "at": 21062.5698836,
+      "ms": 0.00670000008540228
+    },
+    {
+      "operation": "reply_nus",
+      "at": 21062.5698908,
+      "ms": 0.0031999989005271345
+    },
+    {
+      "operation": "reply_nus",
+      "at": 21062.5698946,
+      "ms": 0.0031999989005271345
+    },
+    {
+      "operation": "reply_nus",
+      "at": 21062.5698984,
+      "ms": 0.003999997716164216
+    },
+    {
+      "operation": "reply_nus",
+      "at": 21062.5699031,
+      "ms": 0.0034000004234258085
+    },
+    {
+      "operation": "reply_nus",
+      "at": 21062.5699071,
+      "ms": 0.005099998816149309
+    },
+    {
+      "operation": "reply_nus",
+      "at": 21062.5699192,
+      "ms": 0.005300000339047983
+    },
+    {
+      "operation": "read_servo",
+      "at": 21062.569931,
+      "ms": 123.53329999677953
+    },
+    {
+      "operation": "write_servo",
+      "at": 21062.6934787,
+      "ms": 177.85930000172812
+    },
+    {
+      "operation": "write_nus",
+      "at": 21062.8713508,
+      "ms": 238.7882000002719
+    },
+    {
+      "operation": "write_nus",
+      "at": 21063.1101487,
+      "ms": 241.38459999812767
+    },
+    {
+      "operation": "write_nus",
+      "at": 21063.3515433,
+      "ms": 298.5819999994419
+    },
+    {
+      "operation": "write_nus",
+      "at": 21063.6501385,
+      "ms": 240.04079999940586
+    },
+    {
+      "operation": "write_nus",
+      "at": 21063.8901926,
+      "ms": 361.32139999972424
+    },
+    {
+      "operation": "write_nus",
+      "at": 21064.2515232,
+      "ms": 301.08389999804785
+    },
+    {
+      "operation": "write_nus",
+      "at": 21064.5526163,
+      "ms": 300.1661999987846
+    },
+    {
+      "operation": "write_nus",
+      "at": 21064.8527918,
+      "ms": 418.6154000017268
+    },
+    {
+      "operation": "write_nus",
+      "at": 21065.2714194,
+      "ms": 658.9415999987978
+    },
+    {
+      "operation": "write_nus",
+      "at": 21065.9303705,
+      "ms": 539.7743000030459
+    },
+    {
+      "operation": "reply_nus",
+      "at": 21066.4701494,
+      "ms": 0.022000000171829015
+    },
+    {
+      "operation": "reply_nus",
+      "at": 21066.4701736,
+      "ms": 0.007000002369750291
+    },
+    {
+      "operation": "reply_nus",
+      "at": 21066.4701816,
+      "ms": 0.004800000169780105
+    },
+    {
+      "operation": "reply_nus",
+      "at": 21066.4701872,
+      "ms": 0.004499997885432094
+    },
+    {
+      "operation": "reply_nus",
+      "at": 21066.4701926,
+      "ms": 0.004399997123982757
+    },
+    {
+      "operation": "reply_nus",
+      "at": 21066.4701978,
+      "ms": 0.004399997123982757
+    },
+    {
+      "operation": "reply_nus",
+      "at": 21066.4702029,
+      "ms": 0.004099998477613553
+    },
+    {
+      "operation": "reply_nus",
+      "at": 21066.4702077,
+      "ms": 0.0035000011848751456
+    },
+    {
+      "operation": "reply_nus",
+      "at": 21066.4702119,
+      "ms": 0.0035000011848751456
+    },
+    {
+      "operation": "reply_nus",
+      "at": 21066.470216,
+      "ms": 0.14449999798671342
+    },
+    {
+      "operation": "read_servo",
+      "at": 21066.4703732,
+      "ms": 480.92479999831994
+    },
+    {
+      "operation": "read_servo",
+      "at": 21066.9513144,
+      "ms": 358.6911999991571
+    },
+    {
+      "operation": "write_servo",
+      "at": 21067.3100273,
+      "ms": 123.99660000301083
+    },
+    {
+      "operation": "read_servo",
+      "at": 21067.4340329,
+      "ms": 179.0316000005987
+    },
+    {
+      "operation": "write_servo",
+      "at": 21067.6130798,
+      "ms": 119.1620999998122
+    },
+    {
+      "operation": "write_nus",
+      "at": 21067.7322528,
+      "ms": 117.83889999787789
+    },
+    {
+      "operation": "write_nus",
+      "at": 21067.8501039,
+      "ms": 119.72750000131782
+    },
+    {
+      "operation": "write_nus",
+      "at": 21067.9698408,
+      "ms": 120.16139999832376
+    },
+    {
+      "operation": "write_nus",
+      "at": 21068.0900162,
+      "ms": 240.1371999985713
+    },
+    {
+      "operation": "write_nus",
+      "at": 21068.3301636,
+      "ms": 179.8966999995173
+    },
+    {
+      "operation": "write_nus",
+      "at": 21068.5100699,
+      "ms": 420.09150000012596
+    },
+    {
+      "operation": "write_nus",
+      "at": 21068.9301707,
+      "ms": 839.7153999976581
+    },
+    {
+      "operation": "write_nus",
+      "at": 21069.7698985,
+      "ms": 841.720800002804
+    },
+    {
+      "operation": "write_nus",
+      "at": 21070.6116295,
+      "ms": 838.6453000020992
+    },
+    {
+      "operation": "write_nus",
+      "at": 21071.450289,
+      "ms": 423.75499999980093
+    },
+    {
+      "operation": "reply_nus",
+      "at": 21071.8740489,
+      "ms": 0.020799998310394585
+    },
+    {
+      "operation": "reply_nus",
+      "at": 21071.8740717,
+      "ms": 0.006599999323952943
+    },
+    {
+      "operation": "reply_nus",
+      "at": 21071.8740797,
+      "ms": 0.005800000508315861
+    },
+    {
+      "operation": "reply_nus",
+      "at": 21071.8740866,
+      "ms": 0.004900000931229442
+    },
+    {
+      "operation": "reply_nus",
+      "at": 21071.8740924,
+      "ms": 0.003999997716164216
+    },
+    {
+      "operation": "reply_nus",
+      "at": 21071.8740973,
+      "ms": 0.008300001354655251
+    },
+    {
+      "operation": "reply_nus",
+      "at": 21071.8741063,
+      "ms": 0.00419999923906289
+    },
+    {
+      "operation": "reply_nus",
+      "at": 21071.8741113,
+      "ms": 0.0039000005926936865
+    },
+    {
+      "operation": "reply_nus",
+      "at": 21071.8741161,
+      "ms": 0.0036999990697950125
+    },
+    {
+      "operation": "reply_nus",
+      "at": 21071.8741206,
+      "ms": 56.16100000042934
+    },
+    {
+      "operation": "read_servo",
+      "at": 21071.930304,
+      "ms": 420.9162999977707
+    },
+    {
+      "operation": "read_servo",
+      "at": 21072.3512348,
+      "ms": 419.55139999845414
+    },
+    {
+      "operation": "write_servo",
+      "at": 21072.7708018,
+      "ms": 182.9513999982737
+    },
+    {
+      "operation": "read_servo",
+      "at": 21072.9537601,
+      "ms": 237.021699998877
+    },
+    {
+      "operation": "write_servo",
+      "at": 21073.1907993,
+      "ms": 119.64140000054613
+    },
+    {
+      "operation": "write_nus",
+      "at": 21073.3104583,
+      "ms": 60.026099999959115
+    },
+    {
+      "operation": "write_nus",
+      "at": 21073.3704969,
+      "ms": 121.91300000267802
+    },
+    {
+      "operation": "write_nus",
+      "at": 21073.4924197,
+      "ms": 179.79249999916647
+    },
+    {
+      "operation": "write_nus",
+      "at": 21073.6722215,
+      "ms": 178.01929999768618
+    },
+    {
+      "operation": "write_nus",
+      "at": 21073.8502555,
+      "ms": 182.6636999976472
+    },
+    {
+      "operation": "write_nus",
+      "at": 21074.0329299,
+      "ms": 179.2195999987598
+    },
+    {
+      "operation": "write_nus",
+      "at": 21074.2121584,
+      "ms": 238.46489999777987
+    },
+    {
+      "operation": "write_nus",
+      "at": 21074.4506363,
+      "ms": 239.54679999951622
+    },
+    {
+      "operation": "write_nus",
+      "at": 21074.6901955,
+      "ms": 302.0252000023902
+    },
+    {
+      "operation": "write_nus",
+      "at": 21074.9922301,
+      "ms": 358.9627000001201
+    },
+    {
+      "operation": "reply_nus",
+      "at": 21075.3511971,
+      "ms": 0.021299998479662463
+    },
+    {
+      "operation": "reply_nus",
+      "at": 21075.3512207,
+      "ms": 0.004600002284860238
+    },
+    {
+      "operation": "reply_nus",
+      "at": 21075.3512262,
+      "ms": 0.0039000005926936865
+    },
+    {
+      "operation": "reply_nus",
+      "at": 21075.351231,
+      "ms": 0.0037999998312443495
+    },
+    {
+      "operation": "reply_nus",
+      "at": 21075.3512356,
+      "ms": 0.0041000021155923605
+    },
+    {
+      "operation": "reply_nus",
+      "at": 21075.3512405,
+      "ms": 0.00419999923906289
+    },
+    {
+      "operation": "reply_nus",
+      "at": 21075.3512455,
+      "ms": 0.0039000005926936865
+    },
+    {
+      "operation": "reply_nus",
+      "at": 21075.3512502,
+      "ms": 0.0037999998312443495
+    },
+    {
+      "operation": "reply_nus",
+      "at": 21075.3512546,
+      "ms": 0.007500002539018169
+    },
+    {
+      "operation": "reply_nus",
+      "at": 21075.3512629,
+      "ms": 0.004099998477613553
+    },
+    {
+      "operation": "read_servo",
+      "at": 21075.3513158,
+      "ms": 362.4082999995153
+    },
+    {
+      "operation": "read_servo",
+      "at": 21075.7137349,
+      "ms": 416.3786999997683
+    },
+    {
+      "operation": "write_servo",
+      "at": 21076.1301296,
+      "ms": 420.67990000214195
+    },
+    {
+      "operation": "read_servo",
+      "at": 21076.5508819,
+      "ms": 300.2181000010751
+    },
+    {
+      "operation": "write_servo",
+      "at": 21076.8511199,
+      "ms": 182.98219999996945
+    },
+    {
+      "operation": "write_nus",
+      "at": 21077.034117,
+      "ms": 235.92120000103023
+    },
+    {
+      "operation": "write_nus",
+      "at": 21077.2700484,
+      "ms": 241.07179999919026
+    },
+    {
+      "operation": "write_nus",
+      "at": 21077.5111293,
+      "ms": 240.20089999976335
+    },
+    {
+      "operation": "write_nus",
+      "at": 21077.7513389,
+      "ms": 359.7656999991159
+    },
+    {
+      "operation": "write_nus",
+      "at": 21078.1111146,
+      "ms": 419.91259999849717
+    },
+    {
+      "operation": "write_nus",
+      "at": 21078.5310367,
+      "ms": 481.436300000496
+    },
+    {
+      "operation": "write_nus",
+      "at": 21079.0124821,
+      "ms": 599.7650999997859
+    },
+    {
+      "operation": "write_nus",
+      "at": 21079.6122574,
+      "ms": 839.8051000003761
+    },
+    {
+      "operation": "write_nus",
+      "at": 21080.4520726,
+      "ms": 599.9689999989641
+    },
+    {
+      "operation": "write_nus",
+      "at": 21081.052051,
+      "ms": 422.0746000028157
+    },
+    {
+      "operation": "reply_nus",
+      "at": 21081.4741298,
+      "ms": 0.018999999156221747
+    },
+    {
+      "operation": "reply_nus",
+      "at": 21081.4741506,
+      "ms": 0.005800000508315861
+    },
+    {
+      "operation": "reply_nus",
+      "at": 21081.4741573,
+      "ms": 0.004500001523410901
+    },
+    {
+      "operation": "reply_nus",
+      "at": 21081.4741627,
+      "ms": 0.004099998477613553
+    },
+    {
+      "operation": "reply_nus",
+      "at": 21081.4741723,
+      "ms": 0.00419999923906289
+    },
+    {
+      "operation": "reply_nus",
+      "at": 21081.4741773,
+      "ms": 0.0032999996619764715
+    },
+    {
+      "operation": "reply_nus",
+      "at": 21081.4741815,
+      "ms": 0.0031999989005271345
+    },
+    {
+      "operation": "reply_nus",
+      "at": 21081.4741855,
+      "ms": 0.0030000010156072676
+    },
+    {
+      "operation": "reply_nus",
+      "at": 21081.4741893,
+      "ms": 0.0029000002541579306
+    },
+    {
+      "operation": "reply_nus",
+      "at": 21081.4741928,
+      "ms": 56.597800001327414
+    },
+    {
+      "operation": "read_servo",
+      "at": 21081.5308135,
+      "ms": 303.41389999739476
+    },
+    {
+      "operation": "read_servo",
+      "at": 21081.8342366,
+      "ms": 177.83789999884902
+    },
+    {
+      "operation": "write_servo",
+      "at": 21082.0120882,
+      "ms": 121.42649999805144
+    },
+    {
+      "operation": "read_servo",
+      "at": 21082.1335218,
+      "ms": 297.6240999996662
+    },
+    {
+      "operation": "write_servo",
+      "at": 21082.4311676,
+      "ms": 180.2730999988853
+    },
+    {
+      "operation": "write_nus",
+      "at": 21082.6114521,
+      "ms": 179.32339999970281
+    },
+    {
+      "operation": "write_nus",
+      "at": 21082.7907866,
+      "ms": 180.8990999998059
+    },
+    {
+      "operation": "write_nus",
+      "at": 21082.9716948,
+      "ms": 238.7220000018715
+    },
+    {
+      "operation": "write_nus",
+      "at": 21083.2104309,
+      "ms": 122.6249999999709
+    },
+    {
+      "operation": "write_nus",
+      "at": 21083.3330688,
+      "ms": 178.7188000016613
+    },
+    {
+      "operation": "write_nus",
+      "at": 21083.5117961,
+      "ms": 179.407399999036
+    },
+    {
+      "operation": "write_nus",
+      "at": 21083.6912124,
+      "ms": 122.69089999972493
+    },
+    {
+      "operation": "write_nus",
+      "at": 21083.8139122,
+      "ms": 356.51399999915157
+    },
+    {
+      "operation": "write_nus",
+      "at": 21084.1704381,
+      "ms": 242.64149999726214
+    },
+    {
+      "operation": "write_nus",
+      "at": 21084.4130891,
+      "ms": 717.5511000023107
+    },
+    {
+      "operation": "reply_nus",
+      "at": 21085.1306443,
+      "ms": 0.019900002371286973
+    },
+    {
+      "operation": "reply_nus",
+      "at": 21085.1306661,
+      "ms": 0.005399997462518513
+    },
+    {
+      "operation": "reply_nus",
+      "at": 21085.1306725,
+      "ms": 0.0041000021155923605
+    },
+    {
+      "operation": "reply_nus",
+      "at": 21085.1306776,
+      "ms": 0.004300000000512227
+    },
+    {
+      "operation": "reply_nus",
+      "at": 21085.1306825,
+      "ms": 0.0040000013541430235
+    },
+    {
+      "operation": "reply_nus",
+      "at": 21085.1306872,
+      "ms": 0.0034000004234258085
+    },
+    {
+      "operation": "reply_nus",
+      "at": 21085.1306912,
+      "ms": 0.0031999989005271345
+    },
+    {
+      "operation": "reply_nus",
+      "at": 21085.130695,
+      "ms": 0.0035000011848751456
+    },
+    {
+      "operation": "reply_nus",
+      "at": 21085.130699,
+      "ms": 0.0029000002541579306
+    },
+    {
+      "operation": "reply_nus",
+      "at": 21085.1307025,
+      "ms": 0.0027999994927085936
+    },
+    {
+      "operation": "read_servo",
+      "at": 21085.1307399,
+      "ms": 841.3265999988653
+    },
+    {
+      "operation": "read_servo",
+      "at": 21085.9720753,
+      "ms": 421.32629999832716
+    },
+    {
+      "operation": "write_servo",
+      "at": 21086.3934162,
+      "ms": 297.09509999884176
+    },
+    {
+      "operation": "read_servo",
+      "at": 21086.6905205,
+      "ms": 120.90420000095037
+    },
+    {
+      "operation": "write_servo",
+      "at": 21086.8114397,
+      "ms": 120.27940000189119
+    },
+    {
+      "operation": "write_nus",
+      "at": 21086.9317293,
+      "ms": 122.50649999987218
+    },
+    {
+      "operation": "write_nus",
+      "at": 21087.0542456,
+      "ms": 119.89909999829251
+    },
+    {
+      "operation": "write_nus",
+      "at": 21087.1741535,
+      "ms": 119.92639999880339
+    },
+    {
+      "operation": "write_nus",
+      "at": 21087.2940887,
+      "ms": 237.32620000009774
+    },
+    {
+      "operation": "write_nus",
+      "at": 21087.5314236,
+      "ms": 121.95889999929932
+    },
+    {
+      "operation": "write_nus",
+      "at": 21087.6533911,
+      "ms": 357.01630000039586
+    },
+    {
+      "operation": "write_nus",
+      "at": 21088.0104173,
+      "ms": 360.1191000016115
+    },
+    {
+      "operation": "write_nus",
+      "at": 21088.3705458,
+      "ms": 360.20799999823794
+    },
+    {
+      "operation": "write_nus",
+      "at": 21088.7307631,
+      "ms": 363.4697999987111
+    },
+    {
+      "operation": "write_nus",
+      "at": 21089.094242,
+      "ms": 416.51830000046175
+    },
+    {
+      "operation": "reply_nus",
+      "at": 21089.5107657,
+      "ms": 0.02269999822601676
+    },
+    {
+      "operation": "reply_nus",
+      "at": 21089.5107908,
+      "ms": 0.007200000254670158
+    },
+    {
+      "operation": "reply_nus",
+      "at": 21089.5107994,
+      "ms": 0.005800000508315861
+    },
+    {
+      "operation": "reply_nus",
+      "at": 21089.5108062,
+      "ms": 0.010299998393747956
+    },
+    {
+      "operation": "reply_nus",
+      "at": 21089.5108176,
+      "ms": 0.004500001523410901
+    },
+    {
+      "operation": "reply_nus",
+      "at": 21089.510823,
+      "ms": 0.004300000000512227
+    },
+    {
+      "operation": "reply_nus",
+      "at": 21089.510828,
+      "ms": 0.0040000013541430235
+    },
+    {
+      "operation": "reply_nus",
+      "at": 21089.510833,
+      "ms": 0.0037999998312443495
+    },
+    {
+      "operation": "reply_nus",
+      "at": 21089.5108373,
+      "ms": 0.0029000002541579306
+    },
+    {
+      "operation": "reply_nus",
+      "at": 21089.5108408,
+      "ms": 0.1545999984955415
+    },
+    {
+      "operation": "read_servo",
+      "at": 21089.5110087,
+      "ms": 423.49259999900823
+    },
+    {
+      "operation": "read_servo",
+      "at": 21089.9345139,
+      "ms": 597.7410999985295
+    },
+    {
+      "operation": "write_servo",
+      "at": 21090.5322688,
+      "ms": 362.10639999990235
+    },
+    {
+      "operation": "read_servo",
+      "at": 21090.8943818,
+      "ms": 296.89069999949425
+    },
+    {
+      "operation": "write_servo",
+      "at": 21091.1912886,
+      "ms": 120.27800000214484
+    },
+    {
+      "operation": "write_nus",
+      "at": 21091.3115764,
+      "ms": 62.63290000060806
+    },
+    {
+      "operation": "write_nus",
+      "at": 21091.3742183,
+      "ms": 176.64679999870714
+    },
+    {
+      "operation": "write_nus",
+      "at": 21091.5508741,
+      "ms": 300.2515999978641
+    },
+    {
+      "operation": "write_nus",
+      "at": 21091.8511371,
+      "ms": 420.39000000295346
+    },
+    {
+      "operation": "write_nus",
+      "at": 21092.2715366,
+      "ms": 361.1842999998771
+    },
+    {
+      "operation": "write_nus",
+      "at": 21092.6327298,
+      "ms": 478.9880999996967
+    },
+    {
+      "operation": "write_nus",
+      "at": 21093.1117283,
+      "ms": 478.94129999986035
+    },
+    {
+      "operation": "write_nus",
+      "at": 21093.5906801,
+      "ms": 480.7360000013432
+    },
+    {
+      "operation": "write_nus",
+      "at": 21094.0714265,
+      "ms": 480.4122000023199
+    },
+    {
+      "operation": "write_nus",
+      "at": 21094.5518481,
+      "ms": 302.5917999984813
+    },
+    {
+      "operation": "reply_nus",
+      "at": 21094.8544442,
+      "ms": 0.018900002032751217
+    },
+    {
+      "operation": "reply_nus",
+      "at": 21094.854465,
+      "ms": 0.005699999746866524
+    },
+    {
+      "operation": "reply_nus",
+      "at": 21094.8544719,
+      "ms": 0.007800001185387373
+    },
+    {
+      "operation": "reply_nus",
+      "at": 21094.8544806,
+      "ms": 0.0035000011848751456
+    },
+    {
+      "operation": "reply_nus",
+      "at": 21094.8544848,
+      "ms": 0.0031000017770566046
+    },
+    {
+      "operation": "reply_nus",
+      "at": 21094.8544885,
+      "ms": 0.0039000005926936865
+    },
+    {
+      "operation": "reply_nus",
+      "at": 21094.8544932,
+      "ms": 0.004999998054699972
+    },
+    {
+      "operation": "reply_nus",
+      "at": 21094.8544991,
+      "ms": 0.0033999967854470015
+    },
+    {
+      "operation": "reply_nus",
+      "at": 21094.8545032,
+      "ms": 0.0026999987312592566
+    },
+    {
+      "operation": "reply_nus",
+      "at": 21094.8545066,
+      "ms": 55.7730000000447
+    },
+    {
+      "operation": "read_servo",
+      "at": 21094.910304,
+      "ms": 182.72409999917727
+    },
+    {
+      "operation": "read_servo",
+      "at": 21095.093038,
+      "ms": 118.6667000001762
+    },
+    {
+      "operation": "write_servo",
+      "at": 21095.2117189,
+      "ms": 122.64880000293488
+    },
+    {
+      "operation": "read_servo",
+      "at": 21095.3343765,
+      "ms": 177.20660000122734
+    },
+    {
+      "operation": "write_servo",
+      "at": 21095.5115975,
+      "ms": 59.256399999867426
+    },
+    {
+      "operation": "write_nus",
+      "at": 21095.5708645,
+      "ms": 60.860699999466306
+    },
+    {
+      "operation": "write_nus",
+      "at": 21095.6317393,
+      "ms": 240.71490000278573
+    },
+    {
+      "operation": "write_nus",
+      "at": 21095.8724647,
+      "ms": 239.63009999715723
+    },
+    {
+      "operation": "write_nus",
+      "at": 21096.1121046,
+      "ms": 241.0688999989361
+    },
+    {
+      "operation": "write_nus",
+      "at": 21096.3531839,
+      "ms": 357.7431000012439
+    },
+    {
+      "operation": "write_nus",
+      "at": 21096.7109361,
+      "ms": 242.20209999839426
+    },
+    {
+      "operation": "write_nus",
+      "at": 21096.9531479,
+      "ms": 241.25719999938156
+    },
+    {
+      "operation": "write_nus",
+      "at": 21097.1944148,
+      "ms": 299.0810000010242
+    },
+    {
+      "operation": "write_nus",
+      "at": 21097.4935049,
+      "ms": 418.8284999981988
+    },
+    {
+      "operation": "write_nus",
+      "at": 21097.912343,
+      "ms": 361.9867000015802
+    },
+    {
+      "operation": "reply_nus",
+      "at": 21098.2743342,
+      "ms": 0.018599999748403206
+    },
+    {
+      "operation": "reply_nus",
+      "at": 21098.2743546,
+      "ms": 0.005600002623395994
+    },
+    {
+      "operation": "reply_nus",
+      "at": 21098.2743614,
+      "ms": 0.0041000021155923605
+    },
+    {
+      "operation": "reply_nus",
+      "at": 21098.2743663,
+      "ms": 0.0035999983083456755
+    },
+    {
+      "operation": "reply_nus",
+      "at": 21098.2743705,
+      "ms": 0.0036000019463244826
+    },
+    {
+      "operation": "reply_nus",
+      "at": 21098.2743748,
+      "ms": 0.0035000011848751456
+    },
+    {
+      "operation": "reply_nus",
+      "at": 21098.2743789,
+      "ms": 0.0038999969547148794
+    },
+    {
+      "operation": "reply_nus",
+      "at": 21098.2743835,
+      "ms": 0.004099998477613553
+    },
+    {
+      "operation": "reply_nus",
+      "at": 21098.2743882,
+      "ms": 0.0036000019463244826
+    },
+    {
+      "operation": "reply_nus",
+      "at": 21098.2743924,
+      "ms": 56.33270000180346
+    },
+    {
+      "operation": "read_servo",
+      "at": 21098.3307548,
+      "ms": 360.83139999755076
+    },
+    {
+      "operation": "read_servo",
+      "at": 21098.6915973,
+      "ms": 362.8984999995737
+    },
+    {
+      "operation": "write_servo",
+      "at": 21099.0545168,
+      "ms": 178.86619999990216
+    },
+    {
+      "operation": "read_servo",
+      "at": 21099.2333943,
+      "ms": 178.65669999810052
+    },
+    {
+      "operation": "write_servo",
+      "at": 21099.4120699,
+      "ms": 121.61049999849638
+    },
+    {
+      "operation": "write_nus",
+      "at": 21099.5336937,
+      "ms": 297.28520000207936
+    },
+    {
+      "operation": "write_nus",
+      "at": 21099.8309887,
+      "ms": 242.55120000088937
+    },
+    {
+      "operation": "write_nus",
+      "at": 21100.0735494,
+      "ms": 837.5353000010364
+    },
+    {
+      "operation": "write_nus",
+      "at": 21100.9110947,
+      "ms": 903.4676999981457
+    },
+    {
+      "operation": "write_nus",
+      "at": 21101.8145733,
+      "ms": 538.9721999999892
+    },
+    {
+      "operation": "write_nus",
+      "at": 21102.3535553,
+      "ms": 658.4771999987424
+    },
+    {
+      "operation": "write_nus",
+      "at": 21103.0120424,
+      "ms": 359.90989999845624
+    },
+    {
+      "operation": "write_nus",
+      "at": 21103.3719614,
+      "ms": 181.67059999905177
+    },
+    {
+      "operation": "write_nus",
+      "at": 21103.5536412,
+      "ms": 120.1240999980655
+    },
+    {
+      "operation": "write_nus",
+      "at": 21103.6737755,
+      "ms": 177.61389999941457
+    },
+    {
+      "operation": "reply_nus",
+      "at": 21103.8513938,
+      "ms": 0.02479999966453761
+    },
+    {
+      "operation": "reply_nus",
+      "at": 21103.851422,
+      "ms": 0.008700000762473792
+    },
+    {
+      "operation": "reply_nus",
+      "at": 21103.8514326,
+      "ms": 0.008899998647393659
+    },
+    {
+      "operation": "reply_nus",
+      "at": 21103.8514434,
+      "ms": 0.006599999323952943
+    },
+    {
+      "operation": "reply_nus",
+      "at": 21103.8514512,
+      "ms": 0.006199999916134402
+    },
+    {
+      "operation": "reply_nus",
+      "at": 21103.8514589,
+      "ms": 0.006599999323952943
+    },
+    {
+      "operation": "reply_nus",
+      "at": 21103.8514668,
+      "ms": 0.005600002623395994
+    },
+    {
+      "operation": "reply_nus",
+      "at": 21103.8514737,
+      "ms": 0.006499998562503606
+    },
+    {
+      "operation": "reply_nus",
+      "at": 21103.8514814,
+      "ms": 0.005399997462518513
+    },
+    {
+      "operation": "reply_nus",
+      "at": 21103.8514879,
+      "ms": 0.005800000508315861
+    },
+    {
+      "operation": "read_servo",
+      "at": 21103.8515853,
+      "ms": 60.258199999225326
+    },
+    {
+      "operation": "read_servo",
+      "at": 21103.9118576,
+      "ms": 59.63740000152029
+    },
+    {
+      "operation": "write_servo",
+      "at": 21103.9715109,
+      "ms": 119.70859999928507
+    },
+    {
+      "operation": "read_servo",
+      "at": 21104.091264,
+      "ms": 61.06470000304398
+    },
+    {
+      "operation": "write_servo",
+      "at": 21104.1523493,
+      "ms": 118.3591000008164
+    },
+    {
+      "operation": "write_nus",
+      "at": 21104.2707195,
+      "ms": 120.46750000081374
+    },
+    {
+      "operation": "write_nus",
+      "at": 21104.3911965,
+      "ms": 60.969899997871835
+    },
+    {
+      "operation": "write_nus",
+      "at": 21104.4521769,
+      "ms": 178.8012000033632
+    },
+    {
+      "operation": "write_nus",
+      "at": 21104.6309935,
+      "ms": 62.02810000104364
+    },
+    {
+      "operation": "write_nus",
+      "at": 21104.6930309,
+      "ms": 179.36169999666163
+    },
+    {
+      "operation": "write_nus",
+      "at": 21104.872403,
+      "ms": 178.99539999780245
+    },
+    {
+      "operation": "write_nus",
+      "at": 21105.0514122,
+      "ms": 300.00640000071144
+    },
+    {
+      "operation": "write_nus",
+      "at": 21105.351432,
+      "ms": 300.419499999407
+    },
+    {
+      "operation": "write_nus",
+      "at": 21105.6518617,
+      "ms": 360.0439000001643
+    },
+    {
+      "operation": "write_nus",
+      "at": 21106.0119148,
+      "ms": 361.1891000000469
+    },
+    {
+      "operation": "reply_nus",
+      "at": 21106.3731085,
+      "ms": 0.020799998310394585
+    },
+    {
+      "operation": "reply_nus",
+      "at": 21106.3731316,
+      "ms": 0.006399997801054269
+    },
+    {
+      "operation": "reply_nus",
+      "at": 21106.3731391,
+      "ms": 0.004500001523410901
+    },
+    {
+      "operation": "reply_nus",
+      "at": 21106.3731449,
+      "ms": 0.004599998646881431
+    },
+    {
+      "operation": "reply_nus",
+      "at": 21106.3731504,
+      "ms": 0.004600002284860238
+    },
+    {
+      "operation": "reply_nus",
+      "at": 21106.3731562,
+      "ms": 0.0041000021155923605
+    },
+    {
+      "operation": "reply_nus",
+      "at": 21106.3731611,
+      "ms": 0.0036999990697950125
+    },
+    {
+      "operation": "reply_nus",
+      "at": 21106.3731656,
+      "ms": 0.0036999990697950125
+    },
+    {
+      "operation": "reply_nus",
+      "at": 21106.37317,
+      "ms": 0.0037000027077738196
+    },
+    {
+      "operation": "reply_nus",
+      "at": 21106.3731744,
+      "ms": 0.45060000047669746
+    },
+    {
+      "operation": "read_servo",
+      "at": 21106.3736488,
+      "ms": 358.07109999950626
+    },
+    {
+      "operation": "read_servo",
+      "at": 21106.7317296,
+      "ms": 361.01699999926495
+    },
+    {
+      "operation": "write_servo",
+      "at": 21107.0927604,
+      "ms": 718.4836000014911
+    },
+    {
+      "operation": "write_nus",
+      "at": 21107.8112519,
+      "ms": 420.59190000145463
+    },
+    {
+      "operation": "write_nus",
+      "at": 21108.2318485,
+      "ms": 719.1821000014897
+    },
+    {
+      "operation": "reply_nus",
+      "at": 21108.9510349,
+      "ms": 0.021500000002561137
+    },
+    {
+      "operation": "reply_nus",
+      "at": 21108.9510578,
+      "ms": 0.005300000339047983
+    },
+    {
+      "operation": "reply_nus",
+      "at": 21108.9510639,
+      "ms": 0.0039000005926936865
+    },
+    {
+      "operation": "reply_nus",
+      "at": 21108.9510684,
+      "ms": 0.004599998646881431
+    },
+    {
+      "operation": "reply_nus",
+      "at": 21108.9510739,
+      "ms": 0.005599998985417187
+    },
+    {
+      "operation": "reply_nus",
+      "at": 21108.9510804,
+      "ms": 0.006100002792663872
+    },
+    {
+      "operation": "reply_nus",
+      "at": 21108.9510874,
+      "ms": 0.005199999577598646
+    },
+    {
+      "operation": "reply_nus",
+      "at": 21108.9510934,
+      "ms": 0.005100002454128116
+    },
+    {
+      "operation": "reply_nus",
+      "at": 21108.9510993,
+      "ms": 0.009799998224480078
+    },
+    {
+      "operation": "reply_nus",
+      "at": 21108.9511104,
+      "ms": 0.005800000508315861
+    },
+    {
+      "operation": "reply_nus",
+      "at": 21108.9511171,
+      "ms": 0.004800000169780105
+    },
+    {
+      "operation": "reply_nus",
+      "at": 21108.9511227,
+      "ms": 0.004800000169780105
+    },
+    {
+      "operation": "reply_nus",
+      "at": 21108.9511283,
+      "ms": 0.004800000169780105
+    },
+    {
+      "operation": "reply_nus",
+      "at": 21108.9511339,
+      "ms": 0.007600003300467506
+    },
+    {
+      "operation": "reply_nus",
+      "at": 21108.9511424,
+      "ms": 0.005199999577598646
+    },
+    {
+      "operation": "reply_nus",
+      "at": 21108.9511484,
+      "ms": 0.005199999577598646
+    },
+    {
+      "operation": "reply_nus",
+      "at": 21108.9511547,
+      "ms": 0.004500001523410901
+    },
+    {
+      "operation": "reply_nus",
+      "at": 21108.9511602,
+      "ms": 0.004400000761961564
+    },
+    {
+      "operation": "reply_nus",
+      "at": 21108.9511653,
+      "ms": 0.004599998646881431
+    },
+    {
+      "operation": "reply_nus",
+      "at": 21108.9511766,
+      "ms": 0.005900001269765198
+    },
+    {
+      "operation": "read_servo",
+      "at": 21108.9511897,
+      "ms": 422.8277000001981
+    },
+    {
+      "operation": "write_servo",
+      "at": 21109.3740351,
+      "ms": 299.86789999748
+    },
+    {
+      "operation": "write_nus",
+      "at": 21109.6739118,
+      "ms": 237.33759999959148
+    },
+    {
+      "operation": "write_nus",
+      "at": 21109.9112594,
+      "ms": 240.5746000004001
+    },
+    {
+      "operation": "write_nus",
+      "at": 21110.1518492,
+      "ms": 300.7873999995354
+    },
+    {
+      "operation": "write_nus",
+      "at": 21110.452646,
+      "ms": 362.1045999971102
+    },
+    {
+      "operation": "write_nus",
+      "at": 21110.8147612,
+      "ms": 418.9388000013423
+    },
+    {
+      "operation": "write_nus",
+      "at": 21111.2337098,
+      "ms": 480.29780000069877
+    },
+    {
+      "operation": "write_nus",
+      "at": 21111.7140168,
+      "ms": 479.1382000003068
+    },
+    {
+      "operation": "write_nus",
+      "at": 21112.1931643,
+      "ms": 477.8523999993922
+    },
+    {
+      "operation": "write_nus",
+      "at": 21112.6710287,
+      "ms": 419.95760000281734
+    },
+    {
+      "operation": "write_nus",
+      "at": 21113.0909973,
+      "ms": 360.15869999755523
+    },
+    {
+      "operation": "reply_nus",
+      "at": 21113.4511607,
+      "ms": 0.02040000254055485
+    },
+    {
+      "operation": "reply_nus",
+      "at": 21113.4511831,
+      "ms": 0.006499998562503606
+    },
+    {
+      "operation": "reply_nus",
+      "at": 21113.4511908,
+      "ms": 0.005600002623395994
+    },
+    {
+      "operation": "reply_nus",
+      "at": 21113.4511975,
+      "ms": 0.005000001692678779
+    },
+    {
+      "operation": "reply_nus",
+      "at": 21113.4512035,
+      "ms": 0.003999997716164216
+    },
+    {
+      "operation": "reply_nus",
+      "at": 21113.4512085,
+      "ms": 0.0040000013541430235
+    },
+    {
+      "operation": "reply_nus",
+      "at": 21113.4512134,
+      "ms": 0.0040000013541430235
+    },
+    {
+      "operation": "reply_nus",
+      "at": 21113.4512182,
+      "ms": 0.006099999154685065
+    },
+    {
+      "operation": "reply_nus",
+      "at": 21113.451226,
+      "ms": 0.011599997378652915
+    },
+    {
+      "operation": "reply_nus",
+      "at": 21113.4512392,
+      "ms": 0.006900001608300954
+    },
+    {
+      "operation": "read_servo",
+      "at": 21113.4513131,
+      "ms": 301.64979999972275
+    },
+    {
+      "operation": "read_servo",
+      "at": 21113.7529729,
+      "ms": 298.32079999687267
+    },
+    {
+      "operation": "write_servo",
+      "at": 21114.0513116,
+      "ms": 183.85100000159582
+    },
+    {
+      "operation": "read_servo",
+      "at": 21114.2351731,
+      "ms": 179.5862999970268
+    },
+    {
+      "operation": "write_servo",
+      "at": 21114.4147736,
+      "ms": 117.86129999745754
+    },
+    {
+      "operation": "write_nus",
+      "at": 21114.532645,
+      "ms": 118.90420000054291
+    },
+    {
+      "operation": "write_nus",
+      "at": 21114.6515601,
+      "ms": 239.6301000007952
+    },
+    {
+      "operation": "write_nus",
+      "at": 21114.8911995,
+      "ms": 123.6097000000882
+    },
+    {
+      "operation": "write_nus",
+      "at": 21115.0148195,
+      "ms": 536.3956000001053
+    },
+    {
+      "operation": "write_nus",
+      "at": 21115.5512262,
+      "ms": 960.4574000004504
+    },
+    {
+      "operation": "write_nus",
+      "at": 21116.5116936,
+      "ms": 901.1183999973582
+    },
+    {
+      "operation": "write_nus",
+      "at": 21117.4128212,
+      "ms": 658.5927000014635
+    },
+    {
+      "operation": "write_nus",
+      "at": 21118.0714235,
+      "ms": 420.9491000001435
+    },
+    {
+      "operation": "write_nus",
+      "at": 21118.492389,
+      "ms": 360.64470000201254
+    },
+    {
+      "operation": "write_nus",
+      "at": 21118.8530425,
+      "ms": 358.2526999998663
+    },
+    {
+      "operation": "reply_nus",
+      "at": 21119.2113002,
+      "ms": 0.02390000008745119
+    },
+    {
+      "operation": "reply_nus",
+      "at": 21119.2113264,
+      "ms": 0.007200000254670158
+    },
+    {
+      "operation": "reply_nus",
+      "at": 21119.2113348,
+      "ms": 0.006500002200482413
+    },
+    {
+      "operation": "reply_nus",
+      "at": 21119.2113423,
+      "ms": 0.005300000339047983
+    },
+    {
+      "operation": "reply_nus",
+      "at": 21119.2113486,
+      "ms": 0.004599998646881431
+    },
+    {
+      "operation": "reply_nus",
+      "at": 21119.2113543,
+      "ms": 0.003999997716164216
+    },
+    {
+      "operation": "reply_nus",
+      "at": 21119.2113593,
+      "ms": 0.00419999923906289
+    },
+    {
+      "operation": "reply_nus",
+      "at": 21119.2113643,
+      "ms": 0.00419999923906289
+    },
+    {
+      "operation": "reply_nus",
+      "at": 21119.2113694,
+      "ms": 0.004099998477613553
+    },
+    {
+      "operation": "reply_nus",
+      "at": 21119.2113743,
+      "ms": 0.004599998646881431
+    },
+    {
+      "operation": "read_servo",
+      "at": 21119.2114703,
+      "ms": 360.6971000008343
+    },
+    {
+      "operation": "read_servo",
+      "at": 21119.5721769,
+      "ms": 182.06669999926817
+    },
+    {
+      "operation": "write_servo",
+      "at": 21119.754258,
+      "ms": 177.9367999988608
+    },
+    {
+      "operation": "read_servo",
+      "at": 21119.9322008,
+      "ms": 62.66989999858197
+    },
+    {
+      "operation": "write_servo",
+      "at": 21119.9948853,
+      "ms": 176.52870000165422
+    },
+    {
+      "operation": "write_nus",
+      "at": 21120.1714243,
+      "ms": 120.13690000094357
+    },
+    {
+      "operation": "write_nus",
+      "at": 21120.2915719,
+      "ms": 120.03829999957816
+    },
+    {
+      "operation": "write_nus",
+      "at": 21120.4116298,
+      "ms": 62.329799999133684
+    },
+    {
+      "operation": "write_nus",
+      "at": 21120.4739692,
+      "ms": 240.04000000059023
+    },
+    {
+      "operation": "write_nus",
+      "at": 21120.7140191,
+      "ms": 300.0032000018109
+    },
+    {
+      "operation": "write_nus",
+      "at": 21121.0140313,
+      "ms": 357.09829999905196
+    },
+    {
+      "operation": "write_nus",
+      "at": 21121.3711427,
+      "ms": 300.03429999851505
+    },
+    {
+      "operation": "write_nus",
+      "at": 21121.6711902,
+      "ms": 300.02930000046035
+    },
+    {
+      "operation": "write_nus",
+      "at": 21121.9712297,
+      "ms": 421.62420000022394
+    },
+    {
+      "operation": "write_nus",
+      "at": 21122.3928635,
+      "ms": 718.4840999980224
+    },
+    {
+      "operation": "reply_nus",
+      "at": 21123.1113524,
+      "ms": 0.022100000933278352
+    },
+    {
+      "operation": "reply_nus",
+      "at": 21123.1113767,
+      "ms": 0.006800000846851617
+    },
+    {
+      "operation": "reply_nus",
+      "at": 21123.1113848,
+      "ms": 0.00540000110049732
+    },
+    {
+      "operation": "reply_nus",
+      "at": 21123.1113912,
+      "ms": 0.004400000761961564
+    },
+    {
+      "operation": "reply_nus",
+      "at": 21123.1113964,
+      "ms": 0.004400000761961564
+    },
+    {
+      "operation": "reply_nus",
+      "at": 21123.1114016,
+      "ms": 0.0040000013541430235
+    },
+    {
+      "operation": "reply_nus",
+      "at": 21123.1114063,
+      "ms": 0.0037000027077738196
+    },
+    {
+      "operation": "reply_nus",
+      "at": 21123.1114106,
+      "ms": 0.0036000019463244826
+    },
+    {
+      "operation": "reply_nus",
+      "at": 21123.1114149,
+      "ms": 0.0040000013541430235
+    },
+    {
+      "operation": "reply_nus",
+      "at": 21123.1114199,
+      "ms": 0.0040000013541430235
+    },
+    {
+      "operation": "read_servo",
+      "at": 21123.111464,
+      "ms": 542.9716999969969
+    },
+    {
+      "operation": "read_servo",
+      "at": 21123.6544498,
+      "ms": 418.8283000003139
+    },
+    {
+      "operation": "write_servo",
+      "at": 21124.0732923,
+      "ms": 301.2447000000975
+    },
+    {
+      "operation": "read_servo",
+      "at": 21124.3745474,
+      "ms": 358.6743000014394
+    },
+    {
+      "operation": "write_servo",
+      "at": 21124.733237,
+      "ms": 239.76259999835747
+    },
+    {
+      "operation": "write_nus",
+      "at": 21124.9730127,
+      "ms": 239.9751999982982
+    },
+    {
+      "operation": "write_nus",
+      "at": 21125.2129986,
+      "ms": 300.0499000008858
+    },
+    {
+      "operation": "write_nus",
+      "at": 21125.5130581,
+      "ms": 360.00760000024457
+    },
+    {
+      "operation": "write_nus",
+      "at": 21125.8730782,
+      "ms": 418.6600000030012
+    },
+    {
+      "operation": "write_nus",
+      "at": 21126.2917502,
+      "ms": 419.9021000022185
+    },
+    {
+      "operation": "write_nus",
+      "at": 21126.7116632,
+      "ms": 419.7965999992448
+    },
+    {
+      "operation": "write_nus",
+      "at": 21127.13147,
+      "ms": 421.05589999846416
+    },
+    {
+      "operation": "write_nus",
+      "at": 21127.5525396,
+      "ms": 361.87389999759034
+    },
+    {
+      "operation": "write_nus",
+      "at": 21127.9144274,
+      "ms": 419.21000000002095
+    },
+    {
+      "operation": "write_nus",
+      "at": 21128.3336475,
+      "ms": 357.75400000056834
+    },
+    {
+      "operation": "reply_nus",
+      "at": 21128.691406,
+      "ms": 0.022199998056748882
+    },
+    {
+      "operation": "reply_nus",
+      "at": 21128.6914304,
+      "ms": 0.006500002200482413
+    },
+    {
+      "operation": "reply_nus",
+      "at": 21128.6914383,
+      "ms": 0.005300000339047983
+    },
+    {
+      "operation": "reply_nus",
+      "at": 21128.6914446,
+      "ms": 0.008700000762473792
+    },
+    {
+      "operation": "reply_nus",
+      "at": 21128.6914544,
+      "ms": 0.004600002284860238
+    },
+    {
+      "operation": "reply_nus",
+      "at": 21128.6914599,
+      "ms": 0.004499997885432094
+    },
+    {
+      "operation": "reply_nus",
+      "at": 21128.6914654,
+      "ms": 0.004500001523410901
+    },
+    {
+      "operation": "reply_nus",
+      "at": 21128.6914708,
+      "ms": 0.004900000931229442
+    },
+    {
+      "operation": "reply_nus",
+      "at": 21128.6914772,
+      "ms": 0.005100002454128116
+    },
+    {
+      "operation": "reply_nus",
+      "at": 21128.6914832,
+      "ms": 0.004099998477613553
+    },
+    {
+      "operation": "read_servo",
+      "at": 21128.6915704,
+      "ms": 180.62060000011115
+    },
+    {
+      "operation": "read_servo",
+      "at": 21128.872202,
+      "ms": 182.1488000023237
+    },
+    {
+      "operation": "write_servo",
+      "at": 21129.0543643,
+      "ms": 117.23610000262852
+    },
+    {
+      "operation": "read_servo",
+      "at": 21129.1716159,
+      "ms": 60.858400000142865
+    },
+    {
+      "operation": "write_servo",
+      "at": 21129.232489,
+      "ms": 119.20329999702517
+    },
+    {
+      "operation": "write_nus",
+      "at": 21129.3517023,
+      "ms": 60.011500001564855
+    },
+    {
+      "operation": "write_nus",
+      "at": 21129.4117252,
+      "ms": 59.907499999098945
+    },
+    {
+      "operation": "write_nus",
+      "at": 21129.4716421,
+      "ms": 59.827699999004835
+    },
+    {
+      "operation": "write_nus",
+      "at": 21129.5314792,
+      "ms": 239.88459999964107
+    },
+    {
+      "operation": "write_nus",
+      "at": 21129.7713762,
+      "ms": 180.02330000308575
+    },
+    {
+      "operation": "write_nus",
+      "at": 21129.9514103,
+      "ms": 300.4642000014428
+    },
+    {
+      "operation": "write_nus",
+      "at": 21130.2518865,
+      "ms": 300.32180000125663
+    },
+    {
+      "operation": "write_nus",
+      "at": 21130.5522213,
+      "ms": 359.34350000025006
+    },
+    {
+      "operation": "write_nus",
+      "at": 21130.9115802,
+      "ms": 422.6491999979771
+    },
+    {
+      "operation": "write_nus",
+      "at": 21131.3342403,
+      "ms": 1258.17459999962
+    },
+    {
+      "operation": "reply_nus",
+      "at": 21132.5924208,
+      "ms": 0.022000000171829015
+    },
+    {
+      "operation": "reply_nus",
+      "at": 21132.5924471,
+      "ms": 0.010700001439545304
+    },
+    {
+      "operation": "reply_nus",
+      "at": 21132.592459,
+      "ms": 0.005099998816149309
+    },
+    {
+      "operation": "reply_nus",
+      "at": 21132.5924652,
+      "ms": 0.00419999923906289
+    },
+    {
+      "operation": "reply_nus",
+      "at": 21132.5924701,
+      "ms": 0.0036999990697950125
+    },
+    {
+      "operation": "reply_nus",
+      "at": 21132.5924745,
+      "ms": 0.0037999998312443495
+    },
+    {
+      "operation": "reply_nus",
+      "at": 21132.5924791,
+      "ms": 0.007700000423938036
+    },
+    {
+      "operation": "reply_nus",
+      "at": 21132.5924875,
+      "ms": 0.0038000034692231566
+    },
+    {
+      "operation": "reply_nus",
+      "at": 21132.5924922,
+      "ms": 0.0034999975468963385
+    },
+    {
+      "operation": "reply_nus",
+      "at": 21132.5924964,
+      "ms": 0.161899999511661
+    },
+    {
+      "operation": "read_servo",
+      "at": 21132.5926712,
+      "ms": 661.8469999993977
+    },
+    {
+      "operation": "read_servo",
+      "at": 21133.2545303,
+      "ms": 477.7773999994679
+    },
+    {
+      "operation": "write_servo",
+      "at": 21133.7323234,
+      "ms": 359.2248999993899
+    },
+    {
+      "operation": "read_servo",
+      "at": 21134.0916041,
+      "ms": 242.93080000279588
+    },
+    {
+      "operation": "write_servo",
+      "at": 21134.334556,
+      "ms": 239.29879999923287
+    },
+    {
+      "operation": "write_nus",
+      "at": 21134.5738643,
+      "ms": 179.60469999889028
+    },
+    {
+      "operation": "write_nus",
+      "at": 21134.7534824,
+      "ms": 239.85280000124476
+    },
+    {
+      "operation": "write_nus",
+      "at": 21134.9933514,
+      "ms": 239.79920000056154
+    },
+    {
+      "operation": "write_nus",
+      "at": 21135.2331605,
+      "ms": 298.9215999987209
+    },
+    {
+      "operation": "write_nus",
+      "at": 21135.5320928,
+      "ms": 300.50670000127866
+    },
+    {
+      "operation": "write_nus",
+      "at": 21135.8326096,
+      "ms": 419.33980000248994
+    },
+    {
+      "operation": "write_nus",
+      "at": 21136.2519587,
+      "ms": 481.8075000002864
+    },
+    {
+      "operation": "write_nus",
+      "at": 21136.7337761,
+      "ms": 539.3545999977505
+    },
+    {
+      "operation": "write_nus",
+      "at": 21137.2731424,
+      "ms": 482.3051999992458
+    },
+    {
+      "operation": "write_nus",
+      "at": 21137.7554572,
+      "ms": 656.485799998336
+    },
+    {
+      "operation": "reply_nus",
+      "at": 21138.4119472,
+      "ms": 0.02050000330200419
+    },
+    {
+      "operation": "reply_nus",
+      "at": 21138.4119696,
+      "ms": 0.005799996870337054
+    },
+    {
+      "operation": "reply_nus",
+      "at": 21138.4119766,
+      "ms": 0.004800000169780105
+    },
+    {
+      "operation": "reply_nus",
+      "at": 21138.4119822,
+      "ms": 0.004300000000512227
+    },
+    {
+      "operation": "reply_nus",
+      "at": 21138.4119874,
+      "ms": 0.0040000013541430235
+    },
+    {
+      "operation": "reply_nus",
+      "at": 21138.4119921,
+      "ms": 0.0033000032999552786
+    },
+    {
+      "operation": "reply_nus",
+      "at": 21138.4120001,
+      "ms": 0.0036999990697950125
+    },
+    {
+      "operation": "reply_nus",
+      "at": 21138.4120046,
+      "ms": 0.0035000011848751456
+    },
+    {
+      "operation": "reply_nus",
+      "at": 21138.4120089,
+      "ms": 0.0030000010156072676
+    },
+    {
+      "operation": "reply_nus",
+      "at": 21138.4120126,
+      "ms": 0.004699999408330768
+    },
+    {
+      "operation": "read_servo",
+      "at": 21138.4120776,
+      "ms": 362.5599999977567
+    },
+    {
+      "operation": "read_servo",
+      "at": 21138.7746493,
+      "ms": 358.7310000002617
+    },
+    {
+      "operation": "write_servo",
+      "at": 21139.1333937,
+      "ms": 238.18219999884604
+    },
+    {
+      "operation": "read_servo",
+      "at": 21139.3715831,
+      "ms": 183.71850000039558
+    },
+    {
+      "operation": "write_servo",
+      "at": 21139.5553183,
+      "ms": 176.74179999812623
+    },
+    {
+      "operation": "write_nus",
+      "at": 21139.73207,
+      "ms": 121.35830000261194
+    },
+    {
+      "operation": "write_nus",
+      "at": 21139.853447,
+      "ms": 181.9391999997606
+    },
+    {
+      "operation": "write_nus",
+      "at": 21140.0353963,
+      "ms": 237.7725999976974
+    },
+    {
+      "operation": "write_nus",
+      "at": 21140.2731783,
+      "ms": 300.77129999699537
+    },
+    {
+      "operation": "write_nus",
+      "at": 21140.5739586,
+      "ms": 417.7322999967146
+    },
+    {
+      "operation": "write_nus",
+      "at": 21140.9917191,
+      "ms": 421.51270000249497
+    },
+    {
+      "operation": "write_nus",
+      "at": 21141.4132446,
+      "ms": 480.0485000014305
+    },
+    {
+      "operation": "write_nus",
+      "at": 21141.8933025,
+      "ms": 422.2817000008945
+    },
+    {
+      "operation": "write_nus",
+      "at": 21142.3155934,
+      "ms": 539.7919999995793
+    },
+    {
+      "operation": "write_nus",
+      "at": 21142.8553951,
+      "ms": 416.58580000148504
+    },
+    {
+      "operation": "reply_nus",
+      "at": 21143.2719855,
+      "ms": 0.019499999325489625
+    },
+    {
+      "operation": "reply_nus",
+      "at": 21143.2720069,
+      "ms": 0.006100002792663872
+    },
+    {
+      "operation": "reply_nus",
+      "at": 21143.2720142,
+      "ms": 0.005199999577598646
+    },
+    {
+      "operation": "reply_nus",
+      "at": 21143.2720205,
+      "ms": 0.004599998646881431
+    },
+    {
+      "operation": "reply_nus",
+      "at": 21143.2720259,
+      "ms": 0.004099998477613553
+    },
+    {
+      "operation": "reply_nus",
+      "at": 21143.2720308,
+      "ms": 0.004500001523410901
+    },
+    {
+      "operation": "reply_nus",
+      "at": 21143.2720362,
+      "ms": 0.0040000013541430235
+    },
+    {
+      "operation": "reply_nus",
+      "at": 21143.2720411,
+      "ms": 0.0039000005926936865
+    },
+    {
+      "operation": "reply_nus",
+      "at": 21143.2720458,
+      "ms": 0.0035000011848751456
+    },
+    {
+      "operation": "reply_nus",
+      "at": 21143.2720501,
+      "ms": 0.3318999988550786
+    },
+    {
+      "operation": "read_servo",
+      "at": 21143.2723955,
+      "ms": 480.73980000117444
+    },
+    {
+      "operation": "read_servo",
+      "at": 21143.753158,
+      "ms": 302.2205999986909
+    },
+    {
+      "operation": "write_servo",
+      "at": 21144.0553918,
+      "ms": 297.28809999869554
+    },
+    {
+      "operation": "read_servo",
+      "at": 21144.3526893,
+      "ms": 242.82809999931487
+    },
+    {
+      "operation": "write_servo",
+      "at": 21144.5955334,
+      "ms": 176.4528000021528
+    },
+    {
+      "operation": "write_nus",
+      "at": 21144.771996,
+      "ms": 121.02099999901839
+    },
+    {
+      "operation": "write_nus",
+      "at": 21144.8930264,
+      "ms": 238.8360000004468
+    },
+    {
+      "operation": "write_nus",
+      "at": 21145.1318727,
+      "ms": 181.99490000188234
+    },
+    {
+      "operation": "write_nus",
+      "at": 21145.3138774,
+      "ms": 297.9640000012296
+    },
+    {
+      "operation": "write_nus",
+      "at": 21145.6118518,
+      "ms": 241.5736000002653
+    },
+    {
+      "operation": "write_nus",
+      "at": 21145.853438,
+      "ms": 298.75080000056187
+    },
+    {
+      "operation": "write_nus",
+      "at": 21146.152198,
+      "ms": 420.6629000000248
+    },
+    {
+      "operation": "write_nus",
+      "at": 21146.57287,
+      "ms": 539.244299998245
+    },
+    {
+      "operation": "write_nus",
+      "at": 21147.1121235,
+      "ms": 1140.5286000008346
+    },
+    {
+      "operation": "write_nus",
+      "at": 21148.2526659,
+      "ms": 481.56849999941187
+    },
+    {
+      "operation": "reply_nus",
+      "at": 21148.7342391,
+      "ms": 0.020200001017656177
+    },
+    {
+      "operation": "reply_nus",
+      "at": 21148.7342617,
+      "ms": 0.006199999916134402
+    },
+    {
+      "operation": "reply_nus",
+      "at": 21148.7342691,
+      "ms": 0.005699999746866524
+    },
+    {
+      "operation": "reply_nus",
+      "at": 21148.7342759,
+      "ms": 0.005100002454128116
+    },
+    {
+      "operation": "reply_nus",
+      "at": 21148.734282,
+      "ms": 0.004699999408330768
+    },
+    {
+      "operation": "reply_nus",
+      "at": 21148.7342875,
+      "ms": 0.0036999990697950125
+    },
+    {
+      "operation": "reply_nus",
+      "at": 21148.734292,
+      "ms": 0.0034999975468963385
+    },
+    {
+      "operation": "reply_nus",
+      "at": 21148.7342964,
+      "ms": 0.0033999967854470015
+    },
+    {
+      "operation": "reply_nus",
+      "at": 21148.7343006,
+      "ms": 0.0036999990697950125
+    },
+    {
+      "operation": "reply_nus",
+      "at": 21148.734305,
+      "ms": 0.08619999789516442
+    },
+    {
+      "operation": "read_servo",
+      "at": 21148.7344236,
+      "ms": 299.16850000154227
+    },
+    {
+      "operation": "read_servo",
+      "at": 21149.033602,
+      "ms": 298.4114999999292
+    },
+    {
+      "operation": "write_servo",
+      "at": 21149.3320394,
+      "ms": 122.69849999938742
+    },
+    {
+      "operation": "read_servo",
+      "at": 21149.4547442,
+      "ms": 180.25290000150562
+    },
+    {
+      "operation": "write_servo",
+      "at": 21149.6350137,
+      "ms": 177.34890000065207
+    },
+    {
+      "operation": "write_nus",
+      "at": 21149.8123727,
+      "ms": 119.63960000139195
+    },
+    {
+      "operation": "write_nus",
+      "at": 21149.9320267,
+      "ms": 123.58239999957732
+    },
+    {
+      "operation": "write_nus",
+      "at": 21150.0556201,
+      "ms": 180.0532999986899
+    },
+    {
+      "operation": "write_nus",
+      "at": 21150.2356831,
+      "ms": 237.05469999913475
+    },
+    {
+      "operation": "write_nus",
+      "at": 21150.4727478,
+      "ms": 122.83990000287304
+    },
+    {
+      "operation": "write_nus",
+      "at": 21150.5956005,
+      "ms": 178.42169999858015
+    },
+    {
+      "operation": "write_nus",
+      "at": 21150.7740322,
+      "ms": 239.66230000223732
+    },
+    {
+      "operation": "write_nus",
+      "at": 21151.013704,
+      "ms": 358.53099999803817
+    },
+    {
+      "operation": "write_nus",
+      "at": 21151.3722447,
+      "ms": 303.4829999996873
+    },
+    {
+      "operation": "write_nus",
+      "at": 21151.6757379,
+      "ms": 359.2042999989644
+    },
+    {
+      "operation": "reply_nus",
+      "at": 21152.0349488,
+      "ms": 0.026300000172341242
+    },
+    {
+      "operation": "reply_nus",
+      "at": 21152.0349781,
+      "ms": 0.009499999578110874
+    },
+    {
+      "operation": "reply_nus",
+      "at": 21152.0349899,
+      "ms": 0.009300001693191007
+    },
+    {
+      "operation": "reply_nus",
+      "at": 21152.0350009,
+      "ms": 0.008300001354655251
+    },
+    {
+      "operation": "reply_nus",
+      "at": 21152.0350107,
+      "ms": 0.014199998986441642
+    },
+    {
+      "operation": "reply_nus",
+      "at": 21152.0350265,
+      "ms": 0.00799999907030724
+    },
+    {
+      "operation": "reply_nus",
+      "at": 21152.035036,
+      "ms": 0.007599999662488699
+    },
+    {
+      "operation": "reply_nus",
+      "at": 21152.0350452,
+      "ms": 0.008099999831756577
+    },
+    {
+      "operation": "reply_nus",
+      "at": 21152.0350548,
+      "ms": 0.007200000254670158
+    },
+    {
+      "operation": "reply_nus",
+      "at": 21152.0350635,
+      "ms": 0.17130000196630135
+    },
+    {
+      "operation": "read_servo",
+      "at": 21152.0352549,
+      "ms": 477.45129999748315
+    },
+    {
+      "operation": "read_servo",
+      "at": 21152.512725,
+      "ms": 481.5777000003436
+    },
+    {
+      "operation": "write_servo",
+      "at": 21152.9943221,
+      "ms": 300.4798000001756
+    },
+    {
+      "operation": "read_servo",
+      "at": 21153.2948083,
+      "ms": 240.62249999769847
+    },
+    {
+      "operation": "write_servo",
+      "at": 21153.535446,
+      "ms": 236.92389999996522
+    },
+    {
+      "operation": "write_nus",
+      "at": 21153.772381,
+      "ms": 62.007200001971796
+    },
+    {
+      "operation": "write_nus",
+      "at": 21153.8343985,
+      "ms": 179.08280000119703
+    },
+    {
+      "operation": "write_nus",
+      "at": 21154.0134913,
+      "ms": 239.69560000114143
+    },
+    {
+      "operation": "write_nus",
+      "at": 21154.2531991,
+      "ms": 303.0161999995471
+    },
+    {
+      "operation": "write_nus",
+      "at": 21154.5562273,
+      "ms": 415.9103000019968
+    },
+    {
+      "operation": "write_nus",
+      "at": 21154.9721471,
+      "ms": 360.24519999773474
+    },
+    {
+      "operation": "write_nus",
+      "at": 21155.3324025,
+      "ms": 481.10649999944144
+    },
+    {
+      "operation": "write_nus",
+      "at": 21155.8135191,
+      "ms": 419.2207000014605
+    },
+    {
+      "operation": "write_nus",
+      "at": 21156.2327497,
+      "ms": 422.1938000009686
+    },
+    {
+      "operation": "write_nus",
+      "at": 21156.6549552,
+      "ms": 357.44740000154707
+    },
+    {
+      "operation": "reply_nus",
+      "at": 21157.0124074,
+      "ms": 0.020399998902576044
+    },
+    {
+      "operation": "reply_nus",
+      "at": 21157.0124306,
+      "ms": 0.007800001185387373
+    },
+    {
+      "operation": "reply_nus",
+      "at": 21157.01244,
+      "ms": 0.007200000254670158
+    },
+    {
+      "operation": "reply_nus",
+      "at": 21157.0124487,
+      "ms": 0.005500001861946657
+    },
+    {
+      "operation": "reply_nus",
+      "at": 21157.0124553,
+      "ms": 0.006199999916134402
+    },
+    {
+      "operation": "reply_nus",
+      "at": 21157.0124627,
+      "ms": 0.005800000508315861
+    },
+    {
+      "operation": "reply_nus",
+      "at": 21157.0124696,
+      "ms": 0.005800000508315861
+    },
+    {
+      "operation": "reply_nus",
+      "at": 21157.0124768,
+      "ms": 0.011200001608813182
+    },
+    {
+      "operation": "reply_nus",
+      "at": 21157.0124895,
+      "ms": 0.006300000677583739
+    },
+    {
+      "operation": "reply_nus",
+      "at": 21157.0124972,
+      "ms": 0.2413000001979526
+    },
+    {
+      "operation": "read_servo",
+      "at": 21157.0127521,
+      "ms": 361.0554000006232
+    },
+    {
+      "operation": "read_servo",
+      "at": 21157.3738166,
+      "ms": 239.36500000127126
+    },
+    {
+      "operation": "write_servo",
+      "at": 21157.6131956,
+      "ms": 118.99500000072294
+    },
+    {
+      "operation": "write_nus",
+      "at": 21157.7321978,
+      "ms": 62.50039999940782
+    },
+    {
+      "operation": "write_nus",
+      "at": 21157.7947025,
+      "ms": 299.744500000088
+    },
+    {
+      "operation": "reply_nus",
+      "at": 21158.0944511,
+      "ms": 0.019899998733308166
+    },
+    {
+      "operation": "reply_nus",
+      "at": 21158.0944722,
+      "ms": 0.005100002454128116
+    },
+    {
+      "operation": "reply_nus",
+      "at": 21158.0944781,
+      "ms": 0.004400000761961564
+    },
+    {
+      "operation": "reply_nus",
+      "at": 21158.0944832,
+      "ms": 0.0040000013541430235
+    },
+    {
+      "operation": "reply_nus",
+      "at": 21158.0944878,
+      "ms": 0.003999997716164216
+    },
+    {
+      "operation": "reply_nus",
+      "at": 21158.0944925,
+      "ms": 0.0037999998312443495
+    },
+    {
+      "operation": "reply_nus",
+      "at": 21158.0944969,
+      "ms": 0.0030999981390777975
+    },
+    {
+      "operation": "reply_nus",
+      "at": 21158.0945005,
+      "ms": 0.0031000017770566046
+    },
+    {
+      "operation": "reply_nus",
+      "at": 21158.094504,
+      "ms": 0.0031999989005271345
+    },
+    {
+      "operation": "reply_nus",
+      "at": 21158.0945079,
+      "ms": 0.0034000004234258085
+    },
+    {
+      "operation": "reply_nus",
+      "at": 21158.0945118,
+      "ms": 0.0031999989005271345
+    },
+    {
+      "operation": "reply_nus",
+      "at": 21158.0945156,
+      "ms": 0.0030999981390777975
+    },
+    {
+      "operation": "reply_nus",
+      "at": 21158.0945192,
+      "ms": 0.0031000017770566046
+    },
+    {
+      "operation": "reply_nus",
+      "at": 21158.0945228,
+      "ms": 0.0029000002541579306
+    },
+    {
+      "operation": "reply_nus",
+      "at": 21158.0945262,
+      "ms": 0.006500002200482413
+    },
+    {
+      "operation": "reply_nus",
+      "at": 21158.0945332,
+      "ms": 0.004300000000512227
+    },
+    {
+      "operation": "reply_nus",
+      "at": 21158.0945381,
+      "ms": 0.0029000002541579306
+    },
+    {
+      "operation": "reply_nus",
+      "at": 21158.0945417,
+      "ms": 0.0027999994927085936
+    },
+    {
+      "operation": "reply_nus",
+      "at": 21158.094545,
+      "ms": 0.0029000002541579306
+    },
+    {
+      "operation": "reply_nus",
+      "at": 21158.0945523,
+      "ms": 0.0036999990697950125
+    },
+    {
+      "operation": "read_servo",
+      "at": 21158.0945612,
+      "ms": 298.6918999995396
+    },
+    {
+      "operation": "write_servo",
+      "at": 21158.3932706,
+      "ms": 119.87549999685143
+    },
+    {
+      "operation": "write_nus",
+      "at": 21158.5131561,
+      "ms": 60.04639999810024
+    },
+    {
+      "operation": "write_nus",
+      "at": 21158.573212,
+      "ms": 62.80270000206656
+    },
+    {
+      "operation": "write_nus",
+      "at": 21158.6360317,
+      "ms": 176.6806000014185
+    },
+    {
+      "operation": "write_nus",
+      "at": 21158.8127221,
+      "ms": 359.24489999888465
+    },
+    {
+      "operation": "write_nus",
+      "at": 21159.1719772,
+      "ms": 362.9705000021204
+    },
+    {
+      "operation": "write_nus",
+      "at": 21159.5349595,
+      "ms": 599.4310999994923
+    },
+    {
+      "operation": "write_nus",
+      "at": 21160.1344011,
+      "ms": 718.1689999997616
+    },
+    {
+      "operation": "write_nus",
+      "at": 21160.8525831,
+      "ms": 719.6121999986644
+    },
+    {
+      "operation": "write_nus",
+      "at": 21161.5722045,
+      "ms": 840.2127000008477
+    },
+    {
+      "operation": "write_nus",
+      "at": 21162.4124281,
+      "ms": 1380.01770000119
+    },
+    {
+      "operation": "reply_nus",
+      "at": 21163.7924503,
+      "ms": 0.02170000152545981
+    },
+    {
+      "operation": "reply_nus",
+      "at": 21163.7924738,
+      "ms": 0.005699999746866524
+    },
+    {
+      "operation": "reply_nus",
+      "at": 21163.7924805,
+      "ms": 0.004800000169780105
+    },
+    {
+      "operation": "reply_nus",
+      "at": 21163.7924862,
+      "ms": 0.004400000761961564
+    },
+    {
+      "operation": "reply_nus",
+      "at": 21163.7924915,
+      "ms": 0.004599998646881431
+    },
+    {
+      "operation": "reply_nus",
+      "at": 21163.7924971,
+      "ms": 0.00419999923906289
+    },
+    {
+      "operation": "reply_nus",
+      "at": 21163.792502,
+      "ms": 0.0039000005926936865
+    },
+    {
+      "operation": "reply_nus",
+      "at": 21163.7925067,
+      "ms": 0.0036999990697950125
+    },
+    {
+      "operation": "reply_nus",
+      "at": 21163.7925111,
+      "ms": 0.0030999981390777975
+    },
+    {
+      "operation": "reply_nus",
+      "at": 21163.7925149,
+      "ms": 0.04410000110510737
+    },
+    {
+      "operation": "read_servo",
+      "at": 21163.7925712,
+      "ms": 661.0669000001508
+    },
+    {
+      "operation": "read_servo",
+      "at": 21164.4536608,
+      "ms": 479.741399998602
+    },
+    {
+      "operation": "write_servo",
+      "at": 21164.9334183,
+      "ms": 421.7266000014206
+    },
+    {
+      "operation": "read_servo",
+      "at": 21165.3551923,
+      "ms": 239.33739999847603
+    },
+    {
+      "operation": "write_servo",
+      "at": 21165.5945445,
+      "ms": 181.6395999994711
+    },
+    {
+      "operation": "write_nus",
+      "at": 21165.7761936,
+      "ms": 177.95140000089305
+    },
+    {
+      "operation": "write_nus",
+      "at": 21165.9541544,
+      "ms": 121.85500000123284
+    },
+    {
+      "operation": "write_nus",
+      "at": 21166.0760196,
+      "ms": 236.49449999720673
+    },
+    {
+      "operation": "write_nus",
+      "at": 21166.312523,
+      "ms": 241.50029999873368
+    },
+    {
+      "operation": "write_nus",
+      "at": 21166.5540346,
+      "ms": 420.28149999896414
+    },
+    {
+      "operation": "write_nus",
+      "at": 21166.9743261,
+      "ms": 421.81739999796264
+    },
+    {
+      "operation": "write_nus",
+      "at": 21167.396153,
+      "ms": 419.9477999973169
+    },
+    {
+      "operation": "write_nus",
+      "at": 21167.8161108,
+      "ms": 597.2975000004226
+    },
+    {
+      "operation": "write_nus",
+      "at": 21168.4134178,
+      "ms": 541.6635000001406
+    },
+    {
+      "operation": "write_nus",
+      "at": 21168.9550909,
+      "ms": 597.6117999998678
+    },
+    {
+      "operation": "reply_nus",
+      "at": 21169.5527088,
+      "ms": 0.022599997464567423
+    },
+    {
+      "operation": "reply_nus",
+      "at": 21169.5527341,
+      "ms": 0.007799997547408566
+    },
+    {
+      "operation": "reply_nus",
+      "at": 21169.5527434,
+      "ms": 0.006599999323952943
+    },
+    {
+      "operation": "reply_nus",
+      "at": 21169.5527517,
+      "ms": 0.01179999890155159
+    },
+    {
+      "operation": "reply_nus",
+      "at": 21169.5527648,
+      "ms": 0.005199999577598646
+    },
+    {
+      "operation": "reply_nus",
+      "at": 21169.5527709,
+      "ms": 0.00419999923906289
+    },
+    {
+      "operation": "reply_nus",
+      "at": 21169.5527758,
+      "ms": 0.0035000011848751456
+    },
+    {
+      "operation": "reply_nus",
+      "at": 21169.552781,
+      "ms": 0.005900001269765198
+    },
+    {
+      "operation": "reply_nus",
+      "at": 21169.5527882,
+      "ms": 0.00540000110049732
+    },
+    {
+      "operation": "reply_nus",
+      "at": 21169.5527949,
+      "ms": 0.006100002792663872
+    },
+    {
+      "operation": "read_servo",
+      "at": 21169.5528478,
+      "ms": 420.19129999971483
+    },
+    {
+      "operation": "read_servo",
+      "at": 21169.9730508,
+      "ms": 240.37260000113747
+    },
+    {
+      "operation": "write_servo",
+      "at": 21170.2134375,
+      "ms": 360.6679000004078
+    },
+    {
+      "operation": "read_servo",
+      "at": 21170.5741223,
+      "ms": 182.0250999990094
+    },
+    {
+      "operation": "write_servo",
+      "at": 21170.7561628,
+      "ms": 177.84329999994952
+    },
+    {
+      "operation": "write_nus",
+      "at": 21170.9340158,
+      "ms": 178.64759999793023
+    },
+    {
+      "operation": "write_nus",
+      "at": 21171.112674,
+      "ms": 62.00209999951767
+    },
+    {
+      "operation": "write_nus",
+      "at": 21171.1746858,
+      "ms": 178.38950000077602
+    },
+    {
+      "operation": "write_nus",
+      "at": 21171.3530871,
+      "ms": 60.74919999809936
+    },
+    {
+      "operation": "write_nus",
+      "at": 21171.4138462,
+      "ms": 182.48139999923296
+    },
+    {
+      "operation": "write_nus",
+      "at": 21171.5963365,
+      "ms": 236.00079999960144
+    },
+    {
+      "operation": "write_nus",
+      "at": 21171.8323467,
+      "ms": 300.1762999992934
+    },
+    {
+      "operation": "write_nus",
+      "at": 21172.132536,
+      "ms": 420.08089999944787
+    },
+    {
+      "operation": "write_nus",
+      "at": 21172.5526291,
+      "ms": 420.76900000029127
+    },
+    {
+      "operation": "write_nus",
+      "at": 21172.9734074,
+      "ms": 421.23329999958514
+    },
+    {
+      "operation": "reply_nus",
+      "at": 21173.3946451,
+      "ms": 0.018700000509852543
+    },
+    {
+      "operation": "reply_nus",
+      "at": 21173.3946681,
+      "ms": 0.00549999822396785
+    },
+    {
+      "operation": "reply_nus",
+      "at": 21173.3946787,
+      "ms": 0.004400000761961564
+    },
+    {
+      "operation": "reply_nus",
+      "at": 21173.394684,
+      "ms": 0.0039000005926936865
+    },
+    {
+      "operation": "reply_nus",
+      "at": 21173.3946888,
+      "ms": 0.0041000021155923605
+    },
+    {
+      "operation": "reply_nus",
+      "at": 21173.3946936,
+      "ms": 0.0036000019463244826
+    },
+    {
+      "operation": "reply_nus",
+      "at": 21173.3946979,
+      "ms": 0.004900000931229442
+    },
+    {
+      "operation": "reply_nus",
+      "at": 21173.3947034,
+      "ms": 0.0032999996619764715
+    },
+    {
+      "operation": "reply_nus",
+      "at": 21173.3947072,
+      "ms": 0.0030999981390777975
+    },
+    {
+      "operation": "reply_nus",
+      "at": 21173.3947109,
+      "ms": 0.1522999991721008
+    },
+    {
+      "operation": "read_servo",
+      "at": 21173.3948768,
+      "ms": 421.2934999995923
+    },
+    {
+      "operation": "read_servo",
+      "at": 21173.8161806,
+      "ms": 477.3683000021265
+    },
+    {
+      "operation": "write_servo",
+      "at": 21174.2935644,
+      "ms": 300.60260000027483
+    },
+    {
+      "operation": "read_servo",
+      "at": 21174.594174,
+      "ms": 239.17900000014924
+    },
+    {
+      "operation": "write_servo",
+      "at": 21174.8333712,
+      "ms": 179.52400000285706
+    },
+    {
+      "operation": "write_nus",
+      "at": 21175.0129078,
+      "ms": 60.5080999994243
+    },
+    {
+      "operation": "write_nus",
+      "at": 21175.0734268,
+      "ms": 122.89339999915683
+    },
+    {
+      "operation": "write_nus",
+      "at": 21175.1963291,
+      "ms": 176.34850000104052
+    },
+    {
+      "operation": "write_nus",
+      "at": 21175.3726866,
+      "ms": 181.02709999948274
+    },
+    {
+      "operation": "write_nus",
+      "at": 21175.5537282,
+      "ms": 358.98359999919194
+    },
+    {
+      "operation": "write_nus",
+      "at": 21175.9127212,
+      "ms": 419.9232999999367
+    },
+    {
+      "operation": "write_nus",
+      "at": 21176.3326547,
+      "ms": 481.56310000194935
+    },
+    {
+      "operation": "write_nus",
+      "at": 21176.8142274,
+      "ms": 658.2955000012589
+    },
+    {
+      "operation": "write_nus",
+      "at": 21177.4725326,
+      "ms": 663.92629999973
+    },
+    {
+      "operation": "write_nus",
+      "at": 21178.1364731,
+      "ms": 1136.6277000015543
+    },
+    {
+      "operation": "reply_nus",
+      "at": 21179.2731053,
+      "ms": 0.01720000000204891
+    },
+    {
+      "operation": "reply_nus",
+      "at": 21179.2731243,
+      "ms": 0.004899997293250635
+    },
+    {
+      "operation": "reply_nus",
+      "at": 21179.2731304,
+      "ms": 0.005099998816149309
+    },
+    {
+      "operation": "reply_nus",
+      "at": 21179.273137,
+      "ms": 0.006300000677583739
+    },
+    {
+      "operation": "reply_nus",
+      "at": 21179.2731442,
+      "ms": 0.005099998816149309
+    },
+    {
+      "operation": "reply_nus",
+      "at": 21179.2731502,
+      "ms": 0.00540000110049732
+    },
+    {
+      "operation": "reply_nus",
+      "at": 21179.273157,
+      "ms": 0.0039000005926936865
+    },
+    {
+      "operation": "reply_nus",
+      "at": 21179.2731617,
+      "ms": 0.0032999996619764715
+    },
+    {
+      "operation": "reply_nus",
+      "at": 21179.2731658,
+      "ms": 0.0029000002541579306
+    },
+    {
+      "operation": "reply_nus",
+      "at": 21179.2731693,
+      "ms": 0.17190000289701857
+    },
+    {
+      "operation": "read_servo",
+      "at": 21179.2733635,
+      "error": "OSError(22, 'The operation was canceled by the user', None, -2147023673, None)",
+      "ms": 2225.599699999293
+    },
+    {
+      "operation": "subscribe_nus",
+      "at": 21184.539196,
+      "ms": 29.008099998463877
+    },
+    {
+      "operation": "write_nus",
+      "at": 21184.5683167,
+      "ms": 29.54200000021956
+    },
+    {
+      "operation": "reply_nus",
+      "at": 21184.5978651,
+      "ms": 0.01939999856404029
+    },
+    {
+      "operation": "write_servo",
+      "at": 21184.5978936,
+      "ms": 29.90440000212402
+    },
+    {
+      "operation": "read_servo",
+      "at": 21184.6278059,
+      "ms": 30.76839999994263
+    },
+    {
+      "operation": "write_mode",
+      "at": 21184.6585898,
+      "ms": 29.538099999626866
+    },
+    {
+      "operation": "read_mode",
+      "at": 21184.6881366,
+      "ms": 29.901199999585515
+    },
+    {
+      "operation": "unsubscribe_nus",
+      "at": 21184.7180595,
+      "ms": 29.924500002380228
+    }
+  ],
+  "stats": [
+    {
+      "at": 20999.029097,
+      "lines": [
+        "OK BLE_STATS",
+        "s=0 rsv=1",
+        "rx=0/1",
+        "tx=0/1",
+        "rxrej=0",
+        "txrej=0",
+        "sent=21",
+        "done=21",
+        "pool=0",
+        "timeout=0",
+        "err=0",
+        "stale=0",
+        "merge=0",
+        "heap=3376",
+        "min=3376",
+        "stack=3424",
+        "hci=1264",
+        "lag=1",
+        "OK BLE_STATS END"
+      ],
+      "fields": {
+        "s": 0,
+        "rsv": 1,
+        "rx": 0,
+        "tx": 0,
+        "rxrej": 0,
+        "txrej": 0,
+        "sent": 21,
+        "done": 21,
+        "pool": 0,
+        "timeout": 0,
+        "err": 0,
+        "stale": 0,
+        "merge": 0,
+        "heap": 3376,
+        "min": 3376,
+        "stack": 3424,
+        "hci": 1264,
+        "lag": 1,
+        "rx_high": 1,
+        "tx_high": 1
+      }
+    },
+    {
+      "at": 21013.0100363,
+      "lines": [
+        "OK BLE_STATS",
+        "s=0 rsv=1",
+        "rx=0/1",
+        "tx=0/1",
+        "rxrej=0",
+        "txrej=0",
+        "sent=174",
+        "done=174",
+        "pool=0",
+        "timeout=0",
+        "err=0",
+        "stale=0",
+        "merge=24",
+        "heap=3376",
+        "min=3376",
+        "stack=3424",
+        "hci=1220",
+        "lag=1",
+        "OK BLE_STATS END"
+      ],
+      "fields": {
+        "s": 0,
+        "rsv": 1,
+        "rx": 0,
+        "tx": 0,
+        "rxrej": 0,
+        "txrej": 0,
+        "sent": 174,
+        "done": 174,
+        "pool": 0,
+        "timeout": 0,
+        "err": 0,
+        "stale": 0,
+        "merge": 24,
+        "heap": 3376,
+        "min": 3376,
+        "stack": 3424,
+        "hci": 1220,
+        "lag": 1,
+        "rx_high": 1,
+        "tx_high": 1
+      }
+    }
+  ],
+  "phases": [
+    {
+      "name": "stable_reads_do_not_notify",
+      "reads": 20,
+      "seconds": 2.797101100000873,
+      "extra_notifications": 0
+    }
+  ],
+  "connections": [
+    {
+      "notifications": {
+        "adc": 772,
+        "imu": 2838,
+        "tof": 856,
+        "servo": 1818
+      },
+      "invalid_frames": [],
+      "tx_packets": 459,
+      "accepted_commands": 351,
+      "checked_commands": 351
+    },
+    {
+      "notifications": {},
+      "invalid_frames": [],
+      "tx_packets": 1,
+      "accepted_commands": 1,
+      "checked_commands": 0
+    }
+  ],
+  "cleanup": {
+    "status": "restored_and_disconnected",
+    "hardware_connected": true,
+    "connection_attempted": true,
+    "state_change_attempted": true,
+    "stop_acknowledged": true,
+    "servo_restored": true,
+    "imu_mode_restored": true
+  },
+  "restoration_verified": true,
+  "provenance": {
+    "repository": "C:\\Users\\netan\\Dropbox\\DevelopPersonal\\BLEServoController\\Git\\ServoWebController-FW",
+    "captured_utc": "2026-11-07T13:24:18.913730+00:00",
+    "identity_scope": "local artifacts at run start; flash/readback proof is recorded separately",
+    "head": "b6b5a36b8cb5f4a5018a5cfd752367711486e2dc",
+    "worktree_dirty": true,
+    "worktree_status": [
+      " M BleServoController.ioc",
+      " M Core/Inc/app_freertos.h",
+      " M Core/Inc/stm32_rtos.h",
+      " M Core/Src/app_freertos.c",
+      " M Core/agents.md",
+      " M README.md",
+      " M STM32CubeIDE/.project",
+      " M STM32CubeIDE/Application/User/Core/IMU/imu_ble.c",
+      " M STM32CubeIDE/Application/User/Core/adc_ble.c",
+      " M STM32CubeIDE/Application/User/Core/comm/comm_interface.c",
+      " M STM32CubeIDE/Application/User/Core/comm/commands.md",
+      " M STM32_WPAN/App/agents.md",
+      " M STM32_WPAN/App/app_ble.c",
+      " M STM32_WPAN/App/nus.c",
+      " M STM32_WPAN/App/nus_app.c",
+      " M STM32_WPAN/App/nus_app.h",
+      " M STM32_WPAN/App/ota.c",
+      " M STM32_WPAN/App/tof.c",
+      " M tools/check_servo_characteristic.py",
+      "?? BLE_TRANSPORT.md",
+      "?? STM32_WPAN/App/ble_tx.c",
+      "?? STM32_WPAN/App/ble_tx.h",
+      "?? tools/BLE_TRANSPORT_TESTS.md",
+      "?? tools/__pycache__/check_ble_transport_hardware.cpython-313.pyc",
+      "?? tools/ble_transport_mocks/",
+      "?? tools/check_ble_transport.py",
+      "?? tools/check_ble_transport_hardware.py",
+      "?? tools/test_ble_transport.c"
+    ],
+    "artifacts": {
+      "hex": {
+        "path": "C:\\Users\\netan\\Dropbox\\DevelopPersonal\\BLEServoController\\Git\\ServoWebController-FW\\STM32CubeIDE\\Debug\\BleServoController.hex",
+        "sha256": "5bce03294b6dfefefecdc46619fb21bd561b38c27d00e29d92fd6bf8d8b797bd",
+        "bytes": 980690,
+        "modified_ns": 1794057767729636900
+      },
+      "elf": {
+        "path": "C:\\Users\\netan\\Dropbox\\DevelopPersonal\\BLEServoController\\Git\\ServoWebController-FW\\STM32CubeIDE\\Debug\\BleServoController.elf",
+        "sha256": "e91c3cdd5269c7dd69a0704dbdf150d78eabfea7b3268bb6c3a85a5294fef728",
+        "bytes": 4400808,
+        "modified_ns": 1794057767515715900
+      }
+    },
+    "test_script_sha256": "5c7fdeed474cf8ec9f935f90a86732b05658b3f9a94f3696bb3091a499ee660b"
+  },
+  "verified_advertisement": {
+    "address": "00:80:E1:2A:26:24",
+    "name": "NL802915"
+  },
+  "original_values": [
+    1500,
+    1500,
+    1500,
+    1500,
+    1500,
+    1500,
+    1500,
+    1500,
+    1500,
+    1500,
+    1500,
+    1500,
+    1500,
+    1500,
+    1500,
+    1500
+  ],
+  "original_imu_mode": 0,
+  "cleanup_errors": [],
+  "result": "failed",
+  "error": "OSError(22, 'The operation was canceled by the user', None, -2147023673, None)",
+  "latency": {
+    "read_mode": {
+      "count": 3,
+      "errors": 0,
+      "median_ms": 29.901199999585515,
+      "p95_ms": 82.82540000072913,
+      "max_ms": 82.82540000072913
+    },
+    "read_servo": {
+      "count": 123,
+      "errors": 1,
+      "median_ms": 240.37260000113747,
+      "p95_ms": 481.5777000003436,
+      "max_ms": 841.3265999988653
+    },
+    "reply_nus": {
+      "count": 460,
+      "errors": 0,
+      "median_ms": 0.005100002454128116,
+      "p95_ms": 0.5686000004061498,
+      "max_ms": 119.03579999852809
+    },
+    "subscribe_adc": {
+      "count": 1,
+      "errors": 0,
+      "median_ms": 119.73009999928763,
+      "p95_ms": 119.73009999928763,
+      "max_ms": 119.73009999928763
+    },
+    "subscribe_imu": {
+      "count": 1,
+      "errors": 0,
+      "median_ms": 120.34950000088429,
+      "p95_ms": 120.34950000088429,
+      "max_ms": 120.34950000088429
+    },
+    "subscribe_nus": {
+      "count": 2,
+      "errors": 0,
+      "median_ms": 31.019199999718694,
+      "p95_ms": 31.019199999718694,
+      "max_ms": 31.019199999718694
+    },
+    "subscribe_servo": {
+      "count": 1,
+      "errors": 0,
+      "median_ms": 119.2834000030416,
+      "p95_ms": 119.2834000030416,
+      "max_ms": 119.2834000030416
+    },
+    "subscribe_tof": {
+      "count": 1,
+      "errors": 0,
+      "median_ms": 119.84269999811659,
+      "p95_ms": 119.84269999811659,
+      "max_ms": 119.84269999811659
+    },
+    "unsubscribe_nus": {
+      "count": 1,
+      "errors": 0,
+      "median_ms": 29.924500002380228,
+      "p95_ms": 29.924500002380228,
+      "max_ms": 29.924500002380228
+    },
+    "write_mode": {
+      "count": 2,
+      "errors": 0,
+      "median_ms": 180.36620000202674,
+      "p95_ms": 180.36620000202674,
+      "max_ms": 180.36620000202674
+    },
+    "write_nus": {
+      "count": 352,
+      "errors": 0,
+      "median_ms": 301.08389999804785,
+      "p95_ms": 719.6121999986644,
+      "max_ms": 1380.01770000119
+    },
+    "write_servo": {
+      "count": 69,
+      "errors": 0,
+      "median_ms": 178.86619999990216,
+      "p95_ms": 362.10639999990235,
+      "max_ms": 718.4836000014911
+    }
+  },
+  "finished_utc": "2026-11-07T13:27:31.255047+00:00"
+}

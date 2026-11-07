@@ -1,3 +1,4 @@
+#include "ble_tx.h"
 #include "imu.h"
 #include "log_module.h"
 #include "ble_types.h"
@@ -76,7 +77,7 @@ void IMU_BLE_Init(void)
     uuid.Char_UUID_128[12] = 0xa1;
     if (aci_gatt_add_char(service, UUID_TYPE_128, &uuid, IMU_RAW_LENGTH,
             CHAR_PROP_READ | CHAR_PROP_NOTIFY, ATTR_PERMISSION_NONE,
-            GATT_NOTIFY_ATTRIBUTE_WRITE, 0x10, CHAR_VALUE_LEN_CONSTANT,
+            GATT_NOTIFY_ATTRIBUTE_WRITE | GATT_NOTIFY_NOTIFICATION_COMPLETION, 0x10, CHAR_VALUE_LEN_CONSTANT,
             &raw_char) != BLE_STATUS_SUCCESS) return;
     uuid.Char_UUID_128[12] = 0xa3;
     if (aci_gatt_add_char(service, UUID_TYPE_128, &uuid, 1,
@@ -84,6 +85,7 @@ void IMU_BLE_Init(void)
             GATT_NOTIFY_WRITE_REQ_AND_WAIT_FOR_APPL_RESP | GATT_NOTIFY_READ_REQ_AND_WAIT_FOR_APPL_RESP, 0x10,
             CHAR_VALUE_LEN_CONSTANT, &mode_char) != BLE_STATUS_SUCCESS) return;
     available = 1;
+    BLE_TX_Register(BLE_TX_IMU,service,raw_char);
 }
 uint8_t IMU_BLE_Enabled(void) { return available && subscriber != 0xffff; }
 uint8_t IMU_BLE_Mode(void) { return IMU_BLE_Enabled() ? requested_mode : 0; }
@@ -107,5 +109,8 @@ void IMU_BLE_Disconnected(uint16_t handle)
 uint8_t IMU_BLE_Publish(const uint8_t *data)
 {
     if (!available) return 1;
-    return aci_gatt_update_char_value(service, raw_char, 0, IMU_RAW_LENGTH, (uint8_t *)data);
+    /* OFF/error snapshots must also refresh READ when no client is subscribed. */
+    uint8_t result=BLE_TX_Local(service,raw_char,data,IMU_RAW_LENGTH);
+    if (result!=BLE_STATUS_SUCCESS) return result;
+    return BLE_TX_Latest(BLE_TX_IMU,data,IMU_RAW_LENGTH);
 }

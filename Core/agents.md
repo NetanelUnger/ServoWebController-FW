@@ -23,8 +23,9 @@ RTOS objects that matter for application work:
 
 - `i2cMutexHandle`: protects the shared I2C3 bus used by PCA9685 and VL53L5CX.
 - `displayTaskHandle` / `displayMutexHandle`: static, below-normal display owner and drawing/manual GPIO lock. Stop via `Display_Stop()`, never suspend it mid-transfer. No watchdog bit: it may intentionally wait forever.
-- `commRxQueueHandle` and `commTxQueueHandle`: move NUS RX/TX packets between BLE callbacks and `commTask`.
-- `commEventHandle`: wakes `commTask` for NUS RX/TX work.
+- `commRxQueueHandle` and `commTxQueueHandle`: statically copied RX/reply items with session ownership; no heap pointers. `commTask` only parses RX.
+- `bleTxTaskHandle` / `bleTxEventHandle`: sole notification/indication owner with event-driven completion/pool waits; see root `BLE_TRANSPORT.md`.
+- `commEventHandle`: wakes `commTask` for NUS RX work.
 - `s_threadWatchdogFlags`: watchdog bookkeeping; update `config.h` and the relevant task loop if adding new watched tasks.
 
 ## Editing Rules

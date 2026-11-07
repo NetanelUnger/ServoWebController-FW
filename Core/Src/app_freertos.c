@@ -39,6 +39,7 @@
 #include "IMU/imu.h"
 #include "adc_ble.h"
 #include "adc_dma.h"
+#include "ble_tx.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -100,10 +101,22 @@ const osThreadAttr_t vl53l8cxTask_attributes = {
   .priority = (osPriority_t) osPriorityAboveNormal,
 };
 
+osThreadId_t bleTxTaskHandle;
+uint32_t bleTxTaskBuffer[1024];
+osStaticThreadDef_t bleTxTaskBlock;
+const osThreadAttr_t bleTxTask_attributes = {
+  .name="bleTxTask", .stack_mem=bleTxTaskBuffer, .stack_size=sizeof(bleTxTaskBuffer),
+  .cb_mem=&bleTxTaskBlock, .cb_size=sizeof(bleTxTaskBlock), .priority=osPriorityHigh2,
+};
+osEventFlagsId_t bleTxEventHandle;
+osStaticEventGroupDef_t bleTxEventControlBlock;
+const osEventFlagsAttr_t bleTxEvent_attributes = {
+  .name="bleTxEvent", .cb_mem=&bleTxEventControlBlock, .cb_size=sizeof(bleTxEventControlBlock),
+};
 /* USER CODE END Variables */
 /* Definitions for defaultTask */
 osThreadId_t defaultTaskHandle;
-uint32_t defaultTaskBuffer[ 4096 ];
+uint32_t defaultTaskBuffer[ 1536 ];
 osStaticThreadDef_t defaultTaskBlocTask;
 const osThreadAttr_t defaultTask_attributes = {
   .name = "defaultTask",
@@ -317,6 +330,8 @@ void MX_FREERTOS_Init(void) {
 #endif
 
   /* USER CODE BEGIN RTOS_THREADS */
+  bleTxTaskHandle=osThreadNew(BLE_TX_Task,NULL,&bleTxTask_attributes);
+  if (!bleTxTaskHandle) Error_Handler();
 #if ENABLE_DISPLAY
   displayTaskHandle = osThreadNew(displayTask_Entry, NULL, &displayTask_attributes);
   if (displayTaskHandle == NULL) Error_Handler();
@@ -340,6 +355,8 @@ void MX_FREERTOS_Init(void) {
   servoEventHandle = osEventFlagsNew(&servoEvent_attributes);
 
   /* USER CODE BEGIN RTOS_EVENTS */
+  bleTxEventHandle=osEventFlagsNew(&bleTxEvent_attributes);
+  if (!bleTxEventHandle) Error_Handler();
   /* add events, ... */
   /* USER CODE END RTOS_EVENTS */
 
@@ -438,82 +455,21 @@ void WatchdogFlagClear(uint32_t flagMask)
 }
 
 
-osStatus_t NUS_APP_EnqueueRX(const uint8_t *pData, uint8_t length)
+osStatus_t NUS_APP_EnqueueRX(uint16_t connection, const uint8_t *pData, uint16_t length)
 {
-	osStatus_t state = osOK;
-	NUS_APP_QueueItem_t item;
-	item.Length = length;
-
-	item.Payload = pvPortMalloc(length);
-
-	if (item.Payload)
-	{
-		memcpy(item.Payload, pData, length);
-
-		if ( (state = osMessageQueuePut(commRxQueueHandle, &item, 0U, 100)) != osOK)
-		{
-			#ifdef CONFIG_DEBUG_RX
-				LOG_INFO_APP("cant osMessageQueuePut to RX\r\n");
-			#endif //CONFIG_DEBUG_RX
-		}
-		else
-		{
-			#ifdef CONFIG_DEBUG_RX
-				//LogHexArray("NUS_APP_EnqueueRX Success:", item.Payload, item.Length);
-			#endif //CONFIG_DEBUG_RX
-
-			osEventFlagsSet(commEventHandle, COMM_NUS_RX_EVENT);
-		}
-	}
-	else
-	{
-		state = osErrorNoMemory;
-		#ifdef CONFIG_DEBUG_RX
-		LOG_INFO_APP("cant acllocate osMessageQueuePut RX\r\n");
-		#endif //CONFIG_DEBUG_RX
-	}
-
-	return state;
+    NUS_APP_QueueItem_t item;
+    if (!pData || !length || length>BLE_TX_PAYLOAD_MAX ||
+        !BLE_TX_Capture(connection,BLE_TX_REPLY,&item) || !BLE_TX_ReserveRx(&item)) {
+        BLE_TX_RxResult(0); return osErrorResource;
+    }
+    item.Length=(uint8_t)length;
+    memcpy(item.Payload,pData,length);
+    osStatus_t result=osMessageQueuePut(commRxQueueHandle,&item,0,0);
+    if (result==osOK) osEventFlagsSet(commEventHandle,COMM_NUS_RX_EVENT);
+    else BLE_TX_Release(&item);
+    BLE_TX_RxResult(result==osOK);
+    return result;
 }
-
-osStatus_t NUS_APP_EnqueueTX(const uint8_t *pData, uint8_t length)
-{
-	osStatus_t state = osOK;
-	NUS_APP_QueueItem_t item;
-	item.Length = length;
-
-	item.Payload = pvPortMalloc(length);
-
-	if (item.Payload)
-	{
-		memcpy(item.Payload, pData, length);
-
-		if ( (state = osMessageQueuePut(commTxQueueHandle, &item, 0U, 100)) != osOK)
-		{
-			#ifdef CONFIG_DEBUG_TX
-				LOG_INFO_APP("cant osMessageQueuePut to TX\r\n");
-			#endif //CONFIG_DEBUG_TX
-		}
-		else
-		{
-			#ifdef CONFIG_DEBUG_TX
-				LogHexArray("NUS_APP_EnqueueTX Success:", item.Payload, item.Length);
-			#endif //CONFIG_DEBUG_TX
-
-		    osEventFlagsSet(commEventHandle, COMM_NUS_TX_EVENT);
-		}
-	}
-	else
-	{
-		state = osErrorNoMemory;
-		#ifdef CONFIG_DEBUG_TX
-			LOG_INFO_APP("cant acllocate osMessageQueuePut TX\r\n");
-		#endif //CONFIG_DEBUG_TX
-	}
-
-	return state;
-}
-
 
 void LogHexArray(const char *prefix, const uint8_t *bytes, size_t length)
 {

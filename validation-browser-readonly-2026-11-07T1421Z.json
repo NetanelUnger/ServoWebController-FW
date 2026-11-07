@@ -1,0 +1,98 @@
+{
+  "status": "initial_read_only_inspection_complete",
+  "observedAtUtc": "2026-11-07T14:20:57.236Z",
+  "observedAtIsrael": "2026-11-07 16:20:57",
+  "requestedUrl": "http://127.0.0.1:5173/",
+  "actualConnectedWindowUrl": "https://servo.natilab.net/",
+  "chromeDevToolsPages": [
+    {
+      "id": 2,
+      "url": "about:blank"
+    }
+  ],
+  "nativeWindow": {
+    "app": "Chrome",
+    "id": 132706
+  },
+  "connection": {
+    "app": "מחובר",
+    "hardware": "החומרה מחוברת",
+    "chromeTitle": "Bluetooth device connected",
+    "servoTelemetry": "חי",
+    "adcTelemetry": "חי",
+    "deviceIdentity": "Not exposed by visible UI; not independently verified"
+  },
+  "timeline": {
+    "playingFile": "ציר זמן 2",
+    "otherFile": "ציר זמן 1",
+    "commands": 50,
+    "channels": 10,
+    "totalDurationSeconds": 10,
+    "repeatEnabled": true,
+    "repeatEnabledEvidence": "Checkmark visible in screenshot; playback duration denominator is 1.3s.",
+    "repeatAtSeconds": 1.3,
+    "rawAccessibilityRepeatValue": 1.2999999523162842,
+    "playbackState": "מתנגן",
+    "firstObservedCursorSeconds": 0.2,
+    "secondObservedCursorSeconds": 0.1,
+    "processedText": "20 מתוך 20 אירועים עובדו",
+    "lastEvent": "מנוע 10 · SET_TIMING",
+    "playButtonDisabled": true,
+    "stopButtonEnabled": true,
+    "repeatControlsDisabledWhilePlaying": true
+  },
+  "telemetrySamples": {
+    "firstChannels0to3": [
+      1172,
+      1322,
+      1316,
+      1191
+    ],
+    "secondChannels0to3": [
+      1168,
+      1326,
+      1320,
+      1186
+    ]
+  },
+  "interpretation": "The current visible configuration repeats at 1.3 seconds despite a 10-second timeline, explaining the early cursor return. This inspection does not validate the firmware fix or establish the cause of earlier BLE failures.",
+  "changes": {
+    "clicked": false,
+    "startedPlayback": false,
+    "stoppedPlayback": false,
+    "reloaded": false,
+    "disconnected": false,
+    "changedFile": false,
+    "changedSettings": false,
+    "readOrWroteBrowserStorage": false,
+    "sourceChanges": false,
+    "hardwareAccessOutsideBrowser": false
+  },
+  "evidence": [
+    "17 edit (settable, string) Address and search bar Description: Ask Google or type a URL Value: servo.natilab.net ID: view_1012",
+    "2606 document servocontroller Value: https://servo.natilab.net/ ID: RootWebArea",
+    "2614 text הוסיפו במפורש פקודות מנוע וסימוני זמן חזותיים, וערכו כל אובייקט ללא גרירה.",
+    "2616 tab item (selectable) ציר זמן 1 Description: שינוי שם הקובץ (לחיצה כפולה או F2) ID: document-tab-timeline-2de45054-c534-406d-9139-f6b3d92efc00",
+    "2618 tab item (selectable) ציר זמן 2: מתנגן Description: שינוי שם הקובץ (לחיצה כפולה או F2) ID: document-tab-timeline-dbd18741-48c5-4fe7-891f-3fc09631370f",
+    "2622 check box (disabled) ניגון חוזר אוטומטית",
+    "2623 text ניגון חוזר אוטומטית",
+    "2624 text חזרה בשנייה",
+    "2625 spin button (disabled) השנייה שבה הניגון חוזר להתחלה Value: 1.2999999523162842",
+    "2628 text החומרה מחוברת",
+    "2630 text 50 פקודות מנוע",
+    "2632 text סה״כ 10.0 שניות",
+    "2634 text מתנגן",
+    "2635 text 0.1",
+    "2637 text 1.3",
+    "2639 text 20 מתוך 20 אירועים עובדו",
+    "2640 text אחרון: מנוע 10 · SET_TIMING",
+    "2966 button התנתק",
+    "2968 text מחובר",
+    "2976 text חי",
+    "2980 item CH 0 1168",
+    "2981 item CH 1 1326",
+    "2982 item CH 2 1320",
+    "2983 item CH 3 1186",
+    "3002 text חי"
+  ]
+}

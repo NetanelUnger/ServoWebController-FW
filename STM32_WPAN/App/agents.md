@@ -6,7 +6,8 @@ This folder owns BLE service definitions and STM32 WPAN application glue. It mix
 
 - `app_ble.c/.h`: BLE stack app setup, advertising data, connection/disconnection events, and service initialization.
 - `nus.c/.h`: Nordic UART Service definition.
-- `nus_app.c/.h`: NUS app state, notification enable state, TX notification retries, and command RX/TX task helpers.
+- `nus_app.c/.h`: NUS app state, independent servo READ snapshot and telemetry producer, command RX helpers.
+- `ble_tx.c/.h`: static, event-driven owner for every application notification and indication; see root `BLE_TRANSPORT.md`.
 - `tof.c/.h`: custom TOF BLE service definition and distance-map characteristic.
 - `tof_app.c/.h`: TOF app state, notification enable state, and distance-map notification helper.
 - `dis*` and `ota*`: Device Information Service and OTA support.
@@ -25,7 +26,7 @@ This folder owns BLE service definitions and STM32 WPAN application glue. It mix
 
 - NUS RX writes should stay lightweight and enqueue data through `NUS_APP_EnqueueRX()`.
 - `NusRxTask()` calls `parser_ProcessOne()` and enqueues text replies through `NUS_APP_EnqueueTX()`.
-- `NusTxTask()` sends NUS TX notifications only when connected and notifications/indications are enabled.
+- `BLE_TX_Task()` sends queued replies/indications and latest-only telemetry, waiting on actual ST completion or pool events. `commTask` never sends or retries.
 - Keep command parsing in `comm_interface.c`, not in BLE service callbacks.
 
 ## TOF Flow

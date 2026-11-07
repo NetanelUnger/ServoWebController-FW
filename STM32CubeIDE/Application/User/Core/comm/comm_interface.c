@@ -1,3 +1,4 @@
+#include "ble_tx.h"
 /**
  * @file    comm_interface.c
  * @brief   Text command parser and BLE NUS queue processing.
@@ -425,16 +426,7 @@ static uint8_t comm_CommandMatches(const char *command, const char *primary, con
 /**
  * @brief Flush all queued NUS transmit work items.
  */
-static void comm_ProcessTxQueue(void)
-{
-    NUS_APP_QueueItem_t item;
 
-    while (osMessageQueueGet(commTxQueueHandle, &item, NULL, 0U) == osOK)
-    {
-        NusTxTask(&item);
-        vPortFree(item.Payload);
-    }
-}
 
 /**
  * @brief Flush all queued NUS receive work items.
@@ -452,7 +444,7 @@ static void comm_ProcessRxQueue(void)
         }
 
         NusRxTask(&item);
-        vPortFree(item.Payload);
+
     }
 }
 
@@ -522,6 +514,11 @@ packetSize_t parser_ProcessOne(uint8_t *payload, packetSize_t req_len, uint8_t *
         return comm_WriteResponseText(res_payload, "- BAD ARGUMENTS");
     }
 
+    if (!strcmp(command,"BLE_STATS")) {
+        if (*args != '\0') return comm_WriteResponseText(res_payload,"- BAD ARGUMENTS");
+        BLE_TX_Stats((char *)res_payload,COMM_TEXT_RESPONSE_MAX_LEN);
+        return (packetSize_t)strlen((char *)res_payload);
+    }
     if (!strcmp(command, COMM_CMD_HELP)) {
         if (*args != '\0') return comm_WriteResponseText(res_payload, "- BAD ARGUMENTS");
         return comm_WriteResponseText(res_payload, comm_help_text);
@@ -662,7 +659,7 @@ void comm_Task(void)
 
     event_stat = osEventFlagsWait(
         commEventHandle,
-        COMM_WAKE_EVENT | COMM_NUS_TX_EVENT | COMM_NUS_RX_EVENT,
+        COMM_WAKE_EVENT | COMM_NUS_RX_EVENT,
         osFlagsWaitAny,
         THREAD_WAIT_TIMEOUT_TICKS);
 
@@ -672,9 +669,6 @@ void comm_Task(void)
         {
             comm_ProcessRxQueue();
         }
-        if ((event_stat & COMM_NUS_TX_EVENT) == COMM_NUS_TX_EVENT)
-        {
-            comm_ProcessTxQueue();
-        }
+
     }
 }

@@ -92,6 +92,21 @@ static SVCCTL_EvtAckStatus_t NUS_EventHandler(void *p_pckt);
 
 /* Functions Definition ------------------------------------------------------*/
 /* USER CODE BEGIN PFD */
+static void NUS_PermitRead(uint16_t connection,uint16_t attribute,uint8_t servo) {
+    BLE_TX_AttTicket ticket;
+    if (!BLE_TX_AttBegin(connection,attribute,0U,NULL,0U,&ticket)) return;
+    tBleStatus result=servo ? NUS_APP_RefreshAllChannelDcRead() : BLE_STATUS_SUCCESS;
+    BLE_TX_AttCommit(&ticket,result==BLE_STATUS_SUCCESS ? 0U : 1U,
+                     result==BLE_STATUS_SUCCESS ? 0U : NUS_ALL_CHANNEL_DC_ATT_ERROR);
+}
+static void NUS_PermitWrite(uint16_t connection,uint16_t attribute,const uint8_t *data,uint16_t length,uint8_t servo) {
+    BLE_TX_AttTicket ticket;
+    if (!BLE_TX_AttBegin(connection,attribute,1U,data,length,&ticket)) return;
+    uint8_t accepted=servo ? NUS_APP_WriteAllChannelDcPayload(data,(uint8_t)length)==BLE_STATUS_SUCCESS :
+        NUS_APP_EnqueueRX(connection,data,length)==osOK;
+    BLE_TX_AttCommit(&ticket,accepted ? 0U : 1U,accepted ? 0U : servo ? NUS_ALL_CHANNEL_DC_ATT_ERROR : 0x11U);
+    if (servo && accepted) (void)NUS_APP_SyncAllChannelDcCharacteristic();
+}
 
 /* USER CODE END PFD */
 
@@ -136,7 +151,6 @@ static SVCCTL_EvtAckStatus_t NUS_EventHandler(void *p_Event)
   aci_gatt_write_permit_req_event_rp0   *p_write_perm_req;
   aci_gatt_read_permit_req_event_rp0    *p_read_req;
   NUS_NotificationEvt_t                 notification;
-  tBleStatus                            app_status;
   /* USER CODE BEGIN Service2_EventHandler_1 */
 
   /* USER CODE END Service2_EventHandler_1 */
@@ -258,25 +272,14 @@ static SVCCTL_EvtAckStatus_t NUS_EventHandler(void *p_Event)
             /*USER CODE END Service2_Char_1_ACI_GATT_READ_PERMIT_REQ_VSEVT_CODE_1*/
 
             /*USER CODE BEGIN Service2_Char_1_ACI_GATT_READ_PERMIT_REQ_VSEVT_CODE_2 */
-#warning user shall call aci_gatt_permit_read() function if allowed
+            NUS_PermitRead(p_read_req->Connection_Handle,p_read_req->Attribute_Handle,0U);
             /*USER CODE END Service2_Char_1_ACI_GATT_READ_PERMIT_REQ_VSEVT_CODE_2*/
           }
           else if(p_read_req->Attribute_Handle == (NUS_Context.AllChannelDcCharHdle + CHARACTERISTIC_VALUE_ATTRIBUTE_OFFSET))
           {
             return_value = SVCCTL_EvtAckFlowEnable;
             /* USER CODE BEGIN Service2_Char_3_ACI_GATT_READ_PERMIT_REQ_VSEVT_CODE */
-            app_status = NUS_APP_SyncAllChannelDcCharacteristic();
-            if (app_status == BLE_STATUS_SUCCESS)
-            {
-              (void)aci_gatt_permit_read(p_read_req->Connection_Handle, 0U, 0U, 0U);
-            }
-            else
-            {
-              (void)aci_gatt_permit_read(p_read_req->Connection_Handle,
-                                          1U,
-                                          NUS_ALL_CHANNEL_DC_ATT_ERROR,
-                                          p_read_req->Attribute_Handle);
-            }
+            NUS_PermitRead(p_read_req->Connection_Handle,p_read_req->Attribute_Handle,1U);
             /* USER CODE END Service2_Char_3_ACI_GATT_READ_PERMIT_REQ_VSEVT_CODE */
           }
 
@@ -295,34 +298,16 @@ static SVCCTL_EvtAckStatus_t NUS_EventHandler(void *p_Event)
           {
             return_value = SVCCTL_EvtAckFlowEnable;
             /*USER CODE BEGIN Service2_Char_2_ACI_GATT_WRITE_PERMIT_REQ_VSEVT_CODE */
-            NUS_APP_EnqueueRX(p_write_perm_req->Data, p_write_perm_req->Data_Length);
-            aci_gatt_write_resp(p_write_perm_req->Connection_Handle, p_write_perm_req->Attribute_Handle, 0,0, p_write_perm_req->Data_Length, p_write_perm_req->Data);
+            NUS_PermitWrite(p_write_perm_req->Connection_Handle,p_write_perm_req->Attribute_Handle,
+                            p_write_perm_req->Data,p_write_perm_req->Data_Length,0U);
             /*USER CODE END Service2_Char_2_ACI_GATT_WRITE_PERMIT_REQ_VSEVT_CODE*/
           }
           else if(p_write_perm_req->Attribute_Handle == (NUS_Context.AllChannelDcCharHdle + CHARACTERISTIC_VALUE_ATTRIBUTE_OFFSET))
           {
             return_value = SVCCTL_EvtAckFlowEnable;
             /* USER CODE BEGIN Service2_Char_3_ACI_GATT_WRITE_PERMIT_REQ_VSEVT_CODE */
-            app_status = NUS_APP_WriteAllChannelDcPayload(p_write_perm_req->Data, p_write_perm_req->Data_Length);
-            if (app_status == BLE_STATUS_SUCCESS)
-            {
-              (void)aci_gatt_write_resp(p_write_perm_req->Connection_Handle,
-                                         p_write_perm_req->Attribute_Handle,
-                                         0U,
-                                         0U,
-                                         p_write_perm_req->Data_Length,
-                                         p_write_perm_req->Data);
-              (void)NUS_APP_SyncAllChannelDcCharacteristic();
-            }
-            else
-            {
-              (void)aci_gatt_write_resp(p_write_perm_req->Connection_Handle,
-                                         p_write_perm_req->Attribute_Handle,
-                                         1U,
-                                         NUS_ALL_CHANNEL_DC_ATT_ERROR,
-                                         p_write_perm_req->Data_Length,
-                                         p_write_perm_req->Data);
-            }
+            NUS_PermitWrite(p_write_perm_req->Connection_Handle,p_write_perm_req->Attribute_Handle,
+                            p_write_perm_req->Data,p_write_perm_req->Data_Length,1U);
             /* USER CODE END Service2_Char_3_ACI_GATT_WRITE_PERMIT_REQ_VSEVT_CODE */
           }
 
@@ -524,7 +509,7 @@ void NUS_Init(void)
                           SizeAllChannelDc,
                           CHAR_PROP_READ | CHAR_PROP_WRITE | CHAR_PROP_NOTIFY,
                           ATTR_PERMISSION_NONE,
-                          GATT_NOTIFY_ATTRIBUTE_WRITE | GATT_NOTIFY_WRITE_REQ_AND_WAIT_FOR_APPL_RESP | GATT_NOTIFY_READ_REQ_AND_WAIT_FOR_APPL_RESP,
+                          GATT_NOTIFY_ATTRIBUTE_WRITE | GATT_NOTIFY_WRITE_REQ_AND_WAIT_FOR_APPL_RESP | GATT_NOTIFY_READ_REQ_AND_WAIT_FOR_APPL_RESP | GATT_NOTIFY_NOTIFICATION_COMPLETION,
                           0x10,
                           CHAR_VALUE_LEN_CONSTANT,
                           &(NUS_Context.AllChannelDcCharHdle));
@@ -543,6 +528,8 @@ void NUS_Init(void)
   /* USER CODE END SVCCTL_InitService2Char3 */
 
   /* USER CODE BEGIN SVCCTL_InitService2Svc_2 */
+  BLE_TX_Register(BLE_TX_REPLY,NUS_Context.NusSvcHdle,NUS_Context.TxCharHdle);
+  BLE_TX_Register(BLE_TX_SERVO,NUS_Context.NusSvcHdle,NUS_Context.AllChannelDcCharHdle);
 
   /* USER CODE END SVCCTL_InitService2Svc_2 */
 
@@ -557,77 +544,8 @@ void NUS_Init(void)
  */
 tBleStatus NUS_UpdateValue(NUS_CharOpcode_t CharOpcode, NUS_Data_t *pData)
 {
-  tBleStatus ret = BLE_STATUS_INVALID_PARAMS;
-  /* USER CODE BEGIN Service2_App_Update_Char_1 */
-
-  /* USER CODE END Service2_App_Update_Char_1 */
-
-  switch(CharOpcode)
-  {
-    case NUS_TX:
-      ret = aci_gatt_update_char_value(NUS_Context.NusSvcHdle,
-                                       NUS_Context.TxCharHdle,
-                                       0, /* charValOffset */
-                                       pData->Length, /* charValueLen */
-                                       (uint8_t *)pData->p_Payload);
-      if (ret != BLE_STATUS_SUCCESS)
-      {
-        LOG_INFO_BLE("  Fail   : aci_gatt_update_char_value TX command, error code: 0x%02X\n", ret);
-      }
-      else
-      {
-        LOG_INFO_BLE("  Success: aci_gatt_update_char_value TX command\n");
-      }
-      /* USER CODE BEGIN Service2_Char_Value_1 */
-
-      /* USER CODE END Service2_Char_Value_1 */
-      break;
-
-    case NUS_RX:
-      ret = aci_gatt_update_char_value(NUS_Context.NusSvcHdle,
-                                       NUS_Context.RxCharHdle,
-                                       0, /* charValOffset */
-                                       pData->Length, /* charValueLen */
-                                       (uint8_t *)pData->p_Payload);
-      if (ret != BLE_STATUS_SUCCESS)
-      {
-        LOG_INFO_BLE("  Fail   : aci_gatt_update_char_value RX command, error code: 0x%02X\n", ret);
-      }
-      else
-      {
-        LOG_INFO_BLE("  Success: aci_gatt_update_char_value RX command\n");
-      }
-      /* USER CODE BEGIN Service2_Char_Value_2 */
-
-      /* USER CODE END Service2_Char_Value_2 */
-      break;
-
-    case NUS_ALL_CHANNEL_DC:
-      ret = aci_gatt_update_char_value(NUS_Context.NusSvcHdle,
-                                       NUS_Context.AllChannelDcCharHdle,
-                                       0, /* charValOffset */
-                                       pData->Length, /* charValueLen */
-                                       (uint8_t *)pData->p_Payload);
-      if (ret != BLE_STATUS_SUCCESS)
-      {
-        LOG_INFO_BLE("  Fail   : aci_gatt_update_char_value ALL_CHANNEL_DC command, error code: 0x%02X\n", ret);
-      }
-      else
-      {
-        LOG_INFO_BLE("  Success: aci_gatt_update_char_value ALL_CHANNEL_DC command\n");
-      }
-      /* USER CODE BEGIN Service2_Char_Value_3 */
-
-      /* USER CODE END Service2_Char_Value_3 */
-      break;
-
-    default:
-      break;
-  }
-
-  /* USER CODE BEGIN Service2_App_Update_Char_2 */
-
-  /* USER CODE END Service2_App_Update_Char_2 */
-
-  return ret;
+  if (!pData || !pData->p_Payload) return BLE_STATUS_INVALID_PARAMS;
+  if (CharOpcode==NUS_TX) return BLE_TX_Ordered(BLE_TX_REPLY,pData->p_Payload,pData->Length);
+  uint16_t handle=CharOpcode==NUS_ALL_CHANNEL_DC ? NUS_Context.AllChannelDcCharHdle : NUS_Context.RxCharHdle;
+  return BLE_TX_Local(NUS_Context.NusSvcHdle,handle,pData->p_Payload,pData->Length);
 }

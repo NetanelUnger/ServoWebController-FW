@@ -689,5 +689,6 @@
             <locationURI>PARENT-1-PROJECT_LOC/STM32_WPAN/App/display_service.c</locationURI>
         </link>
 	<link><name>Application/User/STM32_WPAN/App/image_service.c</name><type>1</type><locationURI>PARENT-1-PROJECT_LOC/STM32_WPAN/App/image_service.c</locationURI></link>
+<link><name>Application/User/STM32_WPAN/App/ble_tx.c</name><type>1</type><locationURI>PARENT-1-PROJECT_LOC/STM32_WPAN/App/ble_tx.c</locationURI></link>
 </linkedResources>
 </projectDescription>

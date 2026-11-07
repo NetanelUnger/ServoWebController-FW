@@ -68,8 +68,6 @@ typedef struct
 /* Private defines -----------------------------------------------------------*/
 /* USER CODE BEGIN PD */
 #define NUS_APP_INVALID_CONN_HANDLE 0xFFFFU
-#define NUS_APP_NOTIFICATION_RETRY_DELAY_MS 5
-#define NUS_APP_NOTIFICATION_RETRY_COUNT 10
 #define NUS_APP_ALL_CHANNEL_DC_VALUE_SIZE_BYTES 2U
 #define NUS_APP_ALL_CHANNEL_DC_PAYLOAD_LEN (SERVO_CHANNEL_COUNT * NUS_APP_ALL_CHANNEL_DC_VALUE_SIZE_BYTES)
 /* USER CODE END PD */
@@ -196,6 +194,7 @@ void NUS_APP_EvtRx(NUS_APP_ConnHandleNotEvt_t *p_Notification)
     /* USER CODE END Service2_APP_EvtRx_Service2_EvtOpcode */
     case NUS_CONN_HANDLE_EVT :
       /* USER CODE BEGIN Service2_APP_CONN_HANDLE_EVT */
+        BLE_TX_Connected(p_Notification->ConnectionHandle);
         servo_SetBleConnected(1U);
         BoardIO_SetPowerConnected(1U);
 		NUS_APP_Context.ConnectionHandle = p_Notification->ConnectionHandle;
@@ -207,6 +206,7 @@ void NUS_APP_EvtRx(NUS_APP_ConnHandleNotEvt_t *p_Notification)
 
     case NUS_DISCON_HANDLE_EVT :
       /* USER CODE BEGIN Service2_APP_DISCON_HANDLE_EVT */
+        BLE_TX_Disconnected(p_Notification->ConnectionHandle);
         if (p_Notification->ConnectionHandle != NUS_APP_Context.ConnectionHandle) break;
         BoardIO_SetPowerConnected(0U);
         servo_SetBleConnected(0U);
@@ -243,7 +243,7 @@ void NUS_APP_Init(void)
   NUS_APP_SuppressServoChangeSync = 0U;
   NUS_Init();
   servo_RegisterChangeCallback(NUS_APP_HandleServoValuesChanged);
-  (void)NUS_APP_SyncAllChannelDcCharacteristic();
+  (void)NUS_APP_RefreshAllChannelDcRead();
 
   /* USER CODE BEGIN Service2_APP_Init */
 
@@ -281,6 +281,22 @@ tBleStatus NUS_APP_WriteAllChannelDcPayload(const uint8_t *pData, uint8_t length
 }
 
 tBleStatus NUS_APP_SyncAllChannelDcCharacteristic(void)
+{
+  uint8_t channel;
+  uint16_t values[SERVO_CHANNEL_COUNT];
+  uint8_t payload[NUS_APP_ALL_CHANNEL_DC_PAYLOAD_LEN];
+
+  servo_GetAllServoImmediateValues(values);
+
+  for (channel = 0U; channel < SERVO_CHANNEL_COUNT; channel++)
+  {
+    NUS_APP_WriteLe16(&payload[channel * NUS_APP_ALL_CHANNEL_DC_VALUE_SIZE_BYTES], values[channel]);
+  }
+
+
+  return BLE_TX_Latest(BLE_TX_SERVO, payload, sizeof(payload));
+}
+tBleStatus NUS_APP_RefreshAllChannelDcRead(void)
 {
   uint8_t channel;
   uint16_t values[SERVO_CHANNEL_COUNT];
@@ -377,66 +393,21 @@ static void NUS_APP_HandleServoValuesChanged(void)
   (void)NUS_APP_SyncAllChannelDcCharacteristic();
 }
 
-void NusTxTask(NUS_APP_QueueItem_t *item)
-{
-	  if ((NUS_APP_Context.ConnectionHandle == NUS_APP_INVALID_CONN_HANDLE) ||
-		    (
-			  (NUS_APP_Context.Tx_Indication_Status == Tx_INDICATION_OFF) &&
-			  (NUS_APP_Context.Tx_Notification_Status == Tx_NOTIFICATION_OFF)
-		    )
-		)
-	  {
-		LOG_INFO_APP("Dropping NUS TX (conn=0x%04X notif=%u ind=%u)\r\n",
-		             NUS_APP_Context.ConnectionHandle,
-		             (uint32_t)NUS_APP_Context.Tx_Notification_Status,
-		             (uint32_t)NUS_APP_Context.Tx_Indication_Status);
-		return;
-	  }
-
-      /* A multiline reply occupies one queue slot. Send its lines here instead
-       * of enqueueing them from commTask into the same bounded TX queue.
-       * HELP lines are <= 20 bytes; existing single-line replies stay intact. */
-      uint16_t offset = 0U;
-      while (offset < item->Length)
-      {
-          uint8_t *start = item->Payload + offset;
-          uint8_t *newline = memchr(start, '\n', item->Length - offset);
-          uint16_t length = newline ? (uint16_t)(newline - start) : item->Length - offset;
-          offset += length + (newline != NULL ? 1U : 0U);
-          if (length == 0U) continue;
-          if (NUS_APP_Context.ConnectionHandle == NUS_APP_INVALID_CONN_HANDLE) return;
-
-          NUS_Data_t data = { .p_Payload = start, .Length = length };
-          uint8_t sent = 0U;
-          for (uint8_t retry = 0U; retry < NUS_APP_NOTIFICATION_RETRY_COUNT; ++retry)
-          {
-              if (NUS_UpdateValue(NUS_TX, &data) == BLE_STATUS_SUCCESS)
-              {
-                  sent = 1U;
-                  break;
-              }
-              osDelay(NUS_APP_NOTIFICATION_RETRY_DELAY_MS);
-          }
-          if (sent == 0U)
-          {
-              /* Never send a completion marker after losing a HELP line. */
-              LOG_INFO_APP("Failed to send NUS TX\r\n");
-              return;
-          }
-      }
-}
-
-
 void NusRxTask(NUS_APP_QueueItem_t *item)
 {
 	  uint8_t res[COMM_TEXT_RESPONSE_MAX_LEN];
 	  packetSize_t res_len = 0;
 
+	  if (!BLE_TX_SessionCurrent(item)) { BLE_TX_Release(item); return; }
 	  res_len = parser_ProcessOne(item->Payload, item->Length, res);
 
 	  if (res_len > 0)
 	  {
-		  NUS_APP_EnqueueTX(res, res_len);
+		  BLE_TX_Item reply = *item;
+          reply.Length = res_len;
+          memcpy(reply.Payload,res,res_len);
+          if (BLE_TX_Enqueue(&reply,0)!=osOK) BLE_TX_Release(item);
 	  }
+      else BLE_TX_Release(item);
 }
 /* USER CODE END FD_LOCAL_FUNCTIONS */
