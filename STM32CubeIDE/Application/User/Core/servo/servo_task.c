@@ -7,6 +7,9 @@
 
 #include "config.h"
 #include <stddef.h>
+#include <stdio.h>
+#include "../display/image_store.h"
+#include "timeline_format.h"
 
 #include "FreeRTOS.h"
 #include "task.h"
@@ -34,6 +37,22 @@ static TickType_t move_tick[SERVO_CHANNEL_COUNT];
 static uint32_t demo_tick;
 static uint16_t demo_value;
 static uint8_t ble_connected;
+static struct {
+    const uint8_t *events;
+    uint32_t id,count,next,duration,repeat,elapsed,max_late,last_tick;
+    uint64_t ticks,cycle_ms;
+    uint32_t starts[SERVO_CHANNEL_COUNT];
+    volatile uint8_t active,loading,cancelled,leased,finishing;
+    const char *state;
+} timeline = {.state="IDLE"};
+static void timeline_StopLocked(const char *state) {
+    timeline.finishing=0U;
+    if(timeline.loading) timeline.cancelled=1U;
+    if(timeline.active) {timeline.active=0U;timeline.state=state;}
+    if(timeline.leased && !timeline.loading) {
+        timeline.leased=0U;ImageStore_ReleaseTimeline();
+    }
+}
 static void servo_Wake(void)
 {
     if (servoTaskHandle != NULL) (void)osThreadFlagsSet(servoTaskHandle, 1U);
@@ -97,6 +116,7 @@ static void servo_ApplyDemoValue(void)
 
 static void servo_StopLocked(void)
 {
+    timeline_StopLocked("STOPPED");
     servos_controller.demo1_active = 0U;
     for (uint8_t channel = 0U; channel < SERVO_CHANNEL_COUNT; channel++)
         servo_StopTimedMove(&servos_controller.servo[channel]);
@@ -127,6 +147,10 @@ HAL_StatusTypeDef servo_StartDemo1(void)
     if (!ble_connected || !servos_controller.pca9685_ready) {
         taskEXIT_CRITICAL();
         return HAL_ERROR;
+    }
+    if (timeline.active || timeline.loading) {
+        taskEXIT_CRITICAL();
+        return HAL_BUSY;
     }
     if (servos_controller.demo1_active) {
         taskEXIT_CRITICAL();
@@ -181,6 +205,8 @@ static uint16_t servo_ComputeTimedMoveValue(volatile servo_state_t *servo, uint3
     return servo_ClampPulseUs((uint16_t)next_value);
 }
 
+#include "timeline_player.inc"
+
 void servo_Init(void)
 {
     uint8_t channel;
@@ -226,6 +252,10 @@ HAL_StatusTypeDef servo_SetServoImmediateValue(uint8_t channel, uint16_t value)
     servo = &servos_controller.servo[channel];
 
     taskENTER_CRITICAL();
+    if (timeline.active || timeline.loading) {
+        taskEXIT_CRITICAL();
+        return HAL_BUSY;
+    }
     if (servos_controller.demo1_active) {
         taskEXIT_CRITICAL();
         return HAL_BUSY;
@@ -266,6 +296,10 @@ HAL_StatusTypeDef servo_SetAllServoImmediateValues(const uint16_t values[SERVO_C
     }
 
     taskENTER_CRITICAL();
+    if (timeline.active || timeline.loading) {
+        taskEXIT_CRITICAL();
+        return HAL_BUSY;
+    }
     if (servos_controller.demo1_active) {
         taskEXIT_CRITICAL();
         return HAL_BUSY;
@@ -332,6 +366,10 @@ HAL_StatusTypeDef servo_StartTimedMove(uint8_t channel, uint16_t target_value, u
     clamped_target = servo_ClampPulseUs(target_value);
 
     taskENTER_CRITICAL();
+    if (timeline.active || timeline.loading) {
+        taskEXIT_CRITICAL();
+        return HAL_BUSY;
+    }
     if (servos_controller.demo1_active) {
         taskEXIT_CRITICAL();
         return HAL_BUSY;
@@ -360,7 +398,7 @@ void servo_Task(void)
     uint8_t pending;
     volatile servo_state_t *servo;
 
-    (void)osThreadFlagsWait(1U, osFlagsWaitAny, pdMS_TO_TICKS(SERVO_TASK_PERIOD_MS));
+    (void)osThreadFlagsWait(1U, osFlagsWaitAny, (timeline.active ? 1U : pdMS_TO_TICKS(SERVO_TASK_PERIOD_MS)));
 
     if (servos_controller.pca9685_ready == 0U)
     {
@@ -389,6 +427,7 @@ void servo_Task(void)
             task_changed = 1U;
         }
     }
+    task_changed |= timeline_AdvanceLocked();
     taskEXIT_CRITICAL();
 
     for (channel = 0U; channel < SERVO_CHANNEL_COUNT; channel++)
@@ -396,7 +435,7 @@ void servo_Task(void)
         servo = &servos_controller.servo[channel];
 
         taskENTER_CRITICAL();
-        if (servo->move.active) {
+        if (!timeline.active && servo->move.active) {
             TickType_t now = xTaskGetTickCount();
             uint32_t elapsed = (uint32_t)((uint64_t)(now - move_tick[channel]) * 1000U / configTICK_RATE_HZ);
             if (elapsed) {
@@ -424,12 +463,19 @@ void servo_Task(void)
         if (pca9685_SetServoPulseFrame(frame) != HAL_OK) {
             servos_controller.pca9685_ready = 0U;
             BoardIO_SetPwmReady(0U);
+            taskENTER_CRITICAL();
+            if(timeline.active) {servo_StopLocked();timeline.state="FAULT";}
+            taskEXIT_CRITICAL();
         } else {
             /* Includes the first complete frame after initialization/recovery.
              * BoardIO also checks BLE state: this cannot override disconnect. */
             BoardIO_SetPwmReady(1U);
         }
     }
+
+    taskENTER_CRITICAL();
+    if(timeline.active && timeline.finishing) timeline_FinishLocked("COMPLETE");
+    taskEXIT_CRITICAL();
 
     if (task_changed != 0U)
     {

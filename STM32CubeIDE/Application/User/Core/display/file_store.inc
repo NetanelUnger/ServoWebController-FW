@@ -1,3 +1,4 @@
+#include "../servo/timeline_format.h"
 /* Sequential file store v2; included by image_store.c after the v1 adapter.
  * All mutations run in displayTask. See FILE_STORE.md for persistence/wire rules. */
 #define FS_MAGIC 0x32534653UL
@@ -41,6 +42,7 @@ static FS_Catalog fs_cat;
 static uint32_t fs_current, fs_received;
 static uint16_t fs_owner=NO_CONNECTION, fs_request_size, fs_result_size=32;
 static uint8_t fs_request[232], fs_result[240], fs_mode, fs_upload=255, fs_name_size;
+static volatile bool fs_playback;
 static bool fs_initialized, fs_recover, fs_fault, fs_ota, fs_legacy_status;
 static volatile bool fs_pending, fs_disconnected;
 static uint32_t fs_align(uint32_t n) { return (n+15U)&~15U; }
@@ -184,7 +186,11 @@ static bool fs_valid_name(const char *name,uint8_t length) {
 static uint8_t fs_image_args(const uint8_t *p,FS_Record *r) {
     memset(r,0,sizeof(*r));r->type=p[1];r->length=get32(p+8);r->crc=get32(p+12);
     r->width=p[16];r->height=p[17];r->layout=p[18];r->version=p[19];
-    if((r->type!=1 && r->type!=2) || r->version!=1) return FS_VERSION;
+    if((r->type!=1 && r->type!=2 && r->type!=3) || r->version!=1) return FS_VERSION;
+    if(r->type==3) {
+        if(r->width || r->height || r->layout || r->length<34 || r->length>FS_CAPACITY) return FS_INVALID;
+        r->capacity=fs_align(r->length);return 0;
+    }
     if(!r->width || !r->height || r->width>240 || r->height>240 || r->layout>1 ||
        (r->layout==1 && (r->width!=240 || r->height!=240))) return FS_INVALID;
     uint32_t pixels=r->layout==1?IMAGE_STORE_BYTES/2U:(uint32_t)r->width*r->height;
@@ -219,6 +225,7 @@ static uint8_t fs_plan(uint32_t target,FS_Record *r,int *index) {
 }
 uint8_t ImageStore_Submit(uint16_t conn,const uint8_t *p,uint16_t n,bool data) {
     ImageStore_Init();
+    if(fs_playback) return FS_BUSY;
     if(!data && n && p[0]<FS_BEGIN) {
         if(fs_ota) return FS_LOCKED;
         if(fs_pending || fs_upload!=255) return FS_BUSY;
@@ -238,7 +245,7 @@ uint8_t ImageStore_Submit(uint16_t conn,const uint8_t *p,uint16_t n,bool data) {
         if(op==FS_NAME ? (n<13 || n>20) : n!=expected) return FS_INVALID;
     }
     uint32_t key=enter();
-    if(fs_pending || pending || uploading || (fs_owner!=NO_CONNECTION && fs_owner!=conn)) {leave(key);return FS_BUSY;}
+    if(fs_playback || fs_pending || pending || uploading || (fs_owner!=NO_CONNECTION && fs_owner!=conn)) {leave(key);return FS_BUSY;}
     if(fs_ota) {leave(key);return FS_LOCKED;}
     if(fs_upload!=255 && op!=FS_DATA_OP && op!=FS_END && op!=FS_ABORT && op!=FS_NAME && op!=FS_INFO) {leave(key);return FS_BUSY;}
     if((op==FS_DATA_OP || op==FS_END || op==FS_NAME) && fs_upload==255) {leave(key);return FS_OFFSET;}
@@ -261,7 +268,7 @@ void ImageStore_Disconnect(uint16_t conn) {
 }
 void ImageStore_Process(void) {
     if(pending) {LegacyStore_Process();fs_mode=catalog?2:empty?0:3;return;}
-    if(fs_ota) return;
+    if(fs_ota || fs_playback) return;
     if(fs_mode==1 && fs_recover) (void)fs_recover_catalog();
     if(!fs_pending) {
         uint32_t key=enter();
@@ -281,7 +288,7 @@ void ImageStore_Process(void) {
     uint16_t payload=0;uint8_t response[208];
     if(fs_fault || fs_mode==3) error=FS_LOCKED;
     if(op==FS_INFO) {
-        error=0;put32(response,FS_CAPACITY);put32(response+4,FS_MAX_FILES);put32(response+8,6);put32(response+12,3);payload=16;
+        error=0;put32(response,FS_CAPACITY);put32(response+4,FS_MAX_FILES);put32(response+8,14);put32(response+12,3);payload=16;
     } else if(op==FS_FORMAT && !error) {
         if(get32(fs_request+8)!=FS_FORMAT_KEY) error=FS_INVALID;
         else {
@@ -332,6 +339,8 @@ void ImageStore_Process(void) {
         } else if(!fs_valid_name(r->name,fs_name_size)) error=FS_INVALID;
         else if(fs_received!=r->length || crc32((const uint8_t *)r->offset,r->length)!=r->crc) {
             error=FS_CRC;if(!fs_abort_upload()) error=FS_IO;
+        } else if(r->type==3 && !timeline_validate((const uint8_t *)r->offset,r->length)) {
+            error=FS_INVALID;if(!fs_abort_upload()) error=FS_IO;
         } else {r->state=FS_LIVE;checksum=r->crc;fs_upload=255;if(!fs_save()) error=FS_IO;}
     } else if(!error && op==FS_ABORT) {if(!fs_abort_upload()) error=FS_IO;
     } else if(!error && op==FS_LIST) {
@@ -367,7 +376,7 @@ void ImageStore_Process(void) {
 bool ImageStore_ClaimOTA(void) {
     ImageStore_Init();
     uint32_t key=enter();
-    if(fs_pending || fs_upload!=255 || fs_recover || fs_fault || pending || uploading) {leave(key);return false;}
+    if(fs_playback || fs_pending || fs_upload!=255 || fs_recover || fs_fault || pending || uploading) {leave(key);return false;}
     fs_ota=true;leave(key);
     if(fs_mode!=1) return LegacyStore_ClaimOTA();
     /* Both snapshots must be invalid before OTA erases any page. */
@@ -376,4 +385,23 @@ bool ImageStore_ClaimOTA(void) {
         if(fs_catalog_valid(a) && !write16(a+16,0,0,0,0)) return false;
     }
     return true;
+}
+
+bool ImageStore_AcquireTimeline(uint32_t id,const uint8_t **payload,uint32_t *length) {
+    ImageStore_Init();
+    uint32_t key=enter();
+    if(fs_playback || fs_pending || fs_upload!=255 || fs_recover || fs_fault ||
+       fs_ota || pending || uploading || fs_mode!=1) {leave(key);return false;}
+    int index=fs_find(id);
+    if(index<0 || fs_cat.files[index].state!=FS_LIVE || fs_cat.files[index].type!=3 ||
+       fs_cat.files[index].version!=1) {leave(key);return false;}
+    FS_Record r=fs_cat.files[index];fs_playback=true;leave(key);
+    const uint8_t *p=(const uint8_t *)r.offset;
+    if(crc32(p,r.length)!=r.crc || !timeline_validate(p,r.length)) {
+        ImageStore_ReleaseTimeline();return false;
+    }
+    *payload=p;*length=r.length;return true;
+}
+void ImageStore_ReleaseTimeline(void) {
+    uint32_t key=enter();fs_playback=false;leave(key);
 }

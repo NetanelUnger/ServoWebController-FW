@@ -27,7 +27,7 @@ means instead. See `ADC_RAW.md` and `SERVO_SCHEDULING.md` in the repository root
 | `PING` | none | Connectivity check. | `OK PING` |
 | `BLE_STATS` | none | Read transport and ATT recovery counters (`cp/cr/cf`), queue depths, heap and stack headroom; does not reset counters. Displayed monotonic counts saturate at9999999. See `BLE_TRANSPORT.md`. | Short notification lines from `OK BLE_STATS` through `OK BLE_STATS END`. |
 | `DEMO1` | none | All 16 PCA9685 channels start at 500 us and toggle together to 2000 us and back every 2000 ms. Runs in servoTask until STOP or BLE disconnect. Repeating DEMO1 leaves the current phase unchanged. | `OK DEMO1` |
-| `STOP` | none | Cancel DEMO1 and all timed moves, holding the last pulse widths. Safe to repeat. | `OK STOP` |
+| `STOP` | none | Cancel timeline playback, DEMO1 and all timed moves, holding the last pulse widths. Safe to repeat. | `OK STOP` |
 | `TOF_MODE` | `<0|1|3>` | 0 off; 1 range while BLE subscribed (default); 3 live depth on screen plus optional BLE. 2 reserved. Disconnect/unsubscribe returns to 1. | `OK TOF_MODE <mode>` |
 | `TOF_SET_MIN_MAX` | `<min_mm> <max_mm>` | Set distance-map scaling; 0 <= min < max <= 4000. Default 0..500 mm. | `OK TOF_SET_MIN_MAX <min_mm> <max_mm>` |
 | `GPIO_GET` | `<signal_or_pin>` | Read the electrical GPIO level. INT_TOF adds its falling-edge counter. | `OK GPIO_GET <signal> <0_or_1>`; INT_TOF adds ` IRQ <count>` |
@@ -139,3 +139,28 @@ notifications, ending with OK HELP END.
 Pixel and rectangle commands use a separate GATT service, not NUS text or HELP.
 See [the display protocol](../display/README.md) for UUIDs, byte layouts,
 limits, errors and the future Web integration checklist.
+
+
+## Stored timeline commands
+
+- `HELP TIMELINE`: list the timeline commands separately from the legacy HELP page.
+- `TIMELINE_PLAY <id>`: validate and start an existing live type-3 file. IDs are
+  unsigned decimal, 1..4294967295, with no signs, overflow, hex or extra arguments.
+  Reply `OK TIMELINE_PLAY <id>\n` means accepted, not completed. Starting while
+  another timeline or DEMO1 owns servos is rejected. Stop first to restart.
+- `TIMELINE_STOP`: reply `OK TIMELINE_STOP\n`. Same holding/cancellation behavior
+  as STOP. Cancels preparation too; a disconnect also cancels and disables PWM.
+- `TIMELINE_STATUS`: reply
+  `OK TIMELINE_STATUS <state> <id> <elapsed_ms> <event_index> <event_count> <max_late_ms>\n`.
+  State is IDLE, PLAYING, COMPLETE, STOPPED or FAULT. Elapsed/index are within the
+  current repeat cycle; index is the next event (processed count). Counters remain
+  after stopping. Max lateness is measured logical event dispatch lateness, not a
+  physical PWM or shaft-position measurement.
+
+Every timeline success/error response ends in newline so clients can assemble
+fragmented NUS notifications. Errors are `ERR TIMELINE_<command> <reason>\n`.
+PLAY reasons: BAD_ARGUMENTS, BUSY, NOT_READY, DISABLED, INVALID_FILE, CANCELLED.
+INVALID_FILE includes an unavailable storage lease/recovery/upload, missing or
+wrong-type file, CRC failure or invalid plan. No uncertain command is retried
+automatically. Direct, timed, binary servo writes and DEMO1 are rejected while
+playback or preparation owns servo state. STOP remains available.

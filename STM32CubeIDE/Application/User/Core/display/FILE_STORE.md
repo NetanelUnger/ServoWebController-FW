@@ -36,8 +36,7 @@ distinguish migrated files from legacy slots); reuse of a deleted/reserved exten
 gets a new ID. Replacement of a live last file retains its ID and increments its
 revision. Format retains the next ID of a mounted v2 catalog. Names use at most
 63 UTF-8 bytes, without ASCII control characters. Types: 1 RGB565, 2 RGB332;
-type 3 is reserved for a future motor sequence implementation and cannot be
-uploaded or played by this release. Unused entries and deleted/reserved extents
+type 3 stores executable timelines with their editable source document. Unused entries and deleted/reserved extents
 are allocation states, not content types. Unknown future types remain listable
 and byte-readable if their record format is compatible; image actions reject them.
 
@@ -163,7 +162,7 @@ V2 status header (32 bytes):
 | 20 | payload CRC:u32 when relevant |
 | 24, 28 | free tail bytes:u32, deleted-extent bytes:u32 |
 
-INFO adds four u32 values: data capacity, maximum records, type mask (6), layout
+INFO adds four u32 values: data capacity, maximum records, type mask (14), layout
 mask (3). LIST adds one 96-byte record, or no payload and next index FFFFFFFF at
 end. BEGIN/PLAN/RESERVE add a descriptor. READ adds up to 208 payload bytes.
 Downloads check generation, offsets, length and CRC before applying editor pixels.
@@ -192,8 +191,8 @@ The UI shows allocation capacity separately from payload length, tail space
 separately from holes, image dimensions, encoding, state and file ID. Unknown
 types cannot be edited as images. File metadata is persisted with the project;
 the 240x240 editor uses centred rectangular bounds for smaller files. Code uses
-`showStoredImage(fileId)`; legacy IDs remain 1..5 on legacy storage. Motor file
-editing, upload and autonomous playback are intentionally deferred to phase 2.
+`showStoredImage(fileId)`; legacy IDs remain 1..5 on legacy storage. Motor timelines now share the catalog and use device-side playback; see the
+timeline format and command sections below.
 
 ## Verification
 
@@ -211,3 +210,38 @@ editing, upload and autonomous playback are intentionally deferred to phase 2.
 These tests do not establish physical brownout/ECC behaviour, RF timing or panel
 output. Physical controller flashing and destructive on-device formatting are
 not part of these software tests.
+
+
+## Timeline files (type 3)
+
+Type 3 uses version 1, width/height/layout zero. Storage management, exact byte
+length, CRC32, name, allocation, DELETE/FORMAT and READ use the same v2 protocol
+as images. INFO type mask is 14 (bits 1, 2, 3). SHOW rejects timelines.
+
+The little-endian payload is a 32-byte header, zero to 4096 16-byte events, then
+UTF-8 editor JSON. Header: magic `TML1` at 0, u16 version 1 at 4, u16 header size
+32 at 6; u32 event count at 8, duration milliseconds at 12, repeat boundary at
+16 (0 disables), JSON byte count at 20, zero flags at 24 and zero reserved at 28.
+Each event: u32 dispatch milliseconds at 0, u32 duration milliseconds at 4,
+u16 pulse microseconds at 8, u8 channel at 10, u8 kind at 11 (0 direct, 1 linear),
+u32 zero reserved at 12. Pulse range 500..2500, channels 0..15. Direct duration
+must be zero; linear duration must be positive. All event endpoints fit within
+the declared duration. Durations support the full unsigned 32-bit millisecond
+range. 4096 is an explicit implementation event limit, not a fixed file size.
+
+Events sort by dispatch, then kind (direct first), then channel. Duplicate
+same-kind/channel/dispatch is invalid. Same-channel linear intervals cannot
+overlap; direct events cannot lie strictly inside a linear interval. A direct
+and a linear at the same start are legal. Empty and guide-only documents are
+valid. Repeat clips at its boundary. Events exactly at the boundary execute before
+time-zero events restart; later events are not executed. Repeat may be after the
+last event/guide, holding until that boundary, including in empty documents. JSON preserves editable commands, guides, repeat, identity and name;
+firmware checks UTF-8 but treats JSON as opaque. The editor validates its schema
+and its correspondence to the binary plan. Firmware executes the binary plan.
+
+Both COMMIT and PLAY validate the plan. PLAY additionally verifies full payload
+CRC and acquires an exclusive flash lease. All storage requests (including
+read/list), recovery and OTA are blocked while the lease is held. STOP,
+disconnect, natural completion or execution fault releases it. Stop playback
+before managing files. No flash I/O or allocation occurs in the motion loop.
+See `servo/timeline_player.inc` and root `SERVO_SCHEDULING.md` for timing limits.

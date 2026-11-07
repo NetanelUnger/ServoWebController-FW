@@ -7,6 +7,7 @@
 #define APPLICATION_USER_CORE_SERVO_PID_TASK_H_
 
 #include "main.h"
+#include <stddef.h>
 
 /** @brief Total number of servo channels managed by the firmware. */
 #define SERVO_CHANNEL_COUNT 16U
@@ -69,6 +70,9 @@ extern void servo_SetBleConnected(uint8_t connected);
 extern HAL_StatusTypeDef servo_StartDemo1(void);
 /** Cancel DEMO1 and timed moves, holding the last commanded pulse widths. */
 extern void servo_Stop(void);
+/* PLAY returns accepted after CRC/plan validation. No completion implication. */
+extern const char *servo_TimelinePlay(uint32_t file_id);
+extern void servo_TimelineStatus(char *out,size_t capacity);
 
 /**
  * @brief Periodic worker that initializes the driver and updates timed moves.

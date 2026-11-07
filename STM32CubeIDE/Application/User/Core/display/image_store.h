@@ -11,5 +11,9 @@ uint16_t ImageStore_Status(uint8_t *out);
 void ImageStore_Process(void);
 void ImageStore_Disconnect(uint16_t connection);
 bool ImageStore_ClaimOTA(void);
+/* Exclusive immutable flash lease. Acquire only from task context; release also
+ * safe during STOP/disconnect. All store requests and OTA are busy while held. */
+bool ImageStore_AcquireTimeline(uint32_t id,const uint8_t **payload,uint32_t *length);
+void ImageStore_ReleaseTimeline(void);
 uint16_t ImageStore_RowLeft(uint16_t y);
 #endif

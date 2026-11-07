@@ -451,3 +451,16 @@ Application notifications and indications have a dedicated, static TX owner.
 Servo reads refresh locally without producing notifications; command writes reject
 overload with ATT0x11 rather than silently dropping work. See [BLE_TRANSPORT.md](BLE_TRANSPORT.md)
 for completion semantics, bounded queues, reconnect assumptions and BLE_STATS diagnostics.
+
+
+### Stored servo timelines
+
+The shared v2 device file catalog now supports type-3 timelines beside RGB565
+and RGB332 images. Variable-length TML1 files preserve the editor document and
+contain a validated execution plan. `TIMELINE_PLAY <file_id>` starts device-side
+playback, `TIMELINE_STOP` holds the last commanded values, and `TIMELINE_STATUS`
+reports progress and lateness. `HELP TIMELINE` lists these commands. Playback
+stops on BLE disconnect and blocks file-store mutation and OTA until stopped.
+See `STM32CubeIDE/Application/User/Core/display/FILE_STORE.md`,
+`STM32CubeIDE/Application/User/Core/comm/commands.md`, and `SERVO_SCHEDULING.md`
+for the exact format, bounds, repeat behavior and physical timing limitations.

@@ -49,7 +49,46 @@ class Store(Machine):
    s=self.cmd(0x24,id,(at,));assert struct.unpack_from('<I',s,12)[0]==at;out.extend(s[32:])
   assert zlib.crc32(out)==f['crc'];return bytes(out)
 
+def verify_timelines(elf):
+ # Real storage C, simulated flash only. No hardware operations.
+ m=Store(elf);m.format()
+ def plan(events=(),duration=0,repeat=0):
+  source=b'{"name":"test","commands":[]}'
+  return struct.pack('<IHHIIIIII',0x314c4d54,1,32,len(events),duration,repeat,len(source),0,0)+b''.join(struct.pack('<IIHBBI',*e,0) for e in events)+source
+ image=m.save(b'\x15'*16,4,4)
+ payload=plan(((0,0,1500,0,0),(0,100,2000,0,1)),100,50)
+ file=m.save(payload,0,0,type=3,name='timeline')
+ assert m.read(file)==payload and m.read(image)==b'\x15'*16
+ assert struct.unpack_from('<I',m.cmd(0x26),40)[0]==14
+ m.cmd(0x22,file,error=0x89)
+ assert m.call('ImageStore_AcquireTimeline',file,0x20017000,0x20017004)==1
+ assert struct.unpack('<I',m.uc.mem_read(0x20017004,4))[0]==len(payload)
+ before=m.flash()
+ for op,args in ((0x23,()),(0x2a,(0x46534f4b,)),(0x26,())):
+  packet=struct.pack('<BBHI',op,0,99,file)+b''.join(struct.pack('<I',v) for v in args)
+  assert m.submit(packet)==0x81
+ assert m.call('ImageStore_ClaimOTA')==0 and m.flash()==before
+ assert m.call('ImageStore_AcquireTimeline',file,0x20017000,0x20017004)==0
+ m.call('ImageStore_ReleaseTimeline');assert m.read(file)==payload
+ reboot=Store(elf,m.flash());assert reboot.read(file)==payload
+ assert reboot.call('ImageStore_AcquireTimeline',image,0x20017000,0x20017004)==0
+ for data in (plan(),plan(repeat=1000),plan(((0,0xffffffff,2500,15,1),),0xffffffff)):
+  m.save(data,0,0,type=3)
+ invalid=[plan(((0,0,499,0,0),)),plan(((0,0,1500,16,0),)),
+          plan(((0,100,2000,0,1),(50,0,1700,0,0)),100),
+          plan(((0,100,2000,0,1),(50,100,1700,0,1)),150),
+          plan(((0,0,1500,0,0),(0,0,1700,0,0)))]
+ for data in invalid:
+  bad=m.begin(data,0,0,type=3);m.data(data);m.cmd(0x21,bad,error=0x80)
+ assert m.read(image)==b'\x15'*16 and m.read(file)==payload
+ descriptor=next(f for f in m.files() if f['id']==file)
+ m.uc.mem_write(descriptor['offset']+32,b'\x01')
+ assert m.call('ImageStore_AcquireTimeline',file,0x20017000,0x20017004)==0
+ m.cmd(0x26)
+ print('PASS: timeline/image coexistence, round trip, validation, flash/OTA lease and CRC')
+
 def verify(elf):
+ verify_timelines(elf)
  m=Store(elf);assert m.cmd(0x26)[6]==0
  m.format();assert m.files()==[]
  a=bytes((i*13)&255 for i in range(31*17));b=bytes((i*7)&255 for i in range(33*19));c=b'\x96'*(23*21)

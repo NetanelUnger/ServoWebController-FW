@@ -485,6 +485,20 @@ static packetSize_t comm_BoardCommand(const char *command, char *args, uint8_t *
         (unsigned)(!strcmp(command, COMM_CMD_ADC_READ) ? raw : level));
 }
 
+/* Decimal IDs only: reject signs, overflow, partial tokens and extra operands. */
+static uint8_t comm_ParseTimelineId(const char *args,uint32_t *id) {
+    uint32_t value=0;
+    if(*args<'0' || *args>'9') return 0;
+    while(*args>='0' && *args<='9') {
+        uint32_t digit=(uint32_t)(*args++-'0');
+        if(value>(UINT32_MAX-digit)/10U) return 0;
+        value=value*10U+digit;
+    }
+    while(*args==' ' || *args=='\t' || *args=='\r' || *args=='\n') args++;
+    if(*args || !value) return 0;
+    *id=value;return 1;
+}
+
 packetSize_t parser_ProcessOne(uint8_t *payload, packetSize_t req_len, uint8_t *res_payload)
 {
     char req_text[256];
@@ -519,7 +533,28 @@ packetSize_t parser_ProcessOne(uint8_t *payload, packetSize_t req_len, uint8_t *
         BLE_TX_Stats((char *)res_payload,COMM_TEXT_RESPONSE_MAX_LEN);
         return (packetSize_t)strlen((char *)res_payload);
     }
+    if (!strcmp(command, COMM_CMD_TIMELINE_PLAY)) {
+        uint32_t id;
+        if (memchr(payload, 0, req_len) != NULL || !comm_ParseTimelineId(args, &id))
+            return comm_WriteResponseText(res_payload, "ERR TIMELINE_PLAY BAD_ARGUMENTS\n");
+        const char *error=servo_TimelinePlay(id);
+        if(error) return (packetSize_t)snprintf((char *)res_payload,COMM_TEXT_RESPONSE_MAX_LEN,
+            "ERR TIMELINE_PLAY %s\n",error);
+        return (packetSize_t)snprintf((char *)res_payload,COMM_TEXT_RESPONSE_MAX_LEN,
+            "OK TIMELINE_PLAY %lu\n",(unsigned long)id);
+    }
+    if (!strcmp(command, COMM_CMD_TIMELINE_STOP)) {
+        if (memchr(payload, 0, req_len) != NULL || *args != '\0') return comm_WriteResponseText(res_payload,"ERR TIMELINE_STOP BAD_ARGUMENTS\n");
+        servo_Stop();return comm_WriteResponseText(res_payload,"OK TIMELINE_STOP\n");
+    }
+    if (!strcmp(command, COMM_CMD_TIMELINE_STATUS)) {
+        if (memchr(payload, 0, req_len) != NULL || *args != '\0') return comm_WriteResponseText(res_payload,"ERR TIMELINE_STATUS BAD_ARGUMENTS\n");
+        servo_TimelineStatus((char *)res_payload,COMM_TEXT_RESPONSE_MAX_LEN);
+        return (packetSize_t)strlen((char *)res_payload);
+    }
     if (!strcmp(command, COMM_CMD_HELP)) {
+        if (!strcmp(args,"TIMELINE")) return comm_WriteResponseText(res_payload,
+            "OK HELP TIMELINE\nTIMELINE_PLAY <id>\nTIMELINE_STOP\nTIMELINE_STATUS\nOK HELP END\n");
         if (*args != '\0') return comm_WriteResponseText(res_payload, "- BAD ARGUMENTS");
         return comm_WriteResponseText(res_payload, comm_help_text);
     }
@@ -576,7 +611,7 @@ packetSize_t parser_ProcessOne(uint8_t *payload, packetSize_t req_len, uint8_t *
         }
 
         HAL_StatusTypeDef status = servo_SetServoImmediateValue(channel, value);
-        if (status == HAL_BUSY) return comm_WriteResponseText(res_payload, "- DEMO1 ACTIVE: STOP");
+        if (status == HAL_BUSY) return comm_WriteResponseText(res_payload, "- MOTION ACTIVE: STOP");
         if (status != HAL_OK)
         {
             return comm_WriteResponseText(res_payload, "- BAD ARGUMENTS");
@@ -598,7 +633,7 @@ packetSize_t parser_ProcessOne(uint8_t *payload, packetSize_t req_len, uint8_t *
         }
 
         HAL_StatusTypeDef status = servo_StartTimedMove(channel, value, duration_ms);
-        if (status == HAL_BUSY) return comm_WriteResponseText(res_payload, "- DEMO1 ACTIVE: STOP");
+        if (status == HAL_BUSY) return comm_WriteResponseText(res_payload, "- MOTION ACTIVE: STOP");
         if (status != HAL_OK)
         {
             return comm_WriteResponseText(res_payload, "- BAD ARGUMENTS");

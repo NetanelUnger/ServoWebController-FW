@@ -71,3 +71,56 @@ Validation: `tools/check_servo_priority.py` sends small alternating steps, check
 all commanded values, and reads actual registers on CH0..15 while ADC, IMU and TOF
 notifications are active. It restores initial targets. Physical motion still
 requires observation; correct register readback does not verify the servo supply.
+
+
+## Controller-stored timeline playback
+
+The TML1 plan is validated once before acceptance and accessed through a
+memory-mapped read-only flash lease. Execution belongs to the existing servoTask;
+there is no second PCA writer or new RTOS task. Events due together update one
+coherent desired frame. Linear moves derive from absolute logical event times,
+including an exact logical starting value, rather than accumulating rounded
+worker delays. RTC ticks are extended into uint64 elapsed time, so uint32
+millisecond documents and repeated playback are not limited by one RTC wrap.
+This assumes the task runs at least once per full hardware timer wrap.
+
+While active the task waits at most one FreeRTOS tick (nominal 1 ms at configured
+1000 Hz), then interpolates and writes only a changed coherent PCA frame. The
+RTC is the timeline clock, not that scheduler tick. Actual dispatch/output jitter
+includes RTOS/radio preemption, I2C mutex contention, frame transfer duration and
+PCA9685 PWM frame phase. The servos themselves have no position feedback. This is
+millisecond-resolution scheduling, not guaranteed millisecond physical motion
+or hard real time. Hardware measurement under sensor/radio load is still needed.
+
+Repeat advances its absolute origin by the specified period, clips unfinished
+ramps at the boundary, holds their interpolated value and applies time-zero
+commands again. Events at the repeat boundary execute before time-zero events restart. Repeat
+may extend beyond the last command/guide, holding the current values. A safety work budget
+allows at most 64 overdue events per wake; two missed repeat boundaries or an
+exhausted budget freezes at the last computed value and reports FAULT rather
+than executing an unbounded catch-up burst with interrupts masked. Dense plans
+or extremely short loops may therefore fault under load. An I2C frame failure
+also cancels the timeline and reports FAULT, with the existing PWM-ready gate.
+
+STOP/disconnect cancel pending preparation as well as active playback. Disconnect
+keeps the existing electrical output gate protection. A STOP cannot retract a
+frame transfer already in progress. COMPLETE indicates logical plan completion,
+not measured motor arrival. All flash-store operations and OTA require playback
+to stop first. No automatic motion resumes after reconnect or reboot.
+
+
+Due events with different timestamps can be advanced logically within one worker
+wake and coalesced into one physical PCA frame containing the latest values.
+Intermediate desired values are not guaranteed to appear as separate PWM frames.
+Consequently max_late_ms is a dispatch metric, not measured physical output
+jitter, and there is no strict delivery guarantee for events spaced below the
+I2C/PWM cadence (PCA servo frequency is currently 50 Hz). Validate the required
+sequence on hardware before relying on closely spaced actions.
+
+Regression sources: `tools/check_timeline_host.py` builds the actual servo
+source with a fake clock/PCA/store and the exact decimal ID parser; its C cases
+are in `tools/timeline_host_test.c`. `tools/check_file_store.py` adds actual
+storage-C emulation for mixed image/timeline files, CRC, validation and leases.
+These passed on 2026-11-07 after explicit permission. They do not contact hardware.
+See `validation-timeline-verification-2026-11-07.json` for software results and the
+SWD hardware blocker. Physical output timing is still unverified.
