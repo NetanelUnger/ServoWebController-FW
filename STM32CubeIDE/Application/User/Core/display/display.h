@@ -12,6 +12,8 @@ extern volatile uint32_t g_display_frame_count;
  * more SPI work and leaves the last image visible. The task blocks indefinitely;
  * its static stack stays allocated. Start reinitializes the panel and startup mark.
  * Use these APIs, never externally suspend/delete displayTask mid-transfer. */
+/* Callback-safe: schedule the disconnected welcome view on the display task. */
+void Display_SetBleConnected(uint8_t connected);
 osStatus_t Display_Start(void);
 osStatus_t Display_Stop(void);
 void Display_Task(void *argument);

@@ -1,7 +1,7 @@
 # GC9A01 display and BLE protocol v1
 
-240x240 RGB565 display. Startup draws the NatiLab typographic mark once using
-Font24, then sleeps indefinitely. The existing face animation sources are no
+240x240 RGB565 display. Startup draws NatiLab, version and the six-digit device
+identifier using Font24, then sleeps until work or a connection event arrives. The existing face animation sources are no
 longer referenced by the application and their assets are removed by linker GC.
 No framebuffer, image assembly buffer, heap allocation or periodic refresh.
 The existing 480-byte scanline is used for startup/text/solid fills only.
@@ -314,9 +314,9 @@ skips frames when busy. 64 solid 21x21 fills reuse the driver's existing 480-byt
 scratch buffer. The panel is cleared black once on entry; the 168x168 map begins
 at (36,36), fully inside the round 240px screen. 180px would clip the corners.
 
-RGB565 is calculated with integer arithmetic, no palette: 0 mm red, 4400 mm
-yellow, 8800 mm green, clamped above 8800; UINT16_MAX invalid is black. The
-requested 8.8 m color scale does NOT extend the VL53L8CX rated range of 4 m:
+RGB565 is calculated with integer arithmetic, no palette: 0 mm red, 2000 mm
+yellow, 4000 mm green, clamped above 4000; UINT16_MAX invalid is black. The
+0..4 m color scale matches the VL53L8CX rated range:
 https://www.st.com/resource/en/datasheet/vl53l8cx.pdf . It is independent of
 TOF_SET_MIN_MAX, which remains limited to 4000 mm for the existing BLE protocol.
 
@@ -326,7 +326,56 @@ finishes under the display lock. The last view remains visible after exit.
 
 Validation: ARM-emulated real display C tests cover red/yellow/green, invalid
 and clipped ranges, all 64 tile bounds, one-time clear, mutex busy, SPI failure
-recovery and return to BLE drawing. Production build adds 644 bytes to the
+recovery and return to BLE drawing. Before the identity feature, the depth build added 648 bytes to the
 application binary and 4 bytes of linked static RAM versus the pre-change local
-build (338448 -> 339092 bytes Flash image; data+bss 119308 -> 119312 bytes).
+build (338448 -> 339096 bytes Flash image; data+bss 119308 -> 119312 bytes).
 No task stack sizes or driver buffers changed. Physical rendering not yet tested.
+
+
+TOF orientation: the acquisition loop maps output zone `(row,col)` to sensor
+zone `(7-row,col)` using `zone ^ 56`. This flips vertically only, preserving
+column order. Validity checks use the same source zone. Runtime millimeters,
+64-byte BLE frames and the local depth view all share the corrected orientation.
+No extra array, frame copy, second pass or I2C transaction is added. The bundled
+ULD exposes no orientation-setting API; this is a host-side normalization.
+
+
+## Device identity and disconnected screen
+
+`device_identity.h` formats a stable six-digit decimal identifier from all three
+factory UID words. It needs no persistent Flash record, random-number peripheral
+or static identity cache. Leading zeros are retained. This short human-facing
+label is not a collision-free global ID or a security credential.
+
+The GAP name and complete advertised local name are `NLXXXXXX` (8 bytes).
+The name record is 10 bytes; the NUS UUID record is 18 bytes, and the stack retains
+3 bytes of Flags: exactly 31 bytes.
+Both legacy and enhanced successful connection events notify the display.
+On disconnection, the BLE callback sets a flag and wakes the display worker;
+it does not acquire a mutex or perform SPI transfers. The worker reinitializes
+and draws the three centered lines: NatiLab / 1.0 / XXXXXX. No continuous refresh.
+Drawing requests (including queued stored images) are BUSY while disconnected
+or a welcome redraw is pending, preventing stale work from replacing identity.
+A rapid reconnect still completes the requested welcome before accepting draws.
+
+Validation: the real C ARM tests verify stable six-digit formatting, different
+UID input, name/screen agreement, all three line positions, startup, deferred
+SPI on disconnect, idle sleep and reconnect. Production build and linked-layout
+checks passed. No physical-board verification or flashing in this change.
+The identity/welcome addition increases the prior local binary by 456 bytes
+and linked static RAM by 12 bytes; no additional framebuffer or task stack.
+
+
+### Advertising budget regression fix
+
+The initial 11-character identity name overflowed the legacy packet: the
+31-byte name/UUID update was merged with the stack-owned 3-byte Flags record,
+not used as a complete replacement. ST rejects updates exceeding 31 bytes,
+leaving the old advertisement without the expected NUS/name fields. The Web
+filters on the NUS UUID, so the board disappeared from its device picker.
+
+The corrected name is `NL` plus six digits (8 characters). The static assertion
+now budgets all records: Flags 3 + name 10 + NUS UUID 18 = 31 bytes. TX Power is
+still removed before the update. The identifier itself and the screen text are
+unchanged. The real-device check is `tools/check_advertising_ble.py`: scan for
+name + NUS, connect, compare GAP name, PING, disconnect and scan again.

@@ -125,8 +125,13 @@ The VL53L5CX driver uses ST's default `0x52` I2C address constant, which corresp
 The firmware advertises as:
 
 ```text
-BleServo
+NL123456
 ```
+
+The six decimal digits are a stable, pseudorandom short identifier derived from
+the MCU factory UID, not a new random number on each boot. The example digits
+above vary per board. The complete 8-byte name and 128-bit NUS service UUID
+fit the existing 31-byte advertising payload including 3 bytes of stack Flags. GAP uses the identical name.
 
 Main BLE UUIDs defined by the project:
 
@@ -232,7 +237,7 @@ The project is set up for STM32CubeIDE.
 3. Confirm that the STM32WBA support package required by the project is installed.
 4. Build the active configuration.
 5. Flash the target board.
-6. Connect from a BLE client to `BleServo`.
+6. Connect from a BLE client to `NLXXXXXX` using the six digits shown on its screen.
 7. Send `PING` over the NUS RX characteristic and verify the `OK PING` response.
 
 The main CubeMX configuration file is:
@@ -311,7 +316,7 @@ Created by Netanel Unger as an embedded robotics and BLE firmware project.
 
 ### GC9A01 welcome display and HELP
 
-The 240x240 round GC9A01 display on SPI3 shows the NatiLab startup mark once.
+The 240x240 round GC9A01 display on SPI3 shows NatiLab, version and the six-digit device identifier at startup and after BLE disconnect.
 It retains that image until the dedicated BLE Display Service writes pixel rows, pixel rectangles or
 solid rectangles. There is no local face playback, framebuffer or periodic
 refresh. RGB565 wire bytes go directly from the BLE event to SPI without an
@@ -352,9 +357,9 @@ skips frames when busy. 64 solid 21x21 fills reuse the driver's existing 480-byt
 scratch buffer. The panel is cleared black once on entry; the 168x168 map begins
 at (36,36), fully inside the round 240px screen. 180px would clip the corners.
 
-RGB565 is calculated with integer arithmetic, no palette: 0 mm red, 4400 mm
-yellow, 8800 mm green, clamped above 8800; UINT16_MAX invalid is black. The
-requested 8.8 m color scale does NOT extend the VL53L8CX rated range of 4 m:
+RGB565 is calculated with integer arithmetic, no palette: 0 mm red, 2000 mm
+yellow, 4000 mm green, clamped above 4000; UINT16_MAX invalid is black. The
+0..4 m color scale matches the VL53L8CX rated range:
 https://www.st.com/resource/en/datasheet/vl53l8cx.pdf . It is independent of
 TOF_SET_MIN_MAX, which remains limited to 4000 mm for the existing BLE protocol.
 
@@ -364,7 +369,78 @@ finishes under the display lock. The last view remains visible after exit.
 
 Validation: ARM-emulated real display C tests cover red/yellow/green, invalid
 and clipped ranges, all 64 tile bounds, one-time clear, mutex busy, SPI failure
-recovery and return to BLE drawing. Production build adds 644 bytes to the
+recovery and return to BLE drawing. Before the identity feature, the depth build added 648 bytes to the
 application binary and 4 bytes of linked static RAM versus the pre-change local
-build (338448 -> 339092 bytes Flash image; data+bss 119308 -> 119312 bytes).
+build (338448 -> 339096 bytes Flash image; data+bss 119308 -> 119312 bytes).
 No task stack sizes or driver buffers changed. Physical rendering not yet tested.
+
+
+TOF orientation: the acquisition loop maps output zone `(row,col)` to sensor
+zone `(7-row,col)` using `zone ^ 56`. This flips vertically only, preserving
+column order. Validity checks use the same source zone. Runtime millimeters,
+64-byte BLE frames and the local depth view all share the corrected orientation.
+No extra array, frame copy, second pass or I2C transaction is added. The bundled
+ULD exposes no orientation-setting API; this is a host-side normalization.
+
+
+## Device identity and disconnected screen
+
+`device_identity.h` formats a stable six-digit decimal identifier from all three
+factory UID words. It needs no persistent Flash record, random-number peripheral
+or static identity cache. Leading zeros are retained. This short human-facing
+label is not a collision-free global ID or a security credential.
+
+The GAP name and complete advertised local name are `NLXXXXXX` (8 bytes).
+The name record is 10 bytes; the NUS UUID record is 18 bytes, and the stack retains
+3 bytes of Flags: exactly 31 bytes.
+Both legacy and enhanced successful connection events notify the display.
+On disconnection, the BLE callback sets a flag and wakes the display worker;
+it does not acquire a mutex or perform SPI transfers. The worker reinitializes
+and draws the three centered lines: NatiLab / 1.0 / XXXXXX. No continuous refresh.
+Drawing requests (including queued stored images) are BUSY while disconnected
+or a welcome redraw is pending, preventing stale work from replacing identity.
+A rapid reconnect still completes the requested welcome before accepting draws.
+
+Validation: the real C ARM tests verify stable six-digit formatting, different
+UID input, name/screen agreement, all three line positions, startup, deferred
+SPI on disconnect, idle sleep and reconnect. Production build and linked-layout
+checks passed. No physical-board verification or flashing in this change.
+The identity/welcome addition increases the prior local binary by 456 bytes
+and linked static RAM by 12 bytes; no additional framebuffer or task stack.
+
+
+### Advertising budget regression fix
+
+The initial 11-character identity name overflowed the legacy packet: the
+31-byte name/UUID update was merged with the stack-owned 3-byte Flags record,
+not used as a complete replacement. ST rejects updates exceeding 31 bytes,
+leaving the old advertisement without the expected NUS/name fields. The Web
+filters on the NUS UUID, so the board disappeared from its device picker.
+
+The corrected name is `NL` plus six digits (8 characters). The static assertion
+now budgets all records: Flags 3 + name 10 + NUS UUID 18 = 31 bytes. TX Power is
+still removed before the update. The identifier itself and the screen text are
+unchanged. The real-device check is `tools/check_advertising_ble.py`: scan for
+name + NUS, connect, compare GAP name, PING, disconnect and scan again.
+
+
+## Battery voltage calibration
+
+Battery gain calibration is implemented in `battery_calibration.h`:
+`mV = (RAW * 7830 + 1556) / 3112` using integer division (nearest mV).
+This is the supplied one-point calibration, assuming zero offset; RAW 3112
+maps exactly to 7830 mV. It is applied after the existing weighted ADC window.
+No changes to sampling, DMA, current-channel scaling, or ADC_READ diagnostics.
+
+ADC service b0 / characteristic b1 now publishes v2 (10 bytes): byte 0 = 2,
+byte 1 = validity BAT/ADC1/ADC2, bytes 2..7 = original RAW uint16 LE values,
+bytes 8..9 = battery mV uint16 LE. The battery validity bit also gates mV;
+invalid/idle mV is zero with its validity bit clear. Current fields remain RAW.
+The new Web decodes both v1 and v2, displays firmware mV for v2 and explicitly
+labels v1 battery readings RAW. Deploy the accompanying Web changes with FW:
+old Web only accepts v1. No extra calibration characteristic or Flash storage.
+
+ARM checks verify the conversion including 3112 -> 7830, rounding and 12-bit
+boundaries. Web decode checks cover v1/v2, validity, frame lengths and offsets.
+FW and Web production builds passed; this calibration has not been flashed or
+verified against a new physical voltage measurement.

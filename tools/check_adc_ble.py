@@ -11,12 +11,13 @@ TX = '6e400003-b5a3-f393-e0a9-e50e24dcca9e'
 
 
 def decode(payload, valid=True):
-    assert len(payload) == 8, payload.hex()
-    version, mask, battery, current1, current2 = struct.unpack('<BBHHH', payload)
-    assert version == 1 and mask & ~7 == 0, payload.hex()
+    assert len(payload) == 10, payload.hex()
+    version, mask, battery, current1, current2, battery_mv = struct.unpack('<BBHHHH', payload)
+    assert version == 2 and mask & ~7 == 0, payload.hex()
     if valid:
         assert mask == 7, ('ADC conversion failure', payload.hex())
     assert all(0 <= value <= 4095 for value in (battery, current1, current2))
+    assert battery_mv == ((battery * 7830 + 1556) // 3112 if mask & 1 else 0)
     return battery, current1, current2
 
 

@@ -54,11 +54,13 @@
 /**
  * @brief BLE device name used for both the GAP device name and the advertised complete local name.
  *
- * Keep this string at 11 visible characters or fewer with the current advertising payload layout.
- * That 11-character limit comes from the 31-byte legacy advertising packet after reserving space
- * for the 128-bit service UUID record in `app_ble.c`.
+ * Keep this string at 8 visible characters or fewer with the current advertising payload layout.
+ * That 8-character limit comes from the 31-byte legacy advertising packet after reserving space
+ * for the automatic Flags and the 128-bit service UUID record in `app_ble.c`.
  */
-#define ADV_NAME "BleServo"
+/* Six decimal suffix digits are filled from the factory UID at boot. */
+#define ADV_NAME_PREFIX "NL"
+#define ADV_NAME ADV_NAME_PREFIX "000000"
 
 
 /** @name Debug Output Configuration

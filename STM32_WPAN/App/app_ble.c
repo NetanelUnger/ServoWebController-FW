@@ -52,6 +52,8 @@
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
 #include "config.h"
+#include "device_identity.h"
+#include "display/display.h"
 #include "app_freertos.h"
 #include "app_bsp.h"
 #include "ota.h"
@@ -153,8 +155,10 @@ typedef struct
 #define BLE_GAP_DEVICE_NAME_LEN        (sizeof(ADV_NAME) - 1U)
 #define BLE_ADV_MAX_DATA_LEN           (31U)
 #define BLE_ADV_UUID_RECORD_LEN        (18U)
-/* With the UUID record below kept in the packet, ADV_NAME can use at most 11 bytes. */
-#define BLE_ADV_NAME_MAX_LEN           (BLE_ADV_MAX_DATA_LEN - BLE_ADV_UUID_RECORD_LEN - 2U)
+/* set_discoverable adds Flags and TX Power automatically. We delete TX Power,
+ * but update_adv_data MERGES records and retains the three-byte Flags record. */
+#define BLE_ADV_FLAGS_RECORD_LEN      (3U)
+#define BLE_ADV_NAME_MAX_LEN           (BLE_ADV_MAX_DATA_LEN - BLE_ADV_FLAGS_RECORD_LEN - BLE_ADV_UUID_RECORD_LEN - 2U)
 #define BLE_ADV_NAME_RECORD_LEN        (BLE_GAP_DEVICE_NAME_LEN + 2U)
 #define BLE_ADV_DATA_LEN               (BLE_ADV_NAME_RECORD_LEN + BLE_ADV_UUID_RECORD_LEN)
 /* Device Info Characteristic UUID */
@@ -194,7 +198,8 @@ _Static_assert(BLE_GAP_DEVICE_NAME_LEN > 0U, "ADV_NAME must not be empty");
 _Static_assert(BLE_GAP_DEVICE_NAME_LEN <= BLE_ADV_NAME_MAX_LEN,
                "ADV_NAME is too long for the current advertising payload");
 
-static const char a_GapDeviceName[] = ADV_NAME; /* Gap Device Name */
+_Static_assert(sizeof(ADV_NAME) == sizeof(ADV_NAME_PREFIX) + DEVICE_ID_DIGITS, "Invalid identity suffix length");
+static char a_GapDeviceName[] = ADV_NAME; /* Gap Device Name */
 
 static const uint8_t a_AdvDataUuidField[BLE_ADV_UUID_RECORD_LEN] =
 {
@@ -204,6 +209,8 @@ static const uint8_t a_AdvDataUuidField[BLE_ADV_UUID_RECORD_LEN] =
 /* Advertising Data */
 uint8_t a_AdvData[BLE_ADV_DATA_LEN] = {0};
 
+_Static_assert(BLE_ADV_DATA_LEN + BLE_ADV_FLAGS_RECORD_LEN <= BLE_ADV_MAX_DATA_LEN,
+               "Advertising update plus stack Flags exceeds legacy packet");
 _Static_assert(BLE_ADV_DATA_LEN <= sizeof(sys_AdvData),
                "sys_AdvData buffer is too small for the advertising payload");
 
@@ -324,6 +331,7 @@ void UpdDIS();
 void APP_BLE_Init(void)
 {
   /* USER CODE BEGIN APP_BLE_Init_1 */
+  DeviceIdentity_Format(a_GapDeviceName + sizeof(ADV_NAME_PREFIX) - 1U);
 
   /* USER CODE END APP_BLE_Init_1 */
 
@@ -605,6 +613,7 @@ SVCCTL_UserEvtFlowStatus_t SVCCTL_App_Notification(void *p_Pckt)
                     p_disconnection_complete_event->Reason);
 
         /* USER CODE BEGIN EVT_DISCONN_COMPLETE_2 */
+        Display_SetBleConnected(0U);
         /* Connection state is handled locally in BLE context. */
         /* USER CODE END EVT_DISCONN_COMPLETE_2 */
       }
@@ -697,6 +706,7 @@ SVCCTL_UserEvtFlowStatus_t SVCCTL_App_Notification(void *p_Pckt)
           hci_le_enhanced_connection_complete_event_rp0 *p_enhanced_conn_complete;
           p_enhanced_conn_complete = (hci_le_enhanced_connection_complete_event_rp0 *) p_meta_evt->data;
           if (p_enhanced_conn_complete->Status != 0U) break;
+          Display_SetBleConnected(1U);
           conn_interval_us = p_enhanced_conn_complete->Conn_Interval * 1250;
           LOG_INFO_APP(">>== HCI_LE_ENHANCED_CONNECTION_COMPLETE_SUBEVT_CODE - Connection handle: 0x%04X\n", p_enhanced_conn_complete->Connection_Handle);
           LOG_INFO_APP("     - Connection established with @:%02x:%02x:%02x:%02x:%02x:%02x\n",
@@ -753,6 +763,7 @@ SVCCTL_UserEvtFlowStatus_t SVCCTL_App_Notification(void *p_Pckt)
           hci_le_connection_complete_event_rp0 *p_conn_complete;
           p_conn_complete = (hci_le_connection_complete_event_rp0 *) p_meta_evt->data;
           if (p_conn_complete->Status != 0U) break;
+          Display_SetBleConnected(1U);
           conn_interval_us = p_conn_complete->Conn_Interval * 1250;
           LOG_INFO_APP(">>== HCI_LE_CONNECTION_COMPLETE_SUBEVT_CODE - Connection handle: 0x%04X\n", p_conn_complete->Connection_Handle);
           LOG_INFO_APP("     - Connection established with @:%02x:%02x:%02x:%02x:%02x:%02x\n",

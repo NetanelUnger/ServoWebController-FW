@@ -2,6 +2,7 @@
 #include "image_store.h"
 #include "gc9a01.h"
 #include "config.h"
+#include "device_identity.h"
 #include "app_freertos.h"
 
 #include <string.h>
@@ -17,6 +18,18 @@ static bool running = true;
 static bool needs_init = true;
 static volatile uint8_t depth_enabled;
 static volatile uint8_t depth_clear;
+static volatile uint8_t ble_connected;
+static volatile uint8_t welcome_requested;
+
+void Display_SetBleConnected(uint8_t connected)
+{
+    ble_connected = connected;
+    if (!connected) {
+        depth_enabled = 0U;
+        welcome_requested = 1U;
+        if (displayTaskHandle != NULL) (void)osThreadFlagsSet(displayTaskHandle, DISPLAY_WAKE);
+    }
+}
 
 void Display_SetDepthEnabled(uint8_t enabled)
 {
@@ -28,9 +41,9 @@ void Display_SetDepthEnabled(uint8_t enabled)
 static uint16_t depth_color(uint16_t mm)
 {
     if (mm == UINT16_MAX) return GC9A01_BLACK;
-    if (mm > 8800U) mm = 8800U;
-    uint16_t red = mm <= 4400U ? 31U : (8800U - mm) * 31U / 4400U;
-    uint16_t green = mm >= 4400U ? 63U : (uint32_t)mm * 63U / 4400U;
+    if (mm > 4000U) mm = 4000U;
+    uint16_t red = mm <= 2000U ? 31U : (4000U - mm) * 31U / 2000U;
+    uint16_t green = mm >= 2000U ? 63U : (uint32_t)mm * 63U / 2000U;
     return (red << 11) | (green << 5);
 }
 
@@ -38,7 +51,7 @@ uint8_t Display_DrawDepthMap(const uint16_t *distance_mm)
 {
     if (!distance_mm || !depth_enabled || displayMutexHandle == NULL ||
         osMutexAcquire(displayMutexHandle, 0U) != osOK) return 0x81U;
-    if (!running || needs_init || g_display_boot_status != HAL_OK) {
+    if (!ble_connected || welcome_requested || !running || needs_init || g_display_boot_status != HAL_OK) {
         osMutexRelease(displayMutexHandle); return 0x81U;
     }
     HAL_StatusTypeDef status = HAL_OK;
@@ -62,15 +75,17 @@ uint8_t Display_DrawDepthMap(const uint16_t *distance_mm)
 
 static HAL_StatusTypeDef show_welcome(void)
 {
-    static const char *const lines[] = {"NatiLab", "1.0"};
+    char id[DEVICE_ID_DIGITS + 1U];
+    DeviceIdentity_Format(id);
+    const char *const lines[] = {"NatiLab", "1.0", id};
     const sFONT *font = &Font24;
     const uint16_t line_gap = 12U;
-    uint16_t y = (GC9A01_HEIGHT - (2U * font->Height + line_gap)) / 2U;
+    uint16_t y = (GC9A01_HEIGHT - (3U * font->Height + 2U * line_gap)) / 2U;
     HAL_StatusTypeDef status = GC9A01_Init();
     if (status == HAL_OK) status = GC9A01_SetRotation(DISPLAY_ROTATION);
     if (status == HAL_OK)
         status = GC9A01_FillRect(0, 0, GC9A01_WIDTH, GC9A01_HEIGHT, GC9A01_WHITE);
-    for (size_t i = 0; i < 2U && status == HAL_OK; ++i) {
+    for (size_t i = 0; i < 3U && status == HAL_OK; ++i) {
         uint16_t x = (GC9A01_WIDTH - strlen(lines[i]) * font->Width) / 2U;
         status = GC9A01_DrawText(x, y, lines[i], font, GC9A01_BLACK, GC9A01_WHITE);
         y += font->Height + line_gap;
@@ -140,7 +155,7 @@ uint8_t Display_WritePacket(const uint8_t *p, uint16_t length)
     if (w == 0U || h == 0U || x + w > 240U || y + h > 240U) return 0x80U;
     if (displayMutexHandle == NULL || osMutexAcquire(displayMutexHandle, 0U) != osOK)
         return 0x81U;
-    if (depth_enabled || !running || needs_init || g_display_boot_status != HAL_OK) {
+    if (!ble_connected || welcome_requested || depth_enabled || !running || needs_init || g_display_boot_status != HAL_OK) {
         (void)osMutexRelease(displayMutexHandle);
         return 0x81U;
     }
@@ -164,7 +179,7 @@ uint8_t Display_WritePacket(const uint8_t *p, uint16_t length)
 uint8_t Display_ShowStored(const uint8_t *pixels)
 {
     if(osMutexAcquire(displayMutexHandle,0U)!=osOK) return 0x81;
-    if(depth_enabled || !running || needs_init || g_display_boot_status!=HAL_OK) {osMutexRelease(displayMutexHandle);return 0x81;}
+    if(!ble_connected || welcome_requested || depth_enabled || !running || needs_init || g_display_boot_status!=HAL_OK) {osMutexRelease(displayMutexHandle);return 0x81;}
     HAL_StatusTypeDef status=HAL_OK;
     GC9A01_SetTransferTimeout(100U);
     for(uint16_t y=0;y<240 && status==HAL_OK;y++) {
@@ -182,6 +197,11 @@ void Display_Task(void *argument)
     UNUSED(argument);
     for (;;) {
         if (osMutexAcquire(displayMutexHandle, osWaitForever) != osOK) Error_Handler();
+        if (welcome_requested) {
+            welcome_requested = 0U;
+            running = true;
+            needs_init = true;
+        }
         if (running && needs_init) {
             g_display_boot_status = show_welcome();
             g_display_frame_status = g_display_boot_status;
@@ -194,6 +214,7 @@ void Display_Task(void *argument)
     }
 }
 #else
+void Display_SetBleConnected(uint8_t c) { UNUSED(c); }
 void Display_SetDepthEnabled(uint8_t e) { UNUSED(e); }
 uint8_t Display_DrawDepthMap(const uint16_t *p) { UNUSED(p); return 0x83U; }
 uint8_t Display_ShowStored(const uint8_t *p) { UNUSED(p); return 0x83U; }

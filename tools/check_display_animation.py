@@ -26,6 +26,9 @@ typedef struct { unsigned dummy; } GPIO_TypeDef;
 typedef enum { GPIO_PIN_RESET, GPIO_PIN_SET } GPIO_PinState;
 #define UNUSED(x) ((void)(x))
 uint32_t HAL_GetTick(void);
+uint32_t HAL_GetUIDw0(void);
+uint32_t HAL_GetUIDw1(void);
+uint32_t HAL_GetUIDw2(void);
 void HAL_GPIO_WritePin(GPIO_TypeDef *, uint16_t, GPIO_PinState);
 void Error_Handler(void);
 ''',
@@ -58,6 +61,19 @@ extern osMutexId_t displayMutexHandle;
 #include "display/gc9a01.h"
 #include "app_freertos.h"
 #include "tof.h"
+#include "device_identity.h"
+#include "battery_calibration.h"
+uint16_t Test_BatteryMillivolts(uint16_t raw) { return Battery_Millivolts(raw); }
+#include "config.h"
+uint32_t test_uid[3] = {0x12345678, 0x23456789, 0x34567890};
+uint32_t HAL_GetUIDw0(void) { return test_uid[0]; }
+uint32_t HAL_GetUIDw1(void) { return test_uid[1]; }
+uint32_t HAL_GetUIDw2(void) { return test_uid[2]; }
+void Test_DeviceName(char *name) {
+    const char prefix[] = ADV_NAME_PREFIX;
+    for (unsigned i=0; i<sizeof(prefix)-1; ++i) name[i]=prefix[i];
+    DeviceIdentity_Format(name + sizeof(prefix)-1);
+}
 void TOF_Init(void) {}
 tBleStatus TOF_UpdateValue(TOF_CharOpcode_t op, TOF_Data_t *p) { return 0; }
 osThreadId_t displayTaskHandle = (void *)1;
@@ -109,6 +125,7 @@ class Machine:
         self.locked = False
         self.require_lock = False
         self.calls = []
+        self.texts = []
         self.wait = None
         self.fail_next = False
         self.task_context = None
@@ -167,6 +184,11 @@ class Machine:
                 self.fail_next = False
                 self.ret(1)
                 return
+            if name == 'GC9A01_DrawText':
+                text = bytearray()
+                while (byte := bytes(uc.mem_read(a[2] + len(text), 1))) != b'\0':
+                    text.extend(byte)
+                self.texts.append((a[0], a[1], text.decode()))
             if name == 'GC9A01_BlitWire':
                 self.wire_pointer = struct.unpack('<I', uc.mem_read(uc.reg_read(UC_ARM_REG_SP), 4))[0]
             if name in ('GC9A01_FillRect', 'GC9A01_BlitRGB565'):
@@ -213,15 +235,42 @@ def rgb565(color):
 
 def verify(elf, output):
     m = Machine(elf)
+    for raw in [0, 1, 100, 1556, 3111, 3112, 3113, 4095]:
+        assert m.call('Test_BatteryMillivolts', raw) == (raw * 7830 + 1556) // 3112
+    assert m.call('Test_BatteryMillivolts', 3112) == 7830
+    print('PASS: battery calibration 3112 -> 7830 mV, rounding and 12-bit boundaries')
     address = 0x20018000
     def send(data):
         m.uc.mem_write(address, bytes(data))
         return m.call('Display_WritePacket', address, len(data))
+    for invalid in [64, 0, 7, 56, 63]:
+        m.call('Test_TofAcquisition', address + 512, address + 1024, invalid)
+        distances = struct.unpack('<64H', m.uc.mem_read(address + 512, 128))
+        encoded = bytes(m.uc.mem_read(address + 1024, 64))
+        for zone in range(64):
+            original = (7 - zone // 8) * 8 + zone % 8
+            expected = original * 50
+            assert distances[zone] == (65535 if original == invalid else expected)
+            assert encoded[zone] == (255 if original == invalid else (expected*254+2000)//4000)
+    print('PASS: real acquisition loop vertically flips all 64 zones and validity, matching BLE and display distances')
     valid = [1, 0, 0, 120, 1, 0xf8, 0]
     assert send(valid) == 0x81, 'Drawing before initialization'
     m.task_step()
     assert m.wait == 0xffffffff
-    assert any(c[0] == 'GC9A01_DrawText' for c in m.calls)
+    assert [text for x,y,text in m.texts] == ['NatiLab', '1.0', m.texts[-1][2]]
+    identity = m.texts[-1][2]
+    assert len(identity) == 6 and identity.isdigit()
+    assert m.texts[0][1] < m.texts[1][1] < m.texts[2][1]
+    m.call('Test_DeviceName', address + 2048)
+    name = bytes(m.uc.mem_read(address + 2048, 12)).split(b'\0')[0].decode()
+    assert name == 'NL' + identity and len(name) == 8
+    assert 3 + 2 + len(name) + 18 == 31, 'Advertising name and service must fit'
+    m.uc.mem_write(m.symbols['test_uid'], struct.pack('<3I', 111, 222, 333))
+    m.call('Test_DeviceName', address + 2048)
+    assert bytes(m.uc.mem_read(address + 2048, 8)).decode() != name
+    m.uc.mem_write(m.symbols['test_uid'], struct.pack('<3I', 0x12345678,0x23456789,0x34567890))
+    assert send(valid) == 0x81, 'Disconnected panel must keep its identity view'
+    m.call('Display_SetBleConnected', 1)
     m.calls.clear()
     m.task_step()
     assert not m.calls, 'Idle task redraws the panel'
@@ -267,7 +316,7 @@ def verify(elf, output):
     m.task_step()
     assert send(raw) == 0
     # Run the real depth renderer: 64 borrowed uint16 distances, no framebuffer.
-    values = [0, 4400, 8800, 65535, 9000] + [2200] * 59
+    values = [0, 2000, 4000, 65535, 4500] + [1000] * 59
     m.uc.mem_write(address + 512, struct.pack('<64H', *values))
     m.call('Display_SetDepthEnabled', 1)
     assert send(raw) == 0x81, 'Remote drawing must not overwrite depth mode'
@@ -317,7 +366,65 @@ def verify(elf, output):
     print('PASS: real TOF mode state, invalid mode rejection, unsubscribe/disconnect ownership release')
     m.call('Display_WriteControlPin', 0x1234, 4, 0)
     assert send(raw) == 0x81
+    m.texts.clear()
+    m.calls.clear()
+    m.call('Display_SetBleConnected', 0)
+    assert not m.calls, 'BLE disconnect callback must not do SPI work'
+    assert send(raw) == 0x81
+    assert m.call('Display_ShowStored', address) == 0x81
+    m.task_step()
+    assert [text for x,y,text in m.texts] == ['NatiLab', '1.0', identity]
+    m.calls.clear()
+    m.task_step()
+    assert not m.calls, 'Disconnected screen must not redraw continuously'
+    m.call('Display_SetBleConnected', 1)
+    assert send(raw) == 0
+    # Rapid disconnect/reconnect still completes the queued welcome first.
+    m.call('Display_SetBleConnected', 0)
+    m.call('Display_SetBleConnected', 1)
+    assert send(raw) == 0x81
+    m.task_step()
+    assert send(raw) == 0
+    print('PASS: stable six-digit identity, GAP name fit, startup text, deferred disconnect welcome, reconnect drawing')
     print('PASS: one-shot startup, idle, rectangle/row boundaries, exact lengths, maximum packet, stop/start, GPIO ownership, SPI failure and recovery')
+
+
+def tof_acquisition_stub():
+    # Compile the actual acquisition loop and conversion functions, with only
+    # the sensor result replaced by a deterministic synthetic 8x8 frame.
+    source = (APP / 'VL53L8CX/vl53l8cx_task.c').read_text()
+    def block(start):
+        left = source.index('{', start)
+        depth = 1
+        right = left + 1
+        while depth:
+            depth += (source[right] == '{') - (source[right] == '}')
+            right += 1
+        return source[left:right]
+    helpers = ''
+    for signature in ['static uint8_t vl53l8cx_IsDistanceValid(', 'static uint8_t vl53l8cx_EncodeDistance(']:
+        start = source.rindex(signature)
+        helpers += source[start:source.index('{', start)] + block(start) + '\n'
+    loop = block(source.index('for (zone = 0U; zone < VL53L8CX_ZONE_COUNT; zone++)'))
+    return r"""
+#define VL53L8CX_ZONE_COUNT 64U
+#define VL53L8CX_DISTANCE_INVALID_MM 65535U
+#define VL53L8CX_BLE_DISTANCE_INVALID 255U
+#define VL53L8CX_BLE_DISTANCE_MAX_VALID 254U
+typedef struct { uint32_t NumberOfTargets, Status[1], Distance[1]; } VL53L8CX_ZoneResult_t;
+""" + helpers + r"""
+void Test_TofAcquisition(uint16_t *distance_mm, uint8_t *ble_payload, uint32_t invalid) {
+    struct { uint32_t NumberOfZones; VL53L8CX_ZoneResult_t ZoneResult[64]; } s_vl53l8cxResult;
+    s_vl53l8cxResult.NumberOfZones = 64;
+    for (uint32_t i=0; i<64; ++i) {
+        s_vl53l8cxResult.ZoneResult[i].NumberOfTargets = 1;
+        s_vl53l8cxResult.ZoneResult[i].Status[0] = i == invalid ? 1 : 0;
+        s_vl53l8cxResult.ZoneResult[i].Distance[0] = i * 50;
+    }
+    uint8_t zone;
+    uint16_t ble_distance_min_mm = 0, ble_distance_max_mm = 4000;
+    for (zone=0; zone<64; ++zone)
+""" + loop + '\n}\n'
 
 
 def main():
@@ -329,6 +436,8 @@ def main():
         tmp = Path(tmp)
         for name, content in STUBS.items():
             (tmp / name).write_text(content)
+        with (tmp / 'stubs.c').open('a') as f:
+            f.write(tof_acquisition_stub())
         elf = tmp / 'display.elf'
         subprocess.run([args.cc, '-mcpu=cortex-m3', '-mthumb', '-O1', '-g', '-ffreestanding', '-nostdlib',
                         '-I' + str(tmp), '-I' + str(APP), '-I' + str(ROOT / 'STM32_WPAN/App'), '-I' + str(ROOT / 'Utilities/Fonts'),

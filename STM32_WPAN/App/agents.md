@@ -65,3 +65,10 @@ OTA_APP_Init must never erase the download slot: that region also stores images.
 Erasure belongs only to an accepted OTA upload after ImageStore_ClaimOTA, or
 the bootloader installation/recovery paths. Test image persistence across a real
 board reset after changing OTA initialization or generated startup code.
+
+
+Advertising identity: ADV_NAME_PREFIX plus six UID-derived digits (8-byte full
+name). DeviceIdentity_Format must initialize GAP name before GAP setup; advertising
+copies that same name. Keep the 31-byte name + NUS UUID + stack Flags assertion. Forward both
+successful connection-event types and matching disconnect to Display_SetBleConnected;
+this callback-safe function only schedules work. Never draw in BLE event context.

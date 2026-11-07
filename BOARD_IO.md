@@ -164,3 +164,25 @@ mux DMA with this pin map. SPI waveforms, TOF interrupt edges and analog scaling
 still need physical instruments or known external stimuli for electrical validation.
 
 OE correction from supplied schematic: PA9 drives Q6 gate. PA9=1 enables PCA outputs; PA9=0 disables them. Earlier active-low references describe the PCA pin, not MCU PA9.
+
+
+## Battery voltage calibration
+
+Battery gain calibration is implemented in `battery_calibration.h`:
+`mV = (RAW * 7830 + 1556) / 3112` using integer division (nearest mV).
+This is the supplied one-point calibration, assuming zero offset; RAW 3112
+maps exactly to 7830 mV. It is applied after the existing weighted ADC window.
+No changes to sampling, DMA, current-channel scaling, or ADC_READ diagnostics.
+
+ADC service b0 / characteristic b1 now publishes v2 (10 bytes): byte 0 = 2,
+byte 1 = validity BAT/ADC1/ADC2, bytes 2..7 = original RAW uint16 LE values,
+bytes 8..9 = battery mV uint16 LE. The battery validity bit also gates mV;
+invalid/idle mV is zero with its validity bit clear. Current fields remain RAW.
+The new Web decodes both v1 and v2, displays firmware mV for v2 and explicitly
+labels v1 battery readings RAW. Deploy the accompanying Web changes with FW:
+old Web only accepts v1. No extra calibration characteristic or Flash storage.
+
+ARM checks verify the conversion including 3112 -> 7830, rounding and 12-bit
+boundaries. Web decode checks cover v1/v2, validity, frame lengths and offsets.
+FW and Web production builds passed; this calibration has not been flashed or
+verified against a new physical voltage measurement.

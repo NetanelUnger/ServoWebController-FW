@@ -1,5 +1,6 @@
 #include "adc_ble.h"
 #include "adc_dma.h"
+#include "battery_calibration.h"
 #include "app_conf.h"
 #include "cmsis_os2.h"
 #include "ble_types.h"
@@ -49,7 +50,7 @@ void ADC_BLE_Init(void)
     Char_UUID_t uuid;
     const uint8_t base[16] = {0x59,0x2f,0xa4,0x9f,0xde,0x4e,0x2b,0xaa,
                               0x26,0x42,0x50,0xb9,0xb0,0xd4,0xba,0x91};
-    const uint8_t empty[ADC_BLE_RAW_LENGTH] = {1,0,0,0,0,0,0,0};
+    const uint8_t empty[ADC_BLE_RAW_LENGTH] = {2,0,0,0,0,0,0,0,0,0};
     available = streaming = 0;
     for (unsigned i = 0; i < CFG_BLE_NUM_LINK; ++i) subscribers[i] = 0xffff;
     SVCCTL_RegisterSvcHandler(event_handler);
@@ -79,7 +80,7 @@ uint8_t ADC_BLE_Enabled(void)
 
 void ADC_BLE_Step(void)
 {
-    uint8_t payload[ADC_BLE_RAW_LENGTH] = {1,0,0,0,0,0,0,0};
+    uint8_t payload[ADC_BLE_RAW_LENGTH] = {2,0,0,0,0,0,0,0,0,0};
     uint32_t now = osKernelGetTickCount();
     uint32_t interval = (osKernelGetTickFreq() * ADC_BLE_INTERVAL_MS + 999U) / 1000U;
     if ((uint32_t)(now - last_sample) < interval) return;
@@ -100,6 +101,11 @@ void ADC_BLE_Step(void)
     for (unsigned i = 0; i < 3; ++i) {
         payload[2 + 2*i] = (uint8_t)values[i];
         payload[3 + 2*i] = (uint8_t)(values[i] >> 8);
+    }
+    if (valid & 1U) {
+        uint16_t battery_mv = Battery_Millivolts(values[0]);
+        payload[8] = (uint8_t)battery_mv;
+        payload[9] = (uint8_t)(battery_mv >> 8);
     }
     /* On transport congestion, drop this frame and publish the next fresh one. */
     (void)aci_gatt_update_char_value(service, raw_char, 0, sizeof(payload), payload);

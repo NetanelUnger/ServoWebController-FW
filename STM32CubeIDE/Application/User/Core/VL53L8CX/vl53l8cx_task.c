@@ -126,13 +126,17 @@ void vl53l8cx_Task(void)
 
         for (zone = 0U; zone < VL53L8CX_ZONE_COUNT; zone++)
         {
+            /* Normalize once at acquisition: (row,col) <- (7-row,col).
+             * XOR flips only the three row bits; no extra buffer or pass.
+             * Both BLE encoding and local display consume this orientation. */
+            const uint8_t source_zone = zone ^ 56U;
             ble_payload[zone] = VL53L8CX_BLE_DISTANCE_INVALID;
             distance_mm[zone] = VL53L8CX_DISTANCE_INVALID_MM;
 
-            if ((zone < s_vl53l8cxResult.NumberOfZones) &&
-                (vl53l8cx_IsDistanceValid(&s_vl53l8cxResult.ZoneResult[zone]) != 0U))
+            if ((source_zone < s_vl53l8cxResult.NumberOfZones) &&
+                (vl53l8cx_IsDistanceValid(&s_vl53l8cxResult.ZoneResult[source_zone]) != 0U))
             {
-                uint32_t zone_distance = s_vl53l8cxResult.ZoneResult[zone].Distance[0];
+                uint32_t zone_distance = s_vl53l8cxResult.ZoneResult[source_zone].Distance[0];
 
                 if (zone_distance > (uint32_t)UINT16_MAX)
                 {
