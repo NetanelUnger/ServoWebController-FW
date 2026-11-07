@@ -192,7 +192,7 @@
  *  - 2, if extended properties is used
  *  The total amount of memory needed is the sum of the above quantities for each attribute.
  */
-#define CFG_BLE_ATT_VALUE_ARRAY_SIZE  (2560)
+#define CFG_BLE_ATT_VALUE_ARRAY_SIZE  (2576)
 
 /**
  * Maximum numbers of bearers that can be created for Enhanced ATT per ACL links

@@ -23,6 +23,8 @@ void Display_Task(void *argument);
 void Display_SetDepthEnabled(uint8_t enabled);
 uint8_t Display_DrawDepthMap(const uint16_t *distance_mm);
 uint8_t Display_ShowStored(const uint8_t *pixels);
+uint8_t Display_ShowFile(const uint8_t *pixels, uint32_t length, uint8_t type,
+                         uint8_t layout, uint16_t width, uint16_t height);
 uint8_t Display_WritePacket(const uint8_t *packet, uint16_t length);
 
 /* Board diagnostics only: pause under the display lock before writing CS/DC/RST.

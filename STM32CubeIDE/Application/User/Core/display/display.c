@@ -178,13 +178,37 @@ uint8_t Display_WritePacket(const uint8_t *p, uint16_t length)
 
 uint8_t Display_ShowStored(const uint8_t *pixels)
 {
+    return Display_ShowFile(pixels, IMAGE_STORE_BYTES, 1, 1, 240, 240);
+}
+
+uint8_t Display_ShowFile(const uint8_t *pixels, uint32_t length, uint8_t type,
+                         uint8_t layout, uint16_t width, uint16_t height)
+{
+    static uint8_t converted[480]; /* One RGB565 row, protected by displayMutex. */
+    if (!pixels || !width || !height || width>240 || height>240 || layout>1 ||
+        (type!=1 && type!=2) || (layout==1 && (width!=240 || height!=240)) ||
+        length!=(layout==1?IMAGE_STORE_BYTES/2U:(uint32_t)width*height)*(type==1?2U:1U)) return 0x80;
+    if(displayMutexHandle==NULL) return 0x81;
     if(osMutexAcquire(displayMutexHandle,0U)!=osOK) return 0x81;
     if(!ble_connected || welcome_requested || depth_enabled || !running || needs_init || g_display_boot_status!=HAL_OK) {osMutexRelease(displayMutexHandle);return 0x81;}
     HAL_StatusTypeDef status=HAL_OK;
     GC9A01_SetTransferTimeout(100U);
-    for(uint16_t y=0;y<240 && status==HAL_OK;y++) {
-        uint16_t x=ImageStore_RowLeft(y), width=240U-2U*x;
-        status=GC9A01_BlitWire(x,y,width,1,pixels);pixels+=2U*width;
+    /* Small rectangles are centred; clear stale pixels outside the image. */
+    if(layout==0 && (width<240 || height<240)) status=GC9A01_FillRect(0,0,240,240,GC9A01_WHITE);
+    for(uint16_t y=0;y<height && status==HAL_OK;y++) {
+        uint16_t x=layout==1?ImageStore_RowLeft(y):(240U-width)/2U;
+        uint16_t span=layout==1?240U-2U*x:width;
+        const uint8_t *wire=pixels;
+        if(type==2) {
+            for(uint16_t i=0;i<span;i++) {
+                uint8_t c=pixels[i],r=c>>5,g=(c>>2)&7,b=c&3;
+                uint16_t v=(((r<<2)|(r>>1))<<11)|(((g<<3)|g)<<5)|((b<<3)|(b<<1)|(b>>1));
+                converted[2*i]=v>>8;converted[2*i+1]=v;
+            }
+            wire=converted;
+        }
+        status=GC9A01_BlitWire(x,y+(layout==0?(240U-height)/2U:0),span,1,wire);
+        pixels+=(type==1?2U:1U)*span;
     }
     GC9A01_SetTransferTimeout(1000U);
     g_display_frame_status=status;if(status==HAL_OK) ++g_display_frame_count;
@@ -218,6 +242,9 @@ void Display_SetBleConnected(uint8_t c) { UNUSED(c); }
 void Display_SetDepthEnabled(uint8_t e) { UNUSED(e); }
 uint8_t Display_DrawDepthMap(const uint16_t *p) { UNUSED(p); return 0x83U; }
 uint8_t Display_ShowStored(const uint8_t *p) { UNUSED(p); return 0x83U; }
+uint8_t Display_ShowFile(const uint8_t *p,uint32_t n,uint8_t t,uint8_t l,uint16_t w,uint16_t h) {
+    UNUSED(p);UNUSED(n);UNUSED(t);UNUSED(l);UNUSED(w);UNUSED(h);return 0x83U;
+}
 uint8_t Display_WritePacket(const uint8_t *p, uint16_t n) { UNUSED(p); UNUSED(n); return 0x83U; }
 osStatus_t Display_Start(void) { return osErrorResource; }
 osStatus_t Display_Stop(void) { return osOK; }

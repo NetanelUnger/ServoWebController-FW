@@ -55,11 +55,12 @@ chunking and size-rejection fallback. The first display write per connection
 requests a 7.5-15 ms interval and 251-byte data length; central acceptance is
 not guaranteed. Preserve acknowledged drawing and the borrowed-buffer lifetime.
 
-Image cache service d0/d1/d2/d3 lives in image_service.c. The display worker owns
-image_store.c Flash jobs; BLE callbacks only copy one bounded request and return.
+File storage service d0/d1/d2/d3 lives in image_service.c. The display worker owns
+image_store.c / file_store.inc Flash jobs; BLE callbacks only copy one bounded request and return.
 Never bypass ImageStore_ClaimOTA before firmware-slot erasure. Status READ is
 polled for durable completion; ATT write acceptance alone is not success.
-See display/README.md for the exact memory map, wire layout and OTA constraints.
+See display/FILE_STORE.md for the v2 map, protocol, recovery and legacy migration;
+display/README.md retains the v1 protocol. OTA must invalidate both v2 catalogs.
 
 OTA_APP_Init must never erase the download slot: that region also stores images.
 Erasure belongs only to an accepted OTA upload after ImageStore_ClaimOTA, or

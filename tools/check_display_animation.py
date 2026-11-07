@@ -191,6 +191,10 @@ class Machine:
                 self.texts.append((a[0], a[1], text.decode()))
             if name == 'GC9A01_BlitWire':
                 self.wire_pointer = struct.unpack('<I', uc.mem_read(uc.reg_read(UC_ARM_REG_SP), 4))[0]
+                x,y,w,h=a
+                assert 0<w<=240-x and 0<h<=240-y
+                values=struct.unpack(f'>{w*h}H',uc.mem_read(self.wire_pointer,w*h*2))
+                patch=Image.new('RGB',(w,h));patch.putdata([rgb565(c) for c in values]);self.image.paste(patch,(x,y))
             if name in ('GC9A01_FillRect', 'GC9A01_BlitRGB565'):
                 x, y, w, h = a
                 assert 0 < w <= 240 - x and 0 < h <= 240 - y, 'Out-of-panel write'
@@ -209,6 +213,8 @@ class Machine:
         self.uc.reg_write(UC_ARM_REG_LR, self.STOP | 1)
         for reg, arg in zip([UC_ARM_REG_R0, UC_ARM_REG_R1, UC_ARM_REG_R2, UC_ARM_REG_R3], args):
             self.uc.reg_write(reg, arg)
+        for index,arg in enumerate(args[4:]):
+            self.uc.mem_write(0x2001e000+4*index,struct.pack('<I',arg))
         self.uc.emu_start(self.symbols[name] | 1, self.STOP + 2, count=8000000)
         assert self.uc.reg_read(UC_ARM_REG_PC) == self.STOP, f'{name} did not return'
         return self.uc.reg_read(UC_ARM_REG_R0)
@@ -276,6 +282,19 @@ def verify(elf, output):
     assert not m.calls, 'Idle task redraws the panel'
     assert send(valid) == 0
     assert m.calls[-1][0] == 'GC9A01_FillRect'
+    # Exercise the actual RGB332 renderer against every possible colour.
+    m.uc.mem_write(address,bytes(range(256)))
+    assert m.call('Display_ShowFile',address,256,2,0,16,16)==0
+    for c in range(256):
+        expected=(round((c>>5)*31/7)<<11)|(((c>>2)&7)*9<<5)|round((c&3)*31/3)
+        assert m.image.getpixel((112+c%16,112+c//16))==rgb565(expected)
+    assert m.image.getpixel((111,112))==(255,255,255)
+    m.uc.mem_write(address,b'\xf8\x00\x07\xe0')
+    assert m.call('Display_ShowFile',address,4,1,0,2,1)==0
+    assert m.image.getpixel((119,119))==(255,0,0) and m.image.getpixel((120,119))==(0,255,0)
+    assert m.call('Display_ShowFile',address,3,1,0,2,1)==0x80
+    assert m.call('Display_ShowFile',address,4,2,1,2,2)==0x80
+    print('PASS: all 256 RGB332 colours, RGB565 byte order, rectangular centring and invalid file bounds')
     assert send([1,0,0,240,240,0xff,0xff]) == 0
     assert m.calls[-1] == ('GC9A01_FillRect', [0, 0, 240, 240])
     raw = [2, 239, 239, 1, 1, 0x07, 0xe0]

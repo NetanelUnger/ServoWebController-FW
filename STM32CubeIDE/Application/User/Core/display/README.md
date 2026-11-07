@@ -1,5 +1,10 @@
 # GC9A01 display and BLE protocol v1
 
+Device storage now supports [the sequential v2 file store](FILE_STORE.md), including
+RGB565/RGB332, variable dimensions, recovery and legacy export. The persistent
+image-cache section below documents the retained **legacy v1** disk/wire format.
+The live drawing protocol remains v1; file storage has its own version discovery.
+
 240x240 RGB565 display. Startup draws NatiLab, version and the six-digit device
 identifier using Font24, then sleeps until work or a connection event arrives. The existing face animation sources are no
 longer referenced by the application and their assets are removed by linker GC.

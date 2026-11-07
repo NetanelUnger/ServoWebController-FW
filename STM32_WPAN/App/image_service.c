@@ -45,7 +45,7 @@ void IMAGE_SERVICE_Init(void) {
     tBleStatus s=aci_gatt_add_service(UUID_TYPE_128,(Service_UUID_t *)&uuid,PRIMARY_SERVICE,7,&service);
     if(s) goto fail;
     uuid.Char_UUID_128[12]=0xd1;
-    s=aci_gatt_add_char(service,UUID_TYPE_128,&uuid,12,CHAR_PROP_WRITE,ATTR_PERMISSION_NONE,GATT_NOTIFY_WRITE_REQ_AND_WAIT_FOR_APPL_RESP,0x10,CHAR_VALUE_LEN_VARIABLE,&command);
+    s=aci_gatt_add_char(service,UUID_TYPE_128,&uuid,20,CHAR_PROP_WRITE,ATTR_PERMISSION_NONE,GATT_NOTIFY_WRITE_REQ_AND_WAIT_FOR_APPL_RESP,0x10,CHAR_VALUE_LEN_VARIABLE,&command);
     if(s) goto fail;
     uuid.Char_UUID_128[12]=0xd2;
     s=aci_gatt_add_char(service,UUID_TYPE_128,&uuid,228,CHAR_PROP_WRITE,ATTR_PERMISSION_NONE,GATT_NOTIFY_WRITE_REQ_AND_WAIT_FOR_APPL_RESP,0x10,CHAR_VALUE_LEN_VARIABLE,&data_char);

@@ -50,6 +50,7 @@ void *memset(void *d,int v,size_t n){uint8_t *a=d;while(n--)*a++=v;return d;}
 uint32_t osThreadFlagsSet(void *t,uint32_t v){return v;}
 void osDelay(uint32_t t){}
 uint8_t Display_ShowStored(const uint8_t *p){shows++;return 0;}
+uint8_t Display_ShowFile(const uint8_t *p,uint32_t n,uint8_t t,uint8_t l,uint16_t w,uint16_t h){shows++;return 0;}
 FM_Cmd_Status_t FM_Write(uint32_t *s,uint32_t *d,int32_t words,FM_CallbackNode_t *cb){
  if(busy_next){busy_next=0;cb->Callback(FM_OPERATION_AVAILABLE);return FM_BUSY;}
  if(fail_next){fail_next=0;return FM_ERROR;}
