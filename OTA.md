@@ -294,3 +294,31 @@ establish electrical power-loss reliability.
 - This continuation did not rerun Node tests: automatic approval review rejected
   that command as outside its interpretation of the explicit override. Earlier
   successful host/Web test results are recorded above, not new results.
+
+
+### Global BLE performance and browser validation, 2026-11-12
+
+The user subsequently explicitly authorized build_ota.bat, firmware builds and all
+required C/Python/Node tests. The known-working .2 firmware and Web baseline were
+committed/pushed before performance changes (FW 0eb4bba, Web 085edfe).
+
+The shared link policy in BLE_TRANSPORT.md now requests 15 ms / zero latency,
+251-byte data length and 2M PHY for every connection. Flash Manager/RF arbitration,
+one-at-a-time admission, durable status polling, CRC and commit rules are unchanged.
+
+Final package: NatiLab-1.1.0-ota.3-8B6C6DD5.ota.bin, 352816 image bytes (352880
+container bytes), SHA256 053c5c15fc22d9a797b9c0d67ae7ad31132cd567c467eed6013af37c7a4b6404.
+The actual browser UI uploaded it in 96.15 s through 100%, including preparation,
+then verified CRC and rebooted. After reconnect, Verify installed firmware showed:
+
+```text
+OK VERSION 1.1.0-ota.3 IMAGE=8B6C6DD5 SIZE=352816 OTA=2
+```
+
+The assistant directly observed the page's successful verification. The previous
+active image was B19B537E / 352720 bytes, so this was a different-image installation.
+An earlier same-image full upload took 95.61 s through 100%; both runs passed.
+A separate production-client AbortSignal test cancelled after 32928 durable bytes
+and confirmed the active VERSION stayed unchanged. Physical power interruption
+remains untested; the 372 power-cut boundaries passed only in host simulation.
+See BLE_TRANSPORT.md for timing comparisons, reconnect/PHY recovery and test details.

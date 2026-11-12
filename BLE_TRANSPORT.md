@@ -126,3 +126,55 @@ captured. Counters survive reconnection and reset only with firmware restart.
 `tools/check_ble_transport_hardware.py` checks actual callback receipt, non-notifying
 reads, traffic load, subscription switching, reconnect and heap/stack behavior.
 Neither host tests nor ST completion alone prove remote receipt or physical motion.
+
+## Shared connection performance policy
+
+`STM32_WPAN/App/ble_link.c` applies to every connection, independently of display
+writes. Successful legacy and enhanced connection events schedule tuning; the
+HCI event task owns the static eight-link state and all requests. It sleeps until
+an event or the next request deadline, and waits indefinitely after tuning ends.
+No new task, heap allocation, polling loop or service-specific connection owner.
+
+After one second, slow peripheral links request a 15 ms interval, latency zero
+and a four-second supervision timeout. Already fast zero-latency links are kept;
+central-role connections skip the peripheral-only L2CAP request. Subsequent
+one-second-spaced requests ask for 251-byte link-layer data and 2M PHY. Rejected
+submissions get at most three attempts each. A PHY completion reporting LL
+procedure collision (0x23/0x2A) can schedule at most two further requests, one
+second apart. Unsupported PHY and the peer's successful negotiation stand. Unsupported 2M falls back through the
+BLE stack. Disconnect cancels pending requests, including handle reuse.
+
+UART logs show request status and negotiated interval/data length/PHY. These
+preferences do not change the ATT MTU, telemetry rates, TX queues or OTA/file
+durability protocol. Flash Manager and RF timing arbitration remain enabled.
+`python tools/check_ble_link.py` tests production C scheduling, bounded failures,
+reconnects, all eight links, central roles and millisecond counter wrap.
+
+### Measured on NL802915 / Windows Chrome, 2026-11-12
+
+Thirty sequential OTA status reads through the real Web bridge averaged 119.40 ms
+on the saved 1.1.0-ota.2 baseline, 59.26 ms with the intermediate 30 ms policy, and
+30.12 ms on the final 1.1.0-ota.3 / 8B6C6DD5 firmware. Final servo, ADC and file
+status reads averaged 31.51 / 30.50 / 29.99 ms (30 reads each). This is about four
+times the baseline read throughput on this host, not a guarantee for other peers.
+
+The final browser OTA transferred 352816 bytes in 95.52 s (3691 B/s); preparation
+through 100% took 96.15 s. CRC verification and reboot followed, then the real
+page's Verify button matched VERSION/size/CRC. The source image was B19B537E;
+the installed image was 8B6C6DD5, so this run exercised bootloader copying too.
+UART confirmed 15 ms, latency zero, 251-byte data length and 2M TX/RX. After reboot,
+a real PHY 0x2A collision was followed by the bounded retry and successful 2M.
+
+Fifty PING replies alongside servo/ADC telemetry passed on the first 15 ms build;
+BLE_STATS reported zero rejection, timeout and error counters. The 30 ms Flash
+probe cancelled after 32928 durable bytes and confirmed unchanged active VERSION.
+Raw local records: artifacts/hardware/ble-performance.json and
+artifacts/hardware/ble-performance-uart.log (ignored build/test artifacts).
+
+Validation: firmware build/layout checks, production link-policy/dispatcher C
+regression tests (including empty timer wake and PHY collisions), 59 eight-link
+transport scenarios, and the OTA receiver/boot tests with 372 simulated power-cut
+boundaries passed. Physical power cuts were not performed. Web build and 48 Node
+tests passed; the final package also passed the eight OTA tests. Targeted ESLint
+still reports three existing React provider errors (set-state-in-effect and
+only-export-components), outside the packet logging edits.

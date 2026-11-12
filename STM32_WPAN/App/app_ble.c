@@ -53,6 +53,7 @@
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
 #include "config.h"
+#include "ble_link.h"
 #include "device_identity.h"
 #include "display/display.h"
 #include "app_freertos.h"
@@ -335,6 +336,7 @@ void UpdDIS();
 void APP_BLE_Init(void)
 {
   /* USER CODE BEGIN APP_BLE_Init_1 */
+  BLE_LinkInit();
   DeviceIdentity_Format(a_GapDeviceName + sizeof(ADV_NAME_PREFIX) - 1U);
 
   /* USER CODE END APP_BLE_Init_1 */
@@ -624,6 +626,7 @@ SVCCTL_UserEvtFlowStatus_t SVCCTL_App_Notification(void *p_Pckt)
       gap_cmd_resp_release();
 
       /* USER CODE BEGIN EVT_DISCONN_COMPLETE_1 */
+      BLE_LinkDisconnected(p_disconnection_complete_event->Connection_Handle);
       ADC_BLE_Disconnected(p_disconnection_complete_event->Connection_Handle);
 
       /* USER CODE END EVT_DISCONN_COMPLETE_1 */
@@ -700,6 +703,10 @@ SVCCTL_UserEvtFlowStatus_t SVCCTL_App_Notification(void *p_Pckt)
           gap_cmd_resp_release();
 
           /* USER CODE BEGIN EVT_LE_PHY_UPDATE_COMPLETE */
+          BLE_LinkPhyComplete(p_le_phy_update_complete->Connection_Handle,
+                              p_le_phy_update_complete->Status, HAL_GetTick());
+          LOG_INFO_BLE("Link PHY: status=0x%02X TX=%u RX=%u\n", p_le_phy_update_complete->Status,
+                       p_le_phy_update_complete->TX_PHY, p_le_phy_update_complete->RX_PHY);
 
           /* USER CODE END EVT_LE_PHY_UPDATE_COMPLETE */
           break;
@@ -754,6 +761,8 @@ SVCCTL_UserEvtFlowStatus_t SVCCTL_App_Notification(void *p_Pckt)
           TOF_APP_EvtRx(&TOFHandleNotification);
           DIS_APP_EvtRx(&DISHandleNotification);
           /* USER CODE BEGIN HCI_EVT_LE_ENHANCED_CONN_COMPLETE */
+          BLE_LinkConnected(p_enhanced_conn_complete->Connection_Handle, p_enhanced_conn_complete->Role,
+                            p_enhanced_conn_complete->Conn_Interval, p_enhanced_conn_complete->Conn_Latency, HAL_GetTick());
           OTAHandleNotification.EvtOpcode = OTA_CONN_HANDLE_EVT;
           OTAHandleNotification.ConnectionHandle = p_enhanced_conn_complete->Connection_Handle;
           OTA_APP_EvtRx(&OTAHandleNotification);
@@ -811,6 +820,8 @@ SVCCTL_UserEvtFlowStatus_t SVCCTL_App_Notification(void *p_Pckt)
           TOF_APP_EvtRx(&TOFHandleNotification);
           DIS_APP_EvtRx(&DISHandleNotification);
           /* USER CODE BEGIN HCI_EVT_LE_CONN_COMPLETE */
+          BLE_LinkConnected(p_conn_complete->Connection_Handle, p_conn_complete->Role,
+                            p_conn_complete->Conn_Interval, p_conn_complete->Conn_Latency, HAL_GetTick());
           OTAHandleNotification.EvtOpcode = OTA_CONN_HANDLE_EVT;
           OTAHandleNotification.ConnectionHandle = p_conn_complete->Connection_Handle;
           OTA_APP_EvtRx(&OTAHandleNotification);
@@ -819,6 +830,14 @@ SVCCTL_UserEvtFlowStatus_t SVCCTL_App_Notification(void *p_Pckt)
           break; /* HCI_LE_CONNECTION_COMPLETE_SUBEVT_CODE */
         }
         /* USER CODE BEGIN SUBEVENT */
+        case HCI_LE_DATA_LENGTH_CHANGE_SUBEVT_CODE:
+        {
+          hci_le_data_length_change_event_rp0 *length = (void *)p_meta_evt->data;
+          LOG_INFO_BLE("Link 0x%04X data length: TX=%u RX=%u\n", length->Connection_Handle,
+                       length->MaxTxOctets, length->MaxRxOctets);
+          UNUSED(length);
+          break;
+        }
 
         /* USER CODE END SUBEVENT */
         default:
@@ -2199,8 +2218,16 @@ static void HciAsyncEvt_Task_Entry(void* argument)
 
   while(1)
   {
-    osSemaphoreAcquire(HciAsyncEvtSemaphore, osWaitForever);
-    Ble_UserEvtRx();
+    /* USER CODE BEGIN HciAsyncEvt_LinkPolicy */
+    uint32_t wait = BLE_LinkWaitMs(HAL_GetTick());
+    if (wait != UINT32_MAX && wait != 0U) {
+      wait = pdMS_TO_TICKS(wait);
+      if (wait == 0U) wait = 1U;
+    }
+    /* A deadline wake has no event packet to dequeue. */
+    if (osSemaphoreAcquire(HciAsyncEvtSemaphore, wait) == osOK) Ble_UserEvtRx();
+    BLE_LinkStep(HAL_GetTick());
+    /* USER CODE END HciAsyncEvt_LinkPolicy */
   }
 }
 

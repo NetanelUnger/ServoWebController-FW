@@ -7,6 +7,7 @@ This folder owns BLE service definitions and STM32 WPAN application glue. It mix
 - `app_ble.c/.h`: BLE stack app setup, advertising data, connection/disconnection events, and service initialization.
 - `nus.c/.h`: Nordic UART Service definition.
 - `nus_app.c/.h`: NUS app state, independent servo READ snapshot and telemetry producer, command RX helpers.
+- `ble_link.c/.h`: shared, bounded connection tuning in the HCI dispatcher; see `BLE_TRANSPORT.md`.
 - `ble_tx.c/.h`: static, event-driven owner for every application notification and indication; see root `BLE_TRANSPORT.md`.
 - `tof.c/.h`: custom TOF BLE service definition and distance-map characteristic.
 - `tof_app.c/.h`: TOF app state, notification enable state, and distance-map notification helper.
@@ -52,9 +53,10 @@ For a new characteristic:
 write path borrows the event buffer only until callback return. Use ordinary writes
 with response; do not queue the pointer. Contract and Web integration:
 `STM32CubeIDE/Application/User/Core/display/README.md`. Web helpers own packet
-chunking and size-rejection fallback. The first display write per connection
-requests a 7.5-15 ms interval and 251-byte data length; central acceptance is
-not guaranteed. Preserve acknowledged drawing and the borrowed-buffer lifetime.
+chunking and size-rejection fallback. The shared `ble_link` policy requests fast
+parameters for every connection, including connections that never draw. Central
+acceptance is not guaranteed. Preserve acknowledged drawing and the borrowed-buffer
+lifetime.
 
 File storage service d0/d1/d2/d3 lives in image_service.c. The display worker owns
 image_store.c / file_store.inc Flash jobs; BLE callbacks only copy one bounded request and return.

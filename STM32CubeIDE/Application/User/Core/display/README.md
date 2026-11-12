@@ -180,11 +180,11 @@ disconnect the browser first. The test draws patterns but does not move servos.
 ## Link throughput (2026-11-05)
 
 Command remains WRITE with an application response after SPI completes. There
-is no characteristic "fast" flag. On the first valid-handle write per connection,
-the service requests a 7.5-15 ms interval, zero peripheral latency, 4 s supervision
-timeout and 251-byte link-layer data length. These requests are advisory; the
-central determines the actual link settings. Existing PHY preference is 2M.
-A reconnect clears the request guard. Pixel payloads still go directly to SPI,
+is no characteristic "fast" flag. The shared `ble_link` policy now requests a 15 ms interval,
+zero peripheral latency, 4 s supervision timeout, 251-byte data length and 2M PHY
+after connection, for every service. Requests are advisory; the central chooses
+the actual settings. See root `BLE_TRANSPORT.md` for bounded retries and scheduling.
+Pixel payloads still go directly to SPI,
 without a framebuffer. Increasing the client chunk to 122 pixels reduces a full
 raw image to 480 writes; transport response latency still limits throughput.
 
