@@ -1,0 +1,2 @@
+# WinRT dependencies are installed automatically by pip on Windows.
+bleak==3.1.0

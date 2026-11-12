@@ -150,24 +150,25 @@ async def upload(client, info, image, args):
                 pass  # disconnect also invalidates the RAM upload session
 
 
-async def run(args, package):
+async def run(args, package, device=None):
     from bleak import BleakScanner
-    devices = await BleakScanner.discover(timeout=args.scan_seconds, return_adv=True)
+    devices = {} if device is not None else await BleakScanner.discover(timeout=args.scan_seconds, return_adv=True)
     matches = []
-    for device, adv in devices.values():
-        name = adv.local_name or device.name or ''
+    for discovered, adv in devices.values():
+        name = adv.local_name or discovered.name or ''
         if args.scan:
             if NUS in adv.service_uuids or name.startswith('NL'):
-                print(f'{device.address}  {name}  RSSI={adv.rssi}')
-        elif ((args.address and device.address.lower() == args.address.lower()) or
+                print(f'{discovered.address}  {name}  RSSI={adv.rssi}')
+        elif ((args.address and discovered.address.lower() == args.address.lower()) or
               (args.name and name == args.name) or
               (not args.address and not args.name and NUS in adv.service_uuids)):
-            matches.append(device)
+            matches.append(discovered)
     if args.scan:
         return
-    if len(matches) != 1:
-        raise RuntimeError(f'Found {len(matches)} matching devices. Use --scan then --address or --name.')
-    device = matches[0]
+    if device is None:
+        if len(matches) != 1:
+            raise RuntimeError(f'Found {len(matches)} matching devices. Use --scan then --address or --name.')
+        device = matches[0]
     print(f'Connecting: {device.name} ({device.address})', flush=True)
     async with connection(device) as client:
         before = await version(client)

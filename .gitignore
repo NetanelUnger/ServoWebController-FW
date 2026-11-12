@@ -17,4 +17,9 @@ Bootloader/**/STM32CubeIDE/Release/
 # Local OTA builds, device backups, test environments and logs
 /artifacts/
 /.venv-ota/
+/python_ota/.venv/
 __pycache__/
+*.py[cod]
+
+# One-off validation captures (new runs should write under artifacts/)
+/validation-*

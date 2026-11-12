@@ -1,1 +1,0 @@
-{"test":"post_failed_soak_diagnostics","board_reset_since_failure":false,"reconnected":true,"source":"BLE_STATS actual board read after cleanup","fields":{"s":0,"rsv":1,"rx":0,"rx_high":1,"tx":0,"tx_high":1,"rxrej":0,"txrej":0,"sent":6744,"done":6744,"pool":91,"timeout":1,"err":1,"stale":0,"merge":2231,"heap":3376,"min":3376,"stack":3300,"hci":1184,"lag":1}}

@@ -7,7 +7,14 @@ the absolute path and `file:///` URL of the upload file. The file is named
 latest successful package. A failed build returns a nonzero exit code and never
 packages an old application. Logs are beside the package. Set `OTA_NO_PAUSE=1`
 when invoking the BAT from automation. `-CubeIdeRoot <path>` overrides the default
-STM32CubeIDE 2.2.0 installation. Python 3 is required for packaging.
+STM32CubeIDE installation. The BAT now uses the Python workflow under
+[`python_ota/`](python_ota/README.md), discovers CubeIDE automatically, and creates
+an isolated environment with all Python dependencies. Python 3.10+ and CubeIDE
+must be installed first. Double-click `python_ota/update_ota.bat` to select a
+controller and upload the latest package from the laptop; it confirms device-file
+erasure and verifies VERSION, size and CRC after reboot. `python_ota/run.bat`
+provides a menu and installation checks. See the folder's Hebrew guide for CLI
+options, logs and troubleshooting.
 
 Change the version in `Core/Inc/firmware_version.h` before building a release.
 Version and image CRC are separate: changing code without changing the version
@@ -46,8 +53,10 @@ and blocks other writes during an upload. Stored playback is stopped first.
 
 ## Python CLI
 
-The packaging/check-only path uses the Python standard library. Hardware access
-requires Bleak; this workstation already has it under `py -3.13`.
+The packaging/check-only path uses the Python standard library. For automatic
+dependency installation and interactive device selection use the BAT files in
+`python_ota/`. The lower-level CLI below remains available; hardware access
+requires Bleak in the selected Python environment.
 
 ```powershell
 py -3.13 tools/ota_ble.py --scan

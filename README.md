@@ -11,6 +11,11 @@ This project is both a practical embedded system and a learning platform. It dem
 
 ## What It Does
 
+For firmware builds and laptop BLE updates, open [`python_ota/run.bat`](python_ota/run.bat).
+It offers build, upload and environment checks with automatic Python dependency
+installation. Separate `build_ota.bat` and `update_ota.bat` launchers and a Hebrew
+usage guide are available in [`python_ota/`](python_ota/README.md).
+
 - Controls up to 16 servo channels through a PCA9685 I2C PWM driver
 - Accepts BLE commands through a Nordic UART Service style text protocol
 - Supports immediate servo positioning and timed interpolated movement

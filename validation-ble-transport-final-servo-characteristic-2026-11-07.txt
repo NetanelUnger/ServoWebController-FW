@@ -1,2 +1,0 @@
-Servo characteristic read/write/notify, 16 values: (1500, 1500, 1500, 1500, 1500, 1500, 1500, 1500, 1500, 1500, 1500, 1500, 1500, 1500, 1500, 1500)
-PASS: non-notifying servo READ, valid/disabled and malformed writes, HELP, PING, TOF

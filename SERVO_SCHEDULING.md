@@ -122,5 +122,6 @@ source with a fake clock/PCA/store and the exact decimal ID parser; its C cases
 are in `tools/timeline_host_test.c`. `tools/check_file_store.py` adds actual
 storage-C emulation for mixed image/timeline files, CRC, validation and leases.
 These passed on 2026-11-07 after explicit permission. They do not contact hardware.
-See `validation-timeline-verification-2026-11-07.json` for software results and the
-SWD hardware blocker. Physical output timing is still unverified.
+The historical software results and SWD hardware blocker were recorded in
+`validation-timeline-verification-2026-11-07.json`, available in Git history after
+removal of the raw development captures. Physical output timing is still unverified.
