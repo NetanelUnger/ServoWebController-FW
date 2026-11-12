@@ -113,8 +113,26 @@ static void committed_candidate(void) {
     uint32_t *r=(uint32_t *)OTA_COMMIT_ADDRESS;r[0]=OTA_COMMIT_MAGIC;r[1]=sizeof(image);
     r[2]=OTA_Crc32(image,sizeof(image));r[3]=~r[2];
 }
+/* Version labels are opaque application bytes to the receiver and installer.
+ * Exercise upgrade -> downgrade -> identical reinstall -> custom build using
+ * the real admission, Flash verification, commit and boot installation code. */
+static void test_version_choice(void) {
+    const char *versions[]={"9.0.0","1.0.0","1.0.0","custom-dev"};
+    make_image(old_image,0x55);memcpy(old_image+512,"2.0.0",6);
+    for(unsigned i=0;i<sizeof(versions)/sizeof(versions[0]);i++) {
+        make_image(image,0x55);memcpy(image+512,versions[i],strlen(versions[i])+1);
+        setup();begin(OTA_Crc32(image,sizeof(image)));assert(state==READY);
+        send_image();control(0x11);assert(state==VERIFIED);
+        control(0x12);assert(reset_calls==1 && CheckFwAppValidity(64));
+        BootModeCheck();assert(jumped==1 && !CheckFwAppValidity(64));
+        assert(!memcmp((void *)OTA_ACTIVE_ADDRESS,image,sizeof(image)));
+        memcpy(old_image,image,sizeof(image));
+    }
+    puts("PASS version choice: upgrade, downgrade, same-image reinstall and custom build");
+}
 int main(void) {
     assert(VirtualAlloc(flash,0x100000,MEM_COMMIT|MEM_RESERVE,PAGE_READWRITE)==flash);
+    test_version_choice();
     make_image(image,0x55);make_image(old_image,0xaa);
     setup();assert(init_calls==1 && erase_calls==0);assert(OTA_ImageValid(image,sizeof(image)));
     for(unsigned pidx=0;pidx<256;pidx++) if(pidx!=3 && pidx!=64) assert(!CheckFwAppValidity((uint8_t)pidx));

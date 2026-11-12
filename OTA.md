@@ -322,3 +322,17 @@ A separate production-client AbortSignal test cancelled after 32928 durable byte
 and confirmed the active VERSION stayed unchanged. Physical power interruption
 remains untested; the 372 power-cut boundaries passed only in host simulation.
 See BLE_TRANSPORT.md for timing comparisons, reconnect/PHY recovery and test details.
+
+## User-selected firmware versions
+
+Upgrades, downgrades, reinstalling the same image and custom builds are all
+allowed. Version text is an identity label, not an installation permission or
+ordering rule. Do not add a minimum-version requirement, monotonic counter or
+comparison against the running firmware. Post-reboot verification compares the
+running version, size and CRC to the file the user selected, including an older
+file; it never requires a version newer than the previous installation.
+
+The selected file must still be a valid OTA v2 .ota.bin for this board/application
+layout. Container/protocol versions describe the binary format, not release age.
+CRC, target, size, vector/tag, complete transfer and commit checks remain active.
+An old raw .bin or incompatible OTA format is not a downgrade-policy rejection.
