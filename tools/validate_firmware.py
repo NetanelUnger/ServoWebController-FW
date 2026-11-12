@@ -18,7 +18,7 @@ app = root / 'STM32CubeIDE/Debug/BleServoController.bin'
 boot = root / 'Bootloader/BLE_ApplicationInstallManager/STM32CubeIDE/Release/BLE_ApplicationInstallManager.bin'
 data = app.read_bytes()
 assert 0 < boot.stat().st_size <= 0x6000, 'Boot manager exceeds its reserved area'
-assert len(data) <= 488 * 1024, 'Application exceeds the OTA active slot'
+assert (len(data)+15)//16*16 <= 488 * 1024 - 16, 'Application overlaps the OTA commit record'
 stack, reset = struct.unpack_from('<II', data)
 assert 0x20000000 <= stack <= 0x20020000
 assert reset & 1 and 0x08006000 <= (reset & ~1) < 0x08006000 + len(data)
@@ -27,6 +27,7 @@ assert 0 <= tag <= len(data) - 4, 'OTA tag address invalid'
 assert struct.unpack_from('<I', data, tag)[0] == 0x94448A29, 'OTA completion tag invalid'
 symbols = subprocess.check_output([args.nm, str(app.with_suffix('.elf'))], text=True)
 names = {line.split()[-1] for line in symbols.splitlines() if line.split()}
+assert {'OTA_APP_Submit', 'OTA_APP_Process', 'OTA_APP_Status'} <= names, 'OTA v2 receiver missing'
 assert {'ADC_BLE_Init', 'ADC_BLE_Step', 'BoardIO_ReadADC'} <= names, 'ADC RAW service missing'
 assert {'ADC_DMA_Init', 'HAL_ADC_Start_DMA', 'ADC4_IRQHandler'} <= names, 'ADC DMA sampler missing'
 assert 'vl53l5cx_init' not in names, 'Obsolete VL53L5CX firmware linked'

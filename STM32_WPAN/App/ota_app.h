@@ -27,10 +27,12 @@ extern "C" {
 #endif
 
 /* Includes ------------------------------------------------------------------*/
+#include "app_common.h"
 #include "ble_types.h"
 #include "ble_core.h"
 /* USER CODE BEGIN Includes */
 #include "ota.h"
+#include <stdbool.h>
 /* USER CODE END Includes */
 
 /* Exported types ------------------------------------------------------------*/
@@ -79,6 +81,9 @@ void OTA_APP_Init(void);
 void OTA_APP_EvtRx(OTA_APP_ConnHandleNotEvt_t *p_Notification);
 /* USER CODE BEGIN EFP */
 uint8_t OTA_APP_GetConfStatus(void);
+uint8_t OTA_APP_Submit(uint16_t connection, const uint8_t *p, uint16_t n, bool data);
+uint16_t OTA_APP_Status(uint8_t *out);
+void OTA_APP_Process(void);
 /* USER CODE END EFP */
 
 #ifdef __cplusplus

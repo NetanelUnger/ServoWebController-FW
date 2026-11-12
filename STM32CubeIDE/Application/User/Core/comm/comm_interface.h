@@ -22,6 +22,7 @@
 
 /** @brief Connectivity check command. */
 #define COMM_CMD_PING "PING"
+#define COMM_CMD_VERSION "VERSION"
 /** All-channel repeating PWM test and motion cancellation. */
 #define COMM_CMD_DEMO1 "DEMO1"
 #define COMM_CMD_STOP "STOP"

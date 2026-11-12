@@ -464,3 +464,14 @@ stops on BLE disconnect and blocks file-store mutation and OTA until stopped.
 See `STM32CubeIDE/Application/User/Core/display/FILE_STORE.md`,
 `STM32CubeIDE/Application/User/Core/comm/commands.md`, and `SERVO_SCHEDULING.md`
 for the exact format, bounds, repeat behavior and physical timing limitations.
+
+
+## Local OTA v2
+
+Run `build_ota.bat` to build the firmware and bootloader and print the full path
+of the validated `.ota.bin` upload package. Install both images initially with
+`tools/flash.ps1`, then use Web **Tools → Firmware update**, or
+`py -3.13 tools/ota_ble.py --file <package> --name <controller> --erase-files`.
+`VERSION` returns the running version and image CRC over NUS. See [OTA.md](OTA.md)
+for the protocol, backups, interrupted-update behavior, validation and limits.
+OTA shares Flash with device files: back up images and timelines before uploading.

@@ -8,6 +8,8 @@
 #include "app_freertos.h"
 #include "nus_app.h"
 #include "config.h"
+#include "firmware_version.h"
+#include "ota_image.h"
 #include "log_module.h"
 
 #include "comm_interface.h"
@@ -528,6 +530,15 @@ packetSize_t parser_ProcessOne(uint8_t *payload, packetSize_t req_len, uint8_t *
         return comm_WriteResponseText(res_payload, "- BAD ARGUMENTS");
     }
 
+    if (!strcmp(command, COMM_CMD_VERSION)) {
+        if (*args || memchr(payload,0,req_len)) return comm_WriteResponseText(res_payload,"- BAD ARGUMENTS");
+        uint32_t tag=OTA_Get32((const uint8_t *)(OTA_ACTIVE_ADDRESS+OTA_TAG_OFFSET));
+        uint32_t n=(tag-OTA_ACTIVE_ADDRESS+4U+15U)&~15U;
+        uint32_t crc=OTA_ImageValid((const uint8_t *)OTA_ACTIVE_ADDRESS,n)?OTA_Crc32((const uint8_t *)OTA_ACTIVE_ADDRESS,n):0;
+        return (packetSize_t)snprintf((char *)res_payload,COMM_TEXT_RESPONSE_MAX_LEN,
+            "OK VERSION\nVER=%.16s\nVER+=%s\nIMAGE=%08lX\nSIZE=%lu\nOTA=2\nOK VERSION END",
+            FIRMWARE_VERSION,strlen(FIRMWARE_VERSION)>16?FIRMWARE_VERSION+16:"",(unsigned long)crc,(unsigned long)n);
+    }
     if (!strcmp(command,"BLE_STATS")) {
         if (*args != '\0') return comm_WriteResponseText(res_payload,"- BAD ARGUMENTS");
         BLE_TX_Stats((char *)res_payload,COMM_TEXT_RESPONSE_MAX_LEN);
@@ -553,6 +564,7 @@ packetSize_t parser_ProcessOne(uint8_t *payload, packetSize_t req_len, uint8_t *
         return (packetSize_t)strlen((char *)res_payload);
     }
     if (!strcmp(command, COMM_CMD_HELP)) {
+        if (!strcmp(args,"OTA")) return comm_WriteResponseText(res_payload,"OK HELP OTA\nVERSION\nOK HELP END\n");
         if (!strcmp(args,"TIMELINE")) return comm_WriteResponseText(res_payload,
             "OK HELP TIMELINE\nTIMELINE_PLAY <id>\nTIMELINE_STOP\nTIMELINE_STATUS\nOK HELP END\n");
         if (*args != '\0') return comm_WriteResponseText(res_payload, "- BAD ARGUMENTS");

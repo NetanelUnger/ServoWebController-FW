@@ -13,3 +13,8 @@ STM32CubeIDE/.settings/stm32cubeide.project.prefs
 # Boot manager generated outputs
 Bootloader/**/STM32CubeIDE/Debug/
 Bootloader/**/STM32CubeIDE/Release/
+
+# Local OTA builds, device backups, test environments and logs
+/artifacts/
+/.venv-ota/
+__pycache__/

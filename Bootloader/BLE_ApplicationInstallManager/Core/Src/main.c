@@ -21,6 +21,7 @@
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
+#include "../../../../Core/Inc/ota_image.h"
 
 /* USER CODE END Includes */
 
@@ -79,9 +80,9 @@ void SystemClock_Config(void);
 static void BootModeCheck( void );
 static uint8_t CheckFwAppValidity( uint8_t page_idx );
 void JumpFwApp( void );
-static void DeleteSlot( uint8_t page_idx );
-static void MoveToActiveSlot( uint8_t page_idx );
-static void JumpSelectionOnPowerUp( void );
+static uint8_t DeleteSlot( uint8_t page_idx );
+static uint8_t MoveToActiveSlot( uint8_t page_idx );
+
 
 /* USER CODE END PFP */
 
@@ -215,305 +216,86 @@ HAL_StatusTypeDef HAL_InitTick(uint32_t TickPriority)
  */
 static void BootModeCheck( void )
 {
-  if(LL_RCC_IsActiveFlag_SFTRST( ) || LL_RCC_IsActiveFlag_OBLRST( ))
-  {
-    /**
-     * The SRAM1 content is kept on Software Reset.
-     * First address of the SRAM1 indicates which kind of action has been requested
-     */
-
-    /**
-     * Check Boot Mode from SRAM1
-     */
-    if((CFG_OTA_REBOOT_VAL_MSG == REBOOT_ON_FW_APP) && (CheckFwAppValidity(CFG_ACTIVE_SLOT_START_SECTOR_INDEX) != 0))
-    {
-      uint8_t download_slot_start_sector = CFG_OTA_START_SECTOR_IDX_VAL_MSG;
-
-      if((download_slot_start_sector >= (FLASH_SIZE / FLASH_PAGE_SIZE)) ||
-         ((download_slot_start_sector < CFG_ACTIVE_SLOT_START_SECTOR_INDEX)))
-      {
-        /* CFG_OTA_START_SECTOR_IDX_VAL_MSG not correctly initialized */
-        download_slot_start_sector = DOWNLOAD_SLOT_START_SECTOR_INDEX;
-        CFG_OTA_START_SECTOR_IDX_VAL_MSG = DOWNLOAD_SLOT_START_SECTOR_INDEX;
-      }
-
-      if(CheckFwAppValidity(download_slot_start_sector) != 0)
-      {
-        /**
-         * The user has requested to start on the firmware application and it has been checked
-         * a valid application is ready in the download slot
-         */
-        DeleteSlot( CFG_ACTIVE_SLOT_START_SECTOR_INDEX ); /* Erase active slot */
-        MoveToActiveSlot(download_slot_start_sector); /* Move download slot to active slot */
-        if(CheckFwAppValidity(CFG_ACTIVE_SLOT_START_SECTOR_INDEX) != 0)
-        {
-          DeleteSlot( DOWNLOAD_SLOT_START_SECTOR_INDEX ); /* Erase download slot */
-        }
-      }
-
-      /**
-       * Jump now on the application
-       */
-      JumpFwApp();
+  /* A persistent commit survives ALL reset causes, including lost power during
+   * erase/copy. SRAM bytes alone must never authorize an installation. */
+  if(CheckFwAppValidity(DOWNLOAD_SLOT_START_SECTOR_INDEX)) {
+    const uint32_t *commit=(const uint32_t *)OTA_COMMIT_ADDRESS;
+    uint32_t length=commit[1],crc=commit[2];
+    if(!OTA_ImageValid((const uint8_t *)OTA_ACTIVE_ADDRESS,length) ||
+       OTA_Crc32((const uint8_t *)OTA_ACTIVE_ADDRESS,length)!=crc) {
+      if(!DeleteSlot(CFG_ACTIVE_SLOT_START_SECTOR_INDEX) ||
+         !MoveToActiveSlot(DOWNLOAD_SLOT_START_SECTOR_INDEX)) return;
     }
-    else if((CFG_OTA_REBOOT_VAL_MSG == REBOOT_ON_FW_APP) && (CheckFwAppValidity(CFG_ACTIVE_SLOT_START_SECTOR_INDEX) == 0))
-    {
-      /**
-       * The user has requested to start on the firmware application but there is no valid application
-       * Erase all sectors specified by byte1 and byte1 in SRAM1 to download a new App.
-       */
-      CFG_OTA_REBOOT_VAL_MSG = REBOOT_ON_APP_INSTALL_MNGR; /* Request to reboot on Application Install Manager */
-      CFG_OTA_START_SECTOR_IDX_VAL_MSG = CFG_ACTIVE_SLOT_START_SECTOR_INDEX;
-    }
-    else if(CFG_OTA_REBOOT_VAL_MSG == REBOOT_ON_APP_INSTALL_MNGR)
-    {
-      /**
-       * It has been requested to reboot on App Install Manager application to download data
-       * Erase download slot to download a new App.
-       */
-      DeleteSlot( DOWNLOAD_SLOT_START_SECTOR_INDEX ); /* Erase download slot */
-      JumpFwApp();                                    /* Jump to OTA application */
-    }
-    else
-    {
-      /**
-       * There should be no use case to be there because the device already starts from power up
-       * and the SRAM1 is then filled with the value define by the user
-       * However, it could be that a reset occurs just after a power up and in that case,
-       * App Install Manager will be running but the sectors to download a new App may not be erased
-       */
-      JumpSelectionOnPowerUp( );
-    }
+    if(!OTA_ImageValid((const uint8_t *)OTA_ACTIVE_ADDRESS,length) ||
+       OTA_Crc32((const uint8_t *)OTA_ACTIVE_ADDRESS,length)!=crc) return;
+    /* Active verified. Erase the commit page first: a power cut during cleanup
+     * must never turn a half-erased candidate into an installation request. */
+    (void)DeleteSlot(DOWNLOAD_SLOT_START_SECTOR_INDEX);
   }
-  else
-  {
-    /**
-     * On Power up, the content of SRAM1 is random
-     * The only thing that could be done is to jump on either the firmware application
-     * or the App Install Manager application
-     */
-    JumpSelectionOnPowerUp( );
-  }
-
-  return;
+  if(CheckFwAppValidity(CFG_ACTIVE_SLOT_START_SECTOR_INDEX)) JumpFwApp();
+  /* No valid image: preserve evidence and wait for ST-LINK recovery. */
 }
 
-/**
- * Return 0 if FW App not valid
- * Return 1 if Fw App valid
- */
 static uint8_t CheckFwAppValidity( uint8_t page_idx )
 {
-  uint8_t status;
-  uint32_t magic_keyword_address;
-  uint32_t last_user_flash_address;
-
-  if(page_idx != CFG_ACTIVE_SLOT_START_SECTOR_INDEX && page_idx != DOWNLOAD_SLOT_START_SECTOR_INDEX) return 0;
-  uint32_t candidate=FLASH_BASE+page_idx*FLASH_PAGE_SIZE;
-  uint32_t active=FLASH_BASE+CFG_ACTIVE_SLOT_START_SECTOR_INDEX*FLASH_PAGE_SIZE;
-  uint32_t stack=*(const uint32_t *)candidate, reset=*(const uint32_t *)(candidate+4U);
-  uint32_t tag=*(const uint32_t *)(candidate+KEYWORD_ADDRESS_OFFSET);
-  if(stack<SRAM1_BASE || stack>SRAM1_BASE+128U*1024U || (stack&7U) || !(reset&1U) ||
-     (reset&~1U)<active || (reset&~1U)>=active+APP_SLOT_PAGE_SIZE*FLASH_PAGE_SIZE ||
-     (tag&3U) || tag<active+KEYWORD_ADDRESS_OFFSET+4U || tag>active+APP_SLOT_PAGE_SIZE*FLASH_PAGE_SIZE-4U) return 0;
-
-  magic_keyword_address = *(uint32_t*)(FLASH_BASE + (page_idx * FLASH_PAGE_SIZE + KEYWORD_ADDRESS_OFFSET));
-
-  if(page_idx != CFG_ACTIVE_SLOT_START_SECTOR_INDEX)
-  {
-    /* magic_keyword_address is in the download slot = active slot + APP_SLOT_PAGE_SIZE */
-    magic_keyword_address += ((page_idx - CFG_ACTIVE_SLOT_START_SECTOR_INDEX) * FLASH_PAGE_SIZE);
-  }
-  last_user_flash_address = (FLASH_SIZE + FLASH_BASE) - 4;
-  if( (magic_keyword_address < FLASH_BASE) || (magic_keyword_address > last_user_flash_address) )
-  {
-    /**
-     * The address is not valid
-     */
-    status = 0;
-  }
-  else
-  {
-    if( (*(uint32_t*)magic_keyword_address) != 0x94448A29  )
-    {
-      /**
-       * A firmware update procedure did not complete
-       */
-      status = 0;
-    }
-    else
-    {
-      /**
-       * The firmware application is available
-       */
-      status = 1;
-    }
-  }
-
-  return status;
+  if(page_idx==DOWNLOAD_SLOT_START_SECTOR_INDEX)
+    return OTA_CommitValid((const uint8_t *)OTA_DOWNLOAD_ADDRESS,(const uint8_t *)OTA_COMMIT_ADDRESS);
+  if(page_idx!=CFG_ACTIVE_SLOT_START_SECTOR_INDEX) return 0;
+  uint32_t tag=OTA_Get32((const uint8_t *)(OTA_ACTIVE_ADDRESS+OTA_TAG_OFFSET));
+  if(tag<OTA_ACTIVE_ADDRESS+OTA_TAG_OFFSET+4U || tag>OTA_ACTIVE_ADDRESS+OTA_MAX_IMAGE_SIZE-4U) return 0;
+  uint32_t size=(tag-OTA_ACTIVE_ADDRESS+4U+15U)&~15U;
+  return OTA_ImageValid((const uint8_t *)OTA_ACTIVE_ADDRESS,size);
 }
 
-/**
- * Jump to existing FW App in flash
- * It never returns
- */
 void JumpFwApp( void )
 {
-  fct_t app_reset_handler;
-
-  SCB->VTOR = FLASH_BASE + (CFG_ACTIVE_SLOT_START_SECTOR_INDEX * FLASH_PAGE_SIZE);
-  __set_MSP(*(uint32_t*)(FLASH_BASE + (CFG_ACTIVE_SLOT_START_SECTOR_INDEX * FLASH_PAGE_SIZE)));
-  app_reset_handler = (fct_t)(*(uint32_t*)(FLASH_BASE + (CFG_ACTIVE_SLOT_START_SECTOR_INDEX * FLASH_PAGE_SIZE) + 4));
-  app_reset_handler();
-
-  /**
-   * app_reset_handler() never returns.
-   * However, if for any reason a PUSH instruction is added at the entry of  JumpFwApp(),
-   * we need to make sure the POP instruction is not there before app_reset_handler() is called
-   * The way to ensure this is to add a dummy code after app_reset_handler() is called
-   * This prevents app_reset_handler() to be the last code in the function.
-   */
-  __WFI();
-
-  return;
+  uint32_t stack=*(const uint32_t *)OTA_ACTIVE_ADDRESS;
+  uint32_t reset=*(const uint32_t *)(OTA_ACTIVE_ADDRESS+4U);
+  SysTick->CTRL=0;SysTick->LOAD=0;SysTick->VAL=0;
+  SCB->VTOR=OTA_ACTIVE_ADDRESS;
+  __DSB();__ISB();
+  /* No C stack access after MSP changes. The application reset handler does not return. */
+  __asm volatile("msr msp, %0\n bx %1" : : "r"(stack), "r"(reset) : "memory");
+  __builtin_unreachable();
 }
 
-/**
- * Erase active or download slot
- */
-static void DeleteSlot( uint8_t page_idx )
+static uint8_t DeleteSlot( uint8_t page_idx )
 {
-
-  /**
-   * The number of sectors to erase is read from SRAM1.
-   * It shall be checked whether the number of sectors to erase does not overlap on the secured Flash
-   * The limit can be read from the SFSA option byte which provides the first secured sector address.
-   */
-
-  uint32_t last_page_idx = page_idx + APP_SLOT_PAGE_SIZE - 1;
-  FLASH_EraseInitTypeDef p_erase_init;
-  uint32_t page_error;
-  uint32_t NbrOfPageToBeErased = (uint32_t)APP_SLOT_PAGE_SIZE;
-
-  if(page_idx < CFG_ACTIVE_SLOT_START_SECTOR_INDEX)
-  {
-    /**
-     * Something has been wrong as there is no case we should delete the BLE_BootMngr application
-     * Reboot on the active firmware application
-     */
-    CFG_OTA_REBOOT_VAL_MSG = REBOOT_ON_FW_APP;
-    NVIC_SystemReset(); /* it waits until reset */
-  }
-
-  if ((page_idx + NbrOfPageToBeErased - 1) > last_page_idx)
-  {
-    NbrOfPageToBeErased = last_page_idx - page_idx + 1;
-  }
-
-  p_erase_init.TypeErase = FLASH_TYPEERASE_PAGES;
-  p_erase_init.NbPages = NbrOfPageToBeErased;
-  p_erase_init.Page = (uint32_t)(page_idx & (FLASH_PAGE_NB - 1u));
-
+  if(page_idx!=CFG_ACTIVE_SLOT_START_SECTOR_INDEX && page_idx!=DOWNLOAD_SLOT_START_SECTOR_INDEX) return 0;
+  /* Reverse page order invalidates the tail/commit before any vector changes. */
+  for(uint32_t i=APP_SLOT_PAGE_SIZE;i>0;i--) {
+    uint32_t page=page_idx+i-1U,error;
+    FLASH_EraseInitTypeDef erase={0};
+    erase.TypeErase=FLASH_TYPEERASE_PAGES;erase.NbPages=1;
+    erase.Page=page & (FLASH_PAGE_NB-1U);
 #if defined(FLASH_DBANK_SUPPORT)
-  if ((FLASH_PAGE_NB & page_idx) ^ (1u & READ_BIT (FLASH->OPTR, FLASH_OPTR_SWAP_BANK_Msk)))
-  {
-    p_erase_init.Banks = FLASH_BANK_2;
-  }
-  else
-  {
-    p_erase_init.Banks = FLASH_BANK_1;
-  }
+    erase.Banks=((FLASH_PAGE_NB & page) ^ (1U & READ_BIT(FLASH->OPTR,FLASH_OPTR_SWAP_BANK_Msk)))?FLASH_BANK_2:FLASH_BANK_1;
 #endif
-
-  __HAL_FLASH_CLEAR_FLAG(FLASH_FLAG_ALL_ERRORS); /* Clear all Flash flags before write operation*/
-
-  HAL_FLASH_Unlock();
-
-  HAL_FLASHEx_Erase(&p_erase_init, &page_error);
-
-  HAL_FLASH_Lock();
-
-  return;
-}
-
-/**
- * Move download slot to active slot
- */
-static void MoveToActiveSlot( uint8_t page_idx )
-{
-  uint32_t dwn_addr, act_addr, last_addr;
-
-  /**
-   * Write in Flash the data received in the BLE packet
-   */
-  dwn_addr = FLASH_BASE + (page_idx * FLASH_PAGE_SIZE);
-  act_addr = FLASH_BASE + (CFG_ACTIVE_SLOT_START_SECTOR_INDEX * FLASH_PAGE_SIZE);
-  /* Last address of the new binary relative to the start address in the active slot */
-  last_addr = *(uint32_t*)(dwn_addr + KEYWORD_ADDRESS_OFFSET);
-  last_addr &= 0xFFFFFFF0;  /* Align on 16-byte boundary */
-
-  /**
-   * The flash is written by bunch of 16 bytes
-   * Data are written in flash as long as there are at least 16 bytes
-   */
-  while( act_addr <= last_addr )
-  {
-    HAL_StatusTypeDef status = HAL_ERROR;
-
-    __HAL_FLASH_CLEAR_FLAG(FLASH_FLAG_ALL_ERRORS); /* Clear all Flash flags before write operation*/
-
-    HAL_FLASH_Unlock();
-
-    while(status != HAL_OK)
-      status = HAL_FLASH_Program(FLASH_TYPEPROGRAM_QUADWORD,
-                                 act_addr,
-                                 dwn_addr);
-
+    if(HAL_FLASH_Unlock()!=HAL_OK) return 0;
+    __HAL_FLASH_CLEAR_FLAG(FLASH_FLAG_ALL_ERRORS);
+    HAL_StatusTypeDef status=HAL_FLASHEx_Erase(&erase,&error);
     HAL_FLASH_Lock();
-
-    if((*(uint64_t*)(act_addr) == *(uint64_t*)(dwn_addr)) &&
-       (*(uint64_t*)((act_addr)+8) == *(uint64_t*)((dwn_addr)+8)))
-    {
-      act_addr += 16;
-      dwn_addr += 16;
-    }
+    if(status!=HAL_OK) return 0;
   }
+  return 1;
 }
 
-static void JumpSelectionOnPowerUp( void )
+static uint8_t MoveToActiveSlot( uint8_t page_idx )
 {
-  /**
-   * Check if there is a FW App
-   */
-  if(CheckFwAppValidity(CFG_ACTIVE_SLOT_START_SECTOR_INDEX) != 0)
-  {
-    /**
-     * The SRAM1 is random
-     * Initialize SRAM1 to indicate we requested to reboot of firmware application
-     */
-    CFG_OTA_REBOOT_VAL_MSG = REBOOT_ON_FW_APP;
-
-    /**
-     * A valid application is available
-     * Jump now on the application
-     */
-    JumpFwApp();
+  if(page_idx!=DOWNLOAD_SLOT_START_SECTOR_INDEX || !CheckFwAppValidity(page_idx)) return 0;
+  uint32_t length=*(const uint32_t *)(OTA_COMMIT_ADDRESS+4U);
+  for(uint32_t offset=0;offset<length;offset+=16U) {
+    if(HAL_FLASH_Unlock()!=HAL_OK) return 0;
+    __HAL_FLASH_CLEAR_FLAG(FLASH_FLAG_ALL_ERRORS);
+    HAL_StatusTypeDef status=HAL_FLASH_Program(FLASH_TYPEPROGRAM_QUADWORD,
+        OTA_ACTIVE_ADDRESS+offset,OTA_DOWNLOAD_ADDRESS+offset);
+    HAL_FLASH_Lock();
+    if(status!=HAL_OK) return 0;
+    for(unsigned w=0;w<4;w++)
+      if(*(const uint32_t *)(OTA_ACTIVE_ADDRESS+offset+4U*w)!=
+         *(const uint32_t *)(OTA_DOWNLOAD_ADDRESS+offset+4U*w)) return 0;
   }
-  else
-  {
-    /**
-     * The SRAM1 is random
-     * Initialize SRAM1 to indicate we requested to reboot of BLE_Ota application
-     */
-    CFG_OTA_REBOOT_VAL_MSG = REBOOT_ON_APP_INSTALL_MNGR;
-
-    /**
-     * There is no valid application available
-     * Erase all sectors specified by byte1 and byte1 in SRAM1 to download a new App.
-     */
-    CFG_OTA_START_SECTOR_IDX_VAL_MSG = CFG_ACTIVE_SLOT_START_SECTOR_INDEX;
-  }
-  return;
+  return 1;
 }
 
 /* USER CODE END 4 */

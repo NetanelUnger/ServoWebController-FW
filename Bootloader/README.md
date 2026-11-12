@@ -29,6 +29,14 @@ Routine application-only flashing must preserve sectors 0-2.
 binary. The flash script instead uses the locally built Release binary, so it
 matches the vendored source and HAL. Generated Debug/Release files are ignored.
 
-This restores the OTA-oriented boot structure; end-to-end OTA transfer and
-recovery behavior have not been tested. See the upstream README and ST license
-inside the project directory.
+The project now uses a hardened OTA v2 installer. Candidate installation requires
+an explicit 16-byte persistent record and a whole-image CRC; SRAM reset flags
+alone do not trigger it. Interrupted erase/copy is retried from the intact
+candidate on the next reset. Candidate cleanup invalidates its commit first.
+The original ST reference binary is NOT compatible with this new contract.
+
+Use `../build_ota.bat` to build and package an upload. See [OTA.md](../OTA.md)
+for the exact wire format, file-storage implications, recovery limits and tests.
+`python ../tools/check_ota.py` runs the actual installer with simulated Flash
+faults at 372 boundaries. Hardware evidence is separate from those simulations.
+See the upstream README and ST license inside the project directory.

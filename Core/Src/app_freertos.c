@@ -24,6 +24,7 @@
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
+#include "ota_app.h"
 #include "main.h"
 #include "app_ble.h"
 #include "config.h"
@@ -375,7 +376,8 @@ void StartDefaultTask(void *argument)
     ADC_DMA_Init();
 	for(;;)
 	{
-        osDelay(pdMS_TO_TICKS(20));
+        (void)osThreadFlagsWait(1U, osFlagsWaitAny, pdMS_TO_TICKS(20));
+        OTA_APP_Process();
         IMU_Step();
         ADC_BLE_Step(); /* Telemetry is below motor commands and PWM updates. */
         PCA9685_DiagnosticStep();

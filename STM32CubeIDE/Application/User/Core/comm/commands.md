@@ -25,6 +25,8 @@ means instead. See `ADC_RAW.md` and `SERVO_SCHEDULING.md` in the repository root
 | --- | --- | --- | --- |
 | `HELP` | none | List every command, syntax and legacy alias, including commands for disabled devices. | Multiple notifications, from `OK HELP` through `OK HELP END`. |
 | `PING` | none | Connectivity check. | `OK PING` |
+| `VERSION` | none | Running version, image CRC32, padded size and OTA protocol. | Short packets from `OK VERSION` through `OK VERSION END`; see root `OTA.md`. |
+| `HELP OTA` | none | List OTA diagnostics. | `VERSION` between HELP markers. |
 | `BLE_STATS` | none | Read transport and ATT recovery counters (`cp/cr/cf`), queue depths, heap and stack headroom; does not reset counters. Displayed monotonic counts saturate at9999999. See `BLE_TRANSPORT.md`. | Short notification lines from `OK BLE_STATS` through `OK BLE_STATS END`. |
 | `DEMO1` | none | All 16 PCA9685 channels start at 500 us and toggle together to 2000 us and back every 2000 ms. Runs in servoTask until STOP or BLE disconnect. Repeating DEMO1 leaves the current phase unchanged. | `OK DEMO1` |
 | `STOP` | none | Cancel timeline playback, DEMO1 and all timed moves, holding the last pulse widths. Safe to repeat. | `OK STOP` |

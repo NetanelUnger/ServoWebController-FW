@@ -18,653 +18,147 @@
   */
 /* USER CODE END Header */
 
-/* Includes ------------------------------------------------------------------*/
+/* Project OTA v2: callbacks copy bounded requests; defaultTask owns Flash work. */
 #include "main.h"
 #include "app_common.h"
-#include "log_module.h"
-#include "app_ble.h"
-#include "ll_sys_if.h"
-#include "dbg_trace.h"
 #include "ota_app.h"
-#include "ota.h"
-#include "stm32_rtos.h"
-
-/* Private includes ----------------------------------------------------------*/
-/* USER CODE BEGIN Includes */
-#include "stm32_timer.h"
-#include "flash_driver.h"
+#include "config.h"
+#include "app_freertos.h"
 #include "flash_manager.h"
 #include "display/image_store.h"
+#include "ota_image.h"
+#include <stdbool.h>
+#include <string.h>
 
-/* USER CODE END Includes */
+#define NO_OWNER 0xffffU
+#define OP_BEGIN 0x10U
+#define OP_VERIFY 0x11U
+#define OP_INSTALL 0x12U
+#define OP_ABORT 0x13U
+#define OP_DATA 0x14U
+/* States: idle, busy, ready, receiving, verified, installing, error, aborted. */
+enum { IDLE, BUSY, READY, RECEIVING, VERIFIED, INSTALLING, OTA_ERROR, ABORTED };
+enum { INVALID=0x80, OCCUPIED, IO_ERROR, BAD_STATE, OFFSET_ERROR, CRC_ERROR, IMAGE_ERROR, LOST_CONNECTION };
+static uint8_t request[228], status_data[20];
+static uint16_t request_size, owner=NO_OWNER;
+static uint8_t operation, state;
+static uint32_t image_size, image_crc, received, session;
+static volatile bool pending, disconnected;
+static uint32_t aligned_data[56];
+static volatile bool flash_done;
+static volatile FM_FlashOp_Status_t flash_status;
+static uint32_t enter(void) {uint32_t k=__get_PRIMASK();__disable_irq();return k;}
+static void leave(uint32_t k) {__set_PRIMASK(k);}
+static void flash_callback(FM_FlashOp_Status_t s) {flash_status=s;flash_done=true;}
+static FM_CallbackNode_t callback={.NodeList={NULL,NULL},.Callback=flash_callback};
 
-/* Private typedef -----------------------------------------------------------*/
-/* USER CODE BEGIN PTD */
-typedef enum
-{
-  FILE_TYPE_USER_CONF = 0,
-  FILE_TYPE_FW_APP,
-} OTA_APP_FileType_t;
-
-/* USER CODE END PTD */
-
-typedef enum
-{
-  Conf_INDICATION_OFF,
-  Conf_INDICATION_ON,
-  /* USER CODE BEGIN Service1_APP_SendInformation_t */
-  OTA_APP_No_Pending,
-  OTA_APP_Pending,
-  OTA_APP_Ready_Pending,
-  /* USER CODE END Service1_APP_SendInformation_t */
-  OTA_APP_SENDINFORMATION_LAST
-} OTA_APP_SendInformation_t;
-
-typedef struct
-{
-  OTA_APP_SendInformation_t     Conf_Indication_Status;
-  /* USER CODE BEGIN Service1_APP_Context_t */
-  uint32_t base_address;
-  uint8_t sectors;
-  uint32_t write_value[60];
-  uint8_t  write_value_index;
-  uint8_t  file_type;
-  /* USER CODE END Service1_APP_Context_t */
-  uint16_t              ConnectionHandle;
-} OTA_APP_Context_t;
-
-/* Private defines -----------------------------------------------------------*/
-/* USER CODE BEGIN PD */
-/* Define list of reboot reason */
-#define REBOOT_ON_FW_APP          (0x00)
-
-/* USER CODE END PD */
-
-/* External variables --------------------------------------------------------*/
-/* USER CODE BEGIN EV */
-
-/* USER CODE END EV */
-
-/* Private macros ------------------------------------------------------------*/
-/* USER CODE BEGIN PM */
-
-/* Compute start address where the User Configuration shall be located */
-#define USER_CFG_SLOT_START_SECTOR_INDEX      (CFG_SNVMA_START_SECTOR_ID - CFG_USER_DATA_SECTORS_NB)
-
-/* Compute size in Page of Download and Active slots */
-#define DOWNLOAD_ACTIVE_NB_SECTORS            (CFG_SNVMA_START_SECTOR_ID - CFG_USER_DATA_SECTORS_NB)
-
-/* Compute size in Page of Download or active slot */
-#define APP_SLOT_PAGE_SIZE                    ((DOWNLOAD_ACTIVE_NB_SECTORS - CFG_ACTIVE_SLOT_START_SECTOR_INDEX) / 2)
-
-/* Compute start address where the NEW application shall be downloaded */
-#define DOWNLOAD_SLOT_START_SECTOR_INDEX      (APP_SLOT_PAGE_SIZE + CFG_ACTIVE_SLOT_START_SECTOR_INDEX)
-
-/* USER CODE END PM */
-
-/* Private variables ---------------------------------------------------------*/
-static OTA_APP_Context_t OTA_APP_Context;
-
-uint8_t a_OTA_UpdateCharData[247];
-
-/* USER CODE BEGIN PV */
-static uint32_t size_left;
-static uint32_t address_offset;
-static uint32_t accepted_end;
-static bool upload_accepted;
-
-/* USER CODE END PV */
-
-/* Private function prototypes -----------------------------------------------*/
-static void OTA_Conf_SendIndication(void);
-
-/* USER CODE BEGIN PFP */
-static void FM_WriteCallback (FM_FlashOp_Status_t Status);
-static void OTA_APP_ClearSemaphore(osSemaphoreId_t semaphore);
-/* Flag for write status  */
-static FM_FlashOp_Status_t FM_WriteStatus;
-/* Write test callback */
-static FM_CallbackNode_t FM_WriteStatusCallback =
-{
-  /* Header for chained list */
-  .NodeList =
-  {
-    .next = NULL,
-    .prev = NULL
-  },
-  /* Callback for request status */
-  .Callback = FM_WriteCallback
-};
-static void FM_EraseCallback (FM_FlashOp_Status_t Status);
-/* Flag for write status  */
-static FM_FlashOp_Status_t FM_EraseStatus;
-/* Write test callback */
-static FM_CallbackNode_t FM_EraseStatusCallback =
-{
-  /* Header for chained list */
-  .NodeList =
-  {
-    .next = NULL,
-    .prev = NULL
-  },
-  /* Callback for request status */
-  .Callback = FM_EraseCallback
-};
-
-/* USER CODE END PFP */
-
-/* Functions Definition ------------------------------------------------------*/
-void OTA_Notification(OTA_NotificationEvt_t *p_Notification)
-{
-  /* USER CODE BEGIN Service1_Notification_1 */
-  OTA_Data_t msg_conf;
-  /* USER CODE END Service1_Notification_1 */
-  switch(p_Notification->EvtOpcode)
-  {
-    /* USER CODE BEGIN Service1_Notification_Service1_EvtOpcode */
-   case OTA_CONF_EVT:
-      {
-      /* The Remote notifies it has send all the data to be written in Flash */
-
-      /* Decide now what to do after all the data has been written in Flash */
-
-        switch(OTA_APP_Context.file_type)
-        {
-          case FILE_TYPE_FW_APP:
-            {
-              LOG_INFO_APP("OTA_CONF_EVT: Reboot on new application\n");
-              /**
-               * Reboot on FW Application
-               */
-              CFG_OTA_REBOOT_VAL_MSG = REBOOT_ON_FW_APP;
-
-              /**
-               * Give the download sector
-               */
-              CFG_OTA_START_SECTOR_IDX_VAL_MSG = (OTA_APP_Context.base_address - FLASH_BASE) >> 13;
-
-              NVIC_SystemReset(); /* it waits until reset */
+/* FM_BUSY retains the callback: it must finish before the node/buffer is reused.
+ * Never retry a failed program (ECC quadwords cannot safely be programmed twice). */
+static bool flash_op(uint32_t address,uint32_t count,bool erase) {
+    for(unsigned attempts=0;attempts<8;attempts++) {
+        flash_done=false;
+        FM_Cmd_Status_t r=erase?FM_Erase(address,count,&callback):
+            FM_Write(aligned_data,(uint32_t *)address,count/4U,&callback);
+        if(r!=FM_OK && r!=FM_BUSY) return false;
+        while(!flash_done) {WatchdogFlagClear(WATCHDOG_FLAG_DEFAULT);osDelay(1);}
+        if(r==FM_OK) return flash_status==FM_OPERATION_COMPLETE;
+    }
+    return false;
+}
+static void publish(uint8_t next,uint8_t error) {
+    uint32_t k=enter();
+    state=next;status_data[0]=OTA_PROTOCOL_VERSION;status_data[1]=next;
+    status_data[2]=operation;status_data[3]=error;
+    OTA_Put32(status_data+4,session);OTA_Put32(status_data+8,received);
+    OTA_Put32(status_data+12,image_size);OTA_Put32(status_data+16,image_crc);
+    pending=false;leave(k);
+}
+uint16_t OTA_APP_Status(uint8_t *out) {
+    uint32_t k=enter();memcpy(out,status_data,20);leave(k);return 20;
+}
+uint8_t OTA_APP_Submit(uint16_t connection,const uint8_t *p,uint16_t n,bool data) {
+    if(!p || (data?(n<20 || n>228 || ((n-4U)&15U)):(n!=20 && n!=8))) return INVALID;
+    uint8_t op=data?OP_DATA:p[0];
+    if(!data && (p[1]!=OTA_PROTOCOL_VERSION || (op==OP_BEGIN?n!=20:n!=8) ||
+       (op!=OP_BEGIN && op!=OP_VERIFY && op!=OP_INSTALL && op!=OP_ABORT))) return INVALID;
+    if(op==OP_BEGIN && (p[2]!=1 || p[3]!=0 || OTA_Get32(p+16)!=OTA_TARGET_ID ||
+       !OTA_Get32(p+12) || OTA_Get32(p+4)<OTA_TAG_OFFSET+4 ||
+       OTA_Get32(p+4)>OTA_MAX_IMAGE_SIZE || (OTA_Get32(p+4)&15U))) return INVALID;
+    if(!data && op!=OP_BEGIN && (p[2] || p[3])) return INVALID;
+    uint32_t k=enter();
+    if(pending || (owner!=NO_OWNER && owner!=connection)) {leave(k);return OCCUPIED;}
+    if(op==OP_BEGIN) {
+        if(state==READY || state==RECEIVING || state==VERIFIED || state==INSTALLING) {leave(k);return BAD_STATE;}
+    } else if(owner!=connection || (!data && OTA_Get32(p+4)!=session)) {leave(k);return BAD_STATE;}
+    if(data && (state!=READY && state!=RECEIVING)) {leave(k);return BAD_STATE;}
+    if(data && (OTA_Get32(p)!=received || n-4U>image_size-received)) {leave(k);return OFFSET_ERROR;}
+    if(op==OP_VERIFY && ((state!=READY && state!=RECEIVING) || received!=image_size)) {leave(k);return BAD_STATE;}
+    if(op==OP_INSTALL && state!=VERIFIED) {leave(k);return BAD_STATE;}
+    if(op==OP_ABORT && state==INSTALLING) {leave(k);return BAD_STATE;}
+    if(op==OP_BEGIN) {
+        image_size=OTA_Get32(p+4);image_crc=OTA_Get32(p+8);session=OTA_Get32(p+12);received=0;
+    }
+    memcpy(request,p,n);request_size=n;operation=op;owner=connection;disconnected=false;
+    status_data[1]=BUSY;status_data[2]=op;status_data[3]=0;
+    OTA_Put32(status_data+4,session);OTA_Put32(status_data+8,received);
+    OTA_Put32(status_data+12,image_size);OTA_Put32(status_data+16,image_crc);
+    pending=true;leave(k);
+    osThreadFlagsSet(defaultTaskHandle,1U);return 0;
+}
+void OTA_APP_Process(void) {
+    if(!pending) {
+        if(disconnected && owner!=NO_OWNER) {owner=NO_OWNER;publish(ABORTED,LOST_CONNECTION);}
+        return;
+    }
+    uint8_t error=0,next=state;
+    if(disconnected && operation!=OP_INSTALL) {owner=NO_OWNER;publish(ABORTED,LOST_CONNECTION);return;}
+    if(operation==OP_BEGIN) {
+        /* One claim invalidates BOTH image catalogs before any sector erase. */
+        if(!ImageStore_ClaimOTA()) error=OCCUPIED;
+        else {
+            /* Invalidate an old commit before touching candidate bytes. */
+            if(!flash_op(124U,1,true)) error=IO_ERROR;
+            for(uint32_t page=64U;!error && page<124U;page++) {
+                if(disconnected) {error=LOST_CONNECTION;break;}
+                if(!flash_op(page,1,true)) error=IO_ERROR;
             }
-            break;
-          default:
-            break;
         }
-      }
-      break;
-
-    case OTA_READY_EVT:
-      break;
-
-    /* USER CODE END Service1_Notification_Service1_EvtOpcode */
-
-    case OTA_BASE_ADR_WRITE_NO_RESP_EVT:
-      /* USER CODE BEGIN Service1Char1_WRITE_NO_RESP_EVT */
-      {
-        if(p_Notification->DataTransfered.Length < 1) break;
-        uint8_t command = p_Notification->DataTransfered.p_Payload[0];
-        if((command == OTA_APPLICATION_UPLOAD || command == OTA_USER_CONF_UPLOAD) && p_Notification->DataTransfered.Length < 4) break;
-        switch( ((OTA_Base_Addr_Event_Format_t*)(p_Notification->DataTransfered.p_Payload))->Command )
-        {
-          case OTA_STOP_ALL_UPLOAD:
-            upload_accepted=false;
-            break;
-
-          case OTA_USER_CONF_UPLOAD:
-            {
-              upload_accepted=false; address_offset=0;
-              uint32_t first_valid_address;
-              FM_Cmd_Status_t error = FM_ERROR;
-
-              OTA_APP_Context.file_type = FILE_TYPE_USER_CONF;
-              ((uint8_t*)&OTA_APP_Context.base_address)[0] = (((uint8_t*)((OTA_Base_Addr_Event_Format_t*)(p_Notification->DataTransfered.p_Payload))->Base_Addr))[2];
-              ((uint8_t*)&OTA_APP_Context.base_address)[1] = (((uint8_t*)((OTA_Base_Addr_Event_Format_t*)(p_Notification->DataTransfered.p_Payload))->Base_Addr))[1];
-              ((uint8_t*)&OTA_APP_Context.base_address)[2] = (((uint8_t*)((OTA_Base_Addr_Event_Format_t*)(p_Notification->DataTransfered.p_Payload))->Base_Addr))[0];
-              OTA_APP_Context.base_address |= FLASH_BASE;
-              if(p_Notification->DataTransfered.Length > 4)
-              {
-                OTA_APP_Context.sectors = ((OTA_Base_Addr_Event_Format_t*)(p_Notification->DataTransfered.p_Payload))->Sectors;
-              }
-              else
-              {
-                OTA_APP_Context.sectors = 0;
-              }
-              
-              if(OTA_APP_Context.sectors==0) OTA_APP_Context.sectors = OTA_APP_Context.file_type==FILE_TYPE_FW_APP ? APP_SLOT_PAGE_SIZE : CFG_USER_DATA_SECTORS_NB;
-              OTA_APP_Context.write_value_index = 0;
-              OTA_APP_Context.Conf_Indication_Status = OTA_APP_Ready_Pending;
-              first_valid_address = USER_CFG_SLOT_START_SECTOR_INDEX * FLASH_PAGE_SIZE + FLASH_BASE;
-              if(((OTA_APP_Context.base_address & 0xF) == 0) &&
-                 (OTA_APP_Context.sectors <= CFG_USER_DATA_SECTORS_NB) &&
-                 (OTA_APP_Context.base_address >= first_valid_address) &&
-                 ((OTA_APP_Context.base_address + ((OTA_APP_Context.sectors) * FLASH_PAGE_SIZE)) <= (first_valid_address + (CFG_USER_DATA_SECTORS_NB * FLASH_PAGE_SIZE))))
-              { /* Download address is 128 bits aligned */
-                /* Size of file to download fit in user configuration slot */
-                /* Download address is in the user configuration area */
-                /* End download address fit in the download area */
-                /* Erase the sector */
-                /* Clear semaphore before start testing */
-                OTA_APP_ClearSemaphore(FMEraseSemaphoreHandle);
-
-              /* Erase targetted sectors */
-                while(error != FM_OK)
-                {  
-                  /* Flash manager erase */
-                  if(OTA_APP_Context.sectors == 0)
-                  {
-                    OTA_APP_Context.sectors = CFG_USER_DATA_SECTORS_NB;
-                  }
-                  error = FM_Erase((uint32_t)USER_CFG_SLOT_START_SECTOR_INDEX, 
-                                   (uint32_t)(OTA_APP_Context.sectors),
-                                   &FM_EraseStatusCallback);
-
-                  /* Check Erase result */
-                  if (error == FM_OK)
-                  {
-                    /* Wait for Erase callback to be invoked */
-                    osSemaphoreAcquire(FMEraseSemaphoreHandle, osWaitForever);
-
-                    /* Clear semaphore before start testing */
-                    OTA_APP_ClearSemaphore(FMEraseSemaphoreHandle);
-
-                    /* Check status of Erase status. */
-                    if (FM_EraseStatus != FM_OPERATION_COMPLETE)
-                    {
-                      error = FM_ERROR;
-                      LOG_INFO_APP("OTA_USER_CONF_UPLOAD: FM_EraseStatus != FM_OPERATION_COMPLETE => FM_ERROR\n");
-                    }
-                  }
-                  else if(error == FM_BUSY)
-                  {
-                    /* Wait for Erase callback to be invoked */
-                    osSemaphoreAcquire(FMEraseSemaphoreHandle, osWaitForever);
-
-                    /* Clear semaphore before start testing */
-                    OTA_APP_ClearSemaphore(FMEraseSemaphoreHandle);
-                  }
-                  else
-                  {
-                    LOG_INFO_APP("OTA_USER_CONF_UPLOAD: FM_ERROR\n");
-                  }
-                } /* while(error != FM_OK) */
-
-              /* Flash zone tagetted has been erased, now ready to receive a file to write it */
-                accepted_end=OTA_APP_Context.base_address+OTA_APP_Context.sectors*FLASH_PAGE_SIZE;
-                upload_accepted=true;
-                a_OTA_UpdateCharData[0] = OTA_READY_TO_RECEIVE_FILE;
-                msg_conf.p_Payload = a_OTA_UpdateCharData;
-                msg_conf.Length = 1;
-                OTA_UpdateValue(OTA_CONF, &msg_conf);
-              }
-              else
-              {
-                LOG_INFO_APP("OTA_USER_CONF_UPLOAD: Not ready to receive file, oversized\n");
-                LOG_INFO_APP("OTA_USER_CONF_UPLOAD: First 128 bits aligned address to download should be: 0x%x\n", first_valid_address);
-                a_OTA_UpdateCharData[0] = OTA_NOT_READY_TO_RECEIVE_FILE;
-                msg_conf.p_Payload = a_OTA_UpdateCharData;
-                msg_conf.Length = 1;
-                OTA_UpdateValue(OTA_CONF, &msg_conf);
-              }
-            }
-            break;
-
-          case OTA_APPLICATION_UPLOAD:
-            {
-              upload_accepted=false; address_offset=0;
-              uint32_t first_valid_address;
-              FM_Cmd_Status_t error = FM_ERROR;
-              
-              OTA_APP_Context.file_type = FILE_TYPE_FW_APP;
-
-              /* retrieve base address where to flash */
-              ((uint8_t*)&OTA_APP_Context.base_address)[0] = (((uint8_t*)((OTA_Base_Addr_Event_Format_t*)(p_Notification->DataTransfered.p_Payload))->Base_Addr))[2];
-              ((uint8_t*)&OTA_APP_Context.base_address)[1] = (((uint8_t*)((OTA_Base_Addr_Event_Format_t*)(p_Notification->DataTransfered.p_Payload))->Base_Addr))[1];
-              ((uint8_t*)&OTA_APP_Context.base_address)[2] = (((uint8_t*)((OTA_Base_Addr_Event_Format_t*)(p_Notification->DataTransfered.p_Payload))->Base_Addr))[0];
-              OTA_APP_Context.base_address |= FLASH_BASE;
-              OTA_APP_Context.sectors = 0;
-              if(p_Notification->DataTransfered.Length > 4)
-              {
-                OTA_APP_Context.sectors = ((OTA_Base_Addr_Event_Format_t*)(p_Notification->DataTransfered.p_Payload))->Sectors;
-              }
-              else
-              {
-                OTA_APP_Context.sectors = APP_SLOT_PAGE_SIZE;
-              }
-              
-              if(OTA_APP_Context.sectors==0) OTA_APP_Context.sectors = OTA_APP_Context.file_type==FILE_TYPE_FW_APP ? APP_SLOT_PAGE_SIZE : CFG_USER_DATA_SECTORS_NB;
-              OTA_APP_Context.write_value_index = 0;
-              OTA_APP_Context.Conf_Indication_Status = OTA_APP_Ready_Pending;
-              first_valid_address = ((CFG_ACTIVE_SLOT_START_SECTOR_INDEX + APP_SLOT_PAGE_SIZE) * FLASH_PAGE_SIZE) + FLASH_BASE;
-              if(((OTA_APP_Context.base_address & 0xF) == 0) &&
-                 (OTA_APP_Context.sectors <= APP_SLOT_PAGE_SIZE) &&
-                 (OTA_APP_Context.base_address == first_valid_address) &&
-                 ((OTA_APP_Context.base_address + ((OTA_APP_Context.sectors) * FLASH_PAGE_SIZE)) <= (first_valid_address + (APP_SLOT_PAGE_SIZE * FLASH_PAGE_SIZE))))
-              { /* Download address is 128 bits aligned */
-                if(!ImageStore_ClaimOTA()) {
-                  a_OTA_UpdateCharData[0]=OTA_NOT_READY_TO_RECEIVE_FILE;
-                  msg_conf.p_Payload=a_OTA_UpdateCharData;msg_conf.Length=1;
-                  OTA_UpdateValue(OTA_CONF,&msg_conf);break;
-                }
-
-                /* Size of file to download fit in download slot */
-                /* Download address is in the download area */
-                /* End download address fit in the download area */
-                /* Erase the sectors */
-                /* Clear semaphore before start testing */
-                OTA_APP_ClearSemaphore(FMEraseSemaphoreHandle);
-
-                /* Erase targetted sectors */
-                while(error != FM_OK)
-                {  
-                  /* Flash manager Erase */
-                  if(OTA_APP_Context.sectors == 0)
-                  {
-                    OTA_APP_Context.sectors = APP_SLOT_PAGE_SIZE;
-                  }
-                  error = FM_Erase((uint32_t)((OTA_APP_Context.base_address - FLASH_BASE) >> 13), 
-                                   (uint32_t)(OTA_APP_Context.sectors),
-                                   &FM_EraseStatusCallback);
-
-                  /* Check Erase result. */
-                  if (error == FM_OK)
-                  {
-                    /* Wait for Erase callback to be invoked */
-                    osSemaphoreAcquire(FMEraseSemaphoreHandle, osWaitForever);
-
-                    /* Clear semaphore before start testing */
-                    OTA_APP_ClearSemaphore(FMEraseSemaphoreHandle);
-
-                    /* Check status of Erase. */
-                    if (FM_EraseStatus != FM_OPERATION_COMPLETE)
-                    {
-                      error = FM_ERROR;
-                      LOG_ERROR_APP("OTA_APPLICATION_UPLOAD: FM_EraseStatus != FM_OPERATION_COMPLETE => FM_ERROR\n");
-                    }
-                  }
-                  else if(error == FM_BUSY)
-                  {
-                    /* Wait for Erase callback to be invoked */
-                    osSemaphoreAcquire(FMEraseSemaphoreHandle, osWaitForever);
-
-                    /* Clear semaphore before start testing */
-                    OTA_APP_ClearSemaphore(FMEraseSemaphoreHandle);
-                  }
-                  else
-                  {
-                    LOG_ERROR_APP("OTA_APPLICATION_UPLOAD: FM_ERROR\n");
-                    LOG_ERROR_APP("OTA_APPLICATION_UPLOAD: Try to FM_Erase Number of sectors: %d from sector %d \n",
-                                 (uint32_t)(OTA_APP_Context.sectors),
-                                 (uint32_t)((OTA_APP_Context.base_address) >> 13));
-                  }
-                } /* while(error != FM_OK) */
-
-              /* Flash zone tagetted has been erased, now ready to receive a file to write it */
-
-                accepted_end=OTA_APP_Context.base_address+OTA_APP_Context.sectors*FLASH_PAGE_SIZE;
-                upload_accepted=true;
-                a_OTA_UpdateCharData[0] = OTA_READY_TO_RECEIVE_FILE;
-                msg_conf.p_Payload = a_OTA_UpdateCharData;
-                msg_conf.Length = 1;
-                OTA_UpdateValue(OTA_CONF, &msg_conf);
-              }
-              else
-              {
-                LOG_WARNING_APP("OTA_APPLICATION_UPLOAD: Not ready to receive file, oversized\n", OTA_APP_Context.base_address, OTA_APP_Context.sectors);
-                LOG_WARNING_APP("OTA_APPLICATION_UPLOAD: First 128 bits aligned address to download should be: 0x%x\n", first_valid_address);
-                a_OTA_UpdateCharData[0] = OTA_NOT_READY_TO_RECEIVE_FILE;
-                msg_conf.p_Payload = a_OTA_UpdateCharData;
-                msg_conf.Length = 1;
-                OTA_UpdateValue(OTA_CONF, &msg_conf);
-              }
-            }
-            break;
-
-          case OTA_UPLOAD_FINISHED:
-            {
-              if(upload_accepted && address_offset>0 && OTA_APP_Context.file_type == FILE_TYPE_FW_APP)
-              { /* Reboot only after new application download */
-                OTA_APP_Context.Conf_Indication_Status = OTA_APP_Pending;
-                a_OTA_UpdateCharData[0] = OTA_REBOOT_CONFIRMED;
-                msg_conf.p_Payload = a_OTA_UpdateCharData;
-                msg_conf.Length = 1;
-                OTA_UpdateValue(OTA_CONF, &msg_conf);
-              }
-            }
-            break;
-
-          case OTA_CANCEL_UPLOAD:
-          {
-            upload_accepted=false;
-            LOG_INFO_APP("OTA_CANCEL_UPLOAD\n");
-          }
-          break;
-
-          default:
-            break;
+        next=READY;
+    } else if(operation==OP_DATA) {
+        uint32_t n=request_size-4U;
+        memcpy(aligned_data,request+4,n);
+        if(!flash_op(OTA_DOWNLOAD_ADDRESS+received,n,false) ||
+           memcmp((const void *)(OTA_DOWNLOAD_ADDRESS+received),request+4,n)) error=IO_ERROR;
+        else received+=n;
+        next=RECEIVING;
+    } else if(operation==OP_VERIFY) {
+        if(!OTA_ImageValid((const uint8_t *)OTA_DOWNLOAD_ADDRESS,image_size)) error=IMAGE_ERROR;
+        else if(OTA_Crc32((const uint8_t *)OTA_DOWNLOAD_ADDRESS,image_size)!=image_crc) error=CRC_ERROR;
+        next=VERIFIED;
+    } else if(operation==OP_INSTALL) {
+        /* Durable commit is the ONLY bootloader installation trigger. */
+        aligned_data[0]=OTA_COMMIT_MAGIC;aligned_data[1]=image_size;
+        aligned_data[2]=image_crc;aligned_data[3]=~image_crc;
+        if(!flash_op(OTA_COMMIT_ADDRESS,16,false) ||
+           !OTA_CommitValid((const uint8_t *)OTA_DOWNLOAD_ADDRESS,(const uint8_t *)OTA_COMMIT_ADDRESS)) error=IO_ERROR;
+        else {
+            publish(INSTALLING,0);
+            osDelay(500); /* allow the client to observe the durable acknowledgement */
+            NVIC_SystemReset();return;
         }
-      }
-      /* USER CODE END Service1Char1_WRITE_NO_RESP_EVT */
-      break;
-
-    case OTA_CONF_INDICATE_ENABLED_EVT:
-      /* USER CODE BEGIN Service1Char2_INDICATE_ENABLED_EVT */
-		LOG_INFO_APP("OTA_CONF_INDICATE_ENABLED_EVT\n");
-      /* USER CODE END Service1Char2_INDICATE_ENABLED_EVT */
-      break;
-
-    case OTA_CONF_INDICATE_DISABLED_EVT:
-      /* USER CODE BEGIN Service1Char2_INDICATE_DISABLED_EVT */
-		LOG_INFO_APP("OTA_CONF_INDICATE_DISABLED_EVT\n");
-      /* USER CODE END Service1Char2_INDICATE_DISABLED_EVT */
-      break;
-
-    case OTA_RAW_DATA_WRITE_NO_RESP_EVT:
-      /* USER CODE BEGIN Service1Char3_WRITE_NO_RESP_EVT */
-      {
-        FM_Cmd_Status_t error = FM_ERROR;
-        
-        /**
-         * Write in Flash the data received in the BLE packet
-         */
-        size_left = p_Notification->DataTransfered.Length;
-        if(!upload_accepted || !size_left || size_left>sizeof(OTA_APP_Context.write_value) || (size_left & 15U) ||
-           OTA_APP_Context.base_address+address_offset>accepted_end || size_left>accepted_end-(OTA_APP_Context.base_address+address_offset)) break;
-        
-        /**
-         * For the flash manager the address of the data to be stored in FLASH shall be 32bits aligned
-         * and the address where the data shall be written shall be 128bits aligned
-         */
-        memcpy( (uint8_t*)&OTA_APP_Context.write_value,
-                ((OTA_Raw_Data_Event_Format_t*)(p_Notification->DataTransfered.p_Payload))->Raw_Data,
-                size_left );
-
-        /* Clear semaphore before start testing */
-        OTA_APP_ClearSemaphore(FMWriteSemaphoreHandle);
-
-        while(error != FM_OK)
-        {  
-          /* Flash manager Write */
-          error = FM_Write ((uint32_t *)(&OTA_APP_Context.write_value[0]),
-                            (uint32_t *)((OTA_APP_Context.base_address) + address_offset),
-                            size_left >> 2,
-                            &FM_WriteStatusCallback);
-
-          /* Check Write result. */
-          if (error == FM_OK)
-          {
-            /* Wait for Write callback to be invoked */
-            osSemaphoreAcquire(FMWriteSemaphoreHandle, osWaitForever);
-
-            /* Clear semaphore before start testing */
-            OTA_APP_ClearSemaphore(FMWriteSemaphoreHandle);
-
-            /* Check status of Write op. */
-            if (FM_WriteStatus != FM_OPERATION_COMPLETE)
-            {
-              error = FM_ERROR;
-              LOG_INFO_APP("OTA_RAW_DATA_ID: FM_WriteStatus != FM_OPERATION_COMPLETE => FM_ERROR\n");
-            }
-          }
-          else if(error == FM_BUSY)
-          {
-            /* Wait for Write callback to be invoked */
-            osSemaphoreAcquire(FMWriteSemaphoreHandle, osWaitForever);
-
-            /* Clear semaphore before start testing */
-            OTA_APP_ClearSemaphore(FMWriteSemaphoreHandle);
-          }
-          else
-          {
-            LOG_INFO_APP("OTA_RAW_DATA_ID: FM_ERROR %d\n", error);
-          }
-        } /* while(error != FM_OK) */
-
-        /* Update write offset address for the next FLASH write */
-        address_offset += size_left;
-      }
-      /* USER CODE END Service1Char3_WRITE_NO_RESP_EVT */
-      break;
-
-    default:
-      /* USER CODE BEGIN Service1_Notification_default */
-
-      /* USER CODE END Service1_Notification_default */
-      break;
-  }
-  /* USER CODE BEGIN Service1_Notification_2 */
-
-  /* USER CODE END Service1_Notification_2 */
-  return;
+    } else if(operation==OP_ABORT) {next=ABORTED;owner=NO_OWNER;}
+    if(disconnected) {error=LOST_CONNECTION;owner=NO_OWNER;}
+    publish(error?OTA_ERROR:next,error);
 }
-
-void OTA_APP_EvtRx(OTA_APP_ConnHandleNotEvt_t *p_Notification)
-{
-  /* USER CODE BEGIN Service1_APP_EvtRx_1 */
-  /* USER CODE END Service1_APP_EvtRx_1 */
-
-  switch(p_Notification->EvtOpcode)
-  {
-    /* USER CODE BEGIN Service1_APP_EvtRx_Service1_EvtOpcode */
-
-    /* USER CODE END Service1_APP_EvtRx_Service1_EvtOpcode */
-    case OTA_CONN_HANDLE_EVT :
-      /* USER CODE BEGIN Service1_APP_CONN_HANDLE_EVT */
-
-      /* USER CODE END Service1_APP_CONN_HANDLE_EVT */
-      break;
-
-    case OTA_DISCON_HANDLE_EVT :
-      /* USER CODE BEGIN Service1_APP_DISCON_HANDLE_EVT */
-      upload_accepted=false;
-
-      /* USER CODE END Service1_APP_DISCON_HANDLE_EVT */
-      break;
-
-    default:
-      /* USER CODE BEGIN Service1_APP_EvtRx_default */
-
-      /* USER CODE END Service1_APP_EvtRx_default */
-      break;
-  }
-
-  /* USER CODE BEGIN Service1_APP_EvtRx_2 */
-
-  /* USER CODE END Service1_APP_EvtRx_2 */
-
-  return;
+void OTA_APP_EvtRx(OTA_APP_ConnHandleNotEvt_t *event) {
+    if(event->EvtOpcode==OTA_DISCON_HANDLE_EVT && event->ConnectionHandle==owner) {
+        disconnected=true;osThreadFlagsSet(defaultTaskHandle,1U);
+    }
 }
-
-void OTA_APP_Init(void)
-{
-  UNUSED(OTA_APP_Context);
-  OTA_Init();
-
-  /* USER CODE BEGIN Service1_APP_Init */
-  /* Shared image/OTA Flash must survive normal startup. Only an accepted
-   * OTA upload may claim and erase it (ImageStore_ClaimOTA above). */
-  upload_accepted = false;
-  accepted_end = 0;
-  FM_WriteStatus = FM_OPERATION_AVAILABLE;
-  size_left = 0;
-  address_offset = 0;
-  /* USER CODE END Service1_APP_Init */
-  return;
+void OTA_APP_Init(void) {
+    owner=NO_OWNER;pending=false;disconnected=false;operation=0;
+    session=received=image_size=image_crc=0;publish(IDLE,0);OTA_Init();
 }
-
-/* USER CODE BEGIN FD */
-/**
- * Get Confiramation status
- */
-uint8_t OTA_APP_GetConfStatus(void)
-{
-  return(OTA_APP_Context.Conf_Indication_Status);
-}
-
-static void FM_WriteCallback (FM_FlashOp_Status_t Status)
-{
-	  /* Update status */
-	  FM_WriteStatus = Status;
-
-	  /* Release semaphore to signal Process request call */
-	  if (FMWriteSemaphoreHandle != NULL)
-	  {
-	    osSemaphoreRelease(FMWriteSemaphoreHandle);
-	  }
-}
-
-static void FM_EraseCallback (FM_FlashOp_Status_t Status)
-{
-	  /* Update status */
-	  FM_EraseStatus = Status;
-
-	  /* Release semaphore to signal Process request call */
-	  if (FMEraseSemaphoreHandle != NULL)
-	  {
-	    osSemaphoreRelease(FMEraseSemaphoreHandle);
-	  }
-}
-static void OTA_APP_ClearSemaphore(osSemaphoreId_t semaphore)
-{
-  if (semaphore == NULL)
-  {
-    return;
-  }
-
-  while (osSemaphoreAcquire(semaphore, 0U) == osOK)
-  {
-    /* Loop until semaphore count is drained */
-  }
-}
-/* USER CODE END FD */
-
-/*************************************************************
- *
- * LOCAL FUNCTIONS
- *
- *************************************************************/
-__USED void OTA_Conf_SendIndication(void) /* Property Indication */
-{
-  OTA_APP_SendInformation_t indication_on_off = Conf_INDICATION_OFF;
-  OTA_Data_t ota_indication_data;
-
-  ota_indication_data.p_Payload = (uint8_t*)a_OTA_UpdateCharData;
-  ota_indication_data.Length = 0;
-
-  /* USER CODE BEGIN Service1Char2_IS_1 */
-
-  /* USER CODE END Service1Char2_IS_1 */
-
-  if (indication_on_off != Conf_INDICATION_OFF)
-  {
-    OTA_UpdateValue(OTA_CONF, &ota_indication_data);
-  }
-
-  /* USER CODE BEGIN Service1Char2_IS_Last */
-
-  /* USER CODE END Service1Char2_IS_Last */
-
-  return;
-}
-
-/* USER CODE BEGIN FD_LOCAL_FUNCTIONS */
-
-/* USER CODE END FD_LOCAL_FUNCTIONS */
+/* Retained ABI for the central TX dispatcher; v2 uses durable status reads. */
+uint8_t OTA_APP_GetConfStatus(void) {return 2;}
+void OTA_Notification(OTA_NotificationEvt_t *event) {(void)event;}

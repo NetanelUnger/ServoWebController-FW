@@ -27,6 +27,7 @@ extern "C" {
 #endif
 
 /* Includes ------------------------------------------------------------------*/
+#include "app_common.h"
 #include "ble_types.h"
 #include "ble_core.h"
 #include "svc_ctl.h"
