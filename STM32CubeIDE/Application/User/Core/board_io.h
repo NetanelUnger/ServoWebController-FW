@@ -18,8 +18,12 @@ BoardIO_Status BoardIO_ReadADC(const char *name, const char **canonical, uint16_
 void BoardIO_TofInterrupt(void);
 uint32_t BoardIO_TofInterruptCount(void);
 /* BLE link owns MPQ enable/diagnostic pins and gates PWM; no blocking calls.
- * Disconnect disables PWM before EN/DIAG_EN. Init may not bypass this gate. */
+ * Disconnect disables PWM before EN/DIAG_EN; the servo safe-pose worker can
+ * restore power after writing its frame. Init may not bypass this gate. */
 void BoardIO_SetPowerConnected(uint8_t connected);
 void BoardIO_SetPwmReady(uint8_t ready);
+/* Only servoTask may enable disconnected power, after a safe frame succeeds. */
+void BoardIO_SetSafePoseActive(uint8_t active);
+void BoardIO_PrepareSafePose(void);
 
 #endif

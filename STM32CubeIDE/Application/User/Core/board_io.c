@@ -36,14 +36,38 @@ static volatile uint32_t tof_interrupt_count;
 static uint8_t power_connected;
 static uint8_t pwm_ready;
 static uint8_t pwm_requested = 1U;
+static uint8_t safe_pose_active;
 
 /* Called with interrupts masked: a lower-priority init/diagnostic command must
- * never re-enable PWM after the BLE disconnect handler has switched it off.
+ * never re-enable PWM after disconnect unless servoTask has applied a safe pose.
  * Q6 inverts PA9; MCU low disables PCA outputs (MODE2 OUTNE=00 drives low). */
 static void apply_pwm_enable(void)
 {
     HAL_GPIO_WritePin(OE_GPIO_Port, OE_Pin,
-        power_connected && pwm_ready && pwm_requested ? GPIO_PIN_SET : GPIO_PIN_RESET);
+        (power_connected || safe_pose_active) && pwm_ready && pwm_requested ? GPIO_PIN_SET : GPIO_PIN_RESET);
+}
+
+/* A disconnected safe pose deliberately keeps the servo supply and PWM alive.
+ * servoTask enables this only after writing a complete validated safe frame. */
+static void apply_servo_power(void)
+{
+    GPIO_PinState level=(power_connected || safe_pose_active)?GPIO_PIN_SET:GPIO_PIN_RESET;
+    if(level==GPIO_PIN_RESET) apply_pwm_enable();
+    HAL_GPIO_WritePin(DIAG_EN1_GPIO_Port, DIAG_EN1_Pin, level);
+    HAL_GPIO_WritePin(DIAG_EN2_GPIO_Port, DIAG_EN2_Pin, level);
+    HAL_GPIO_WritePin(EN1_GPIO_Port, EN1_Pin, level);
+    HAL_GPIO_WritePin(EN2_GPIO_Port, EN2_Pin, level);
+    apply_pwm_enable();
+}
+
+void BoardIO_SetSafePoseActive(uint8_t active)
+{
+    uint32_t saved_primask=__get_PRIMASK();
+    __disable_irq();
+    safe_pose_active=active!=0U;
+    if(active) pwm_requested=1U;
+    apply_servo_power();
+    __set_PRIMASK(saved_primask);
 }
 
 void BoardIO_SetPwmReady(uint8_t ready)
@@ -55,6 +79,16 @@ void BoardIO_SetPwmReady(uint8_t ready)
     __set_PRIMASK(saved_primask);
 }
 
+void BoardIO_PrepareSafePose(void)
+{
+    uint32_t saved_primask=__get_PRIMASK();
+    __disable_irq();
+    pwm_ready=0U;
+    pwm_requested=1U; /* Safety overrides a diagnostic OE disable. */
+    apply_pwm_enable();
+    __set_PRIMASK(saved_primask);
+}
+
 void BoardIO_SetPowerConnected(uint8_t connected)
 {
     uint32_t saved_primask = __get_PRIMASK();
@@ -62,21 +96,10 @@ void BoardIO_SetPowerConnected(uint8_t connected)
     if (connected) {
         if (!power_connected) pwm_requested = 1U;
         power_connected = 1U;
-        HAL_GPIO_WritePin(DIAG_EN1_GPIO_Port, DIAG_EN1_Pin, GPIO_PIN_SET);
-        HAL_GPIO_WritePin(DIAG_EN2_GPIO_Port, DIAG_EN2_Pin, GPIO_PIN_SET);
-        HAL_GPIO_WritePin(EN1_GPIO_Port, EN1_Pin, GPIO_PIN_SET);
-        HAL_GPIO_WritePin(EN2_GPIO_Port, EN2_Pin, GPIO_PIN_SET);
-        apply_pwm_enable();
     } else {
         power_connected = 0U;
-        /* Remove servo signals before removing their supply to avoid feeding
-         * unpowered servos through the PWM input. No I2C transaction is needed. */
-        apply_pwm_enable();
-        HAL_GPIO_WritePin(EN1_GPIO_Port, EN1_Pin, GPIO_PIN_RESET);
-        HAL_GPIO_WritePin(EN2_GPIO_Port, EN2_Pin, GPIO_PIN_RESET);
-        HAL_GPIO_WritePin(DIAG_EN1_GPIO_Port, DIAG_EN1_Pin, GPIO_PIN_RESET);
-        HAL_GPIO_WritePin(DIAG_EN2_GPIO_Port, DIAG_EN2_Pin, GPIO_PIN_RESET);
     }
+    apply_servo_power();
     __set_PRIMASK(saved_primask);
 }
 

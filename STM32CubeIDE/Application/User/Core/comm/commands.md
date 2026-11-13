@@ -166,3 +166,24 @@ INVALID_FILE includes an unavailable storage lease/recovery/upload, missing or
 wrong-type file, CRC failure or invalid plan. No uncertain command is retried
 automatically. Direct, timed, binary servo writes and DEMO1 are rejected while
 playback or preparation owns servo state. STOP remains available.
+
+## SAFE_POSE
+
+`SAFE_POSE` cancels DEMO1, stored timeline playback and every timed move, then
+atomically queues all 16 values from the saved type-4 safe-pose file. Response:
+`OK SAFE_POSE APPLIED\n` if a validated pose was queued, or
+`OK SAFE_POSE MISSING\n` if none exists (motion still stops, holding targets).
+`APPLIED` acknowledges the target update, not a physical position measurement
+or completion of the PCA transfer. Arguments/embedded NUL are rejected with
+`ERR SAFE_POSE BAD_ARGUMENTS\n`. `HELP SAFE_POSE` lists the command (the legacy
+unqualified HELP response is already at its 255-byte limit).
+
+BLE disconnect applies the same stored pose autonomously and holds PWM/supply
+on only after servoTask writes the safe frame. The browser also sends SAFE_POSE
+after Code completion/Stop/error and Timeline completion/Stop/unmount, after
+settling its outgoing motion commands. Repeating timeline boundaries do not
+enter safety between iterations. Missing/corrupt files never supply targets.
+See `../display/FILE_STORE.md` for the file format, OTA lifetime and save ordering.
+
+The NUS TX owner strips LF and sends each reply line as one notification. Web
+accepts complete notification payloads as well as newline-delimited demo replies.

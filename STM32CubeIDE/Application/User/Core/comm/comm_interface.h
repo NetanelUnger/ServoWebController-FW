@@ -26,6 +26,7 @@
 /** All-channel repeating PWM test and motion cancellation. */
 #define COMM_CMD_DEMO1 "DEMO1"
 #define COMM_CMD_STOP "STOP"
+#define COMM_CMD_SAFE_POSE "SAFE_POSE"
 #define COMM_CMD_TIMELINE_PLAY "TIMELINE_PLAY"
 #define COMM_CMD_TIMELINE_STOP "TIMELINE_STOP"
 #define COMM_CMD_TIMELINE_STATUS "TIMELINE_STATUS"

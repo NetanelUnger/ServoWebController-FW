@@ -36,7 +36,7 @@ distinguish migrated files from legacy slots); reuse of a deleted/reserved exten
 gets a new ID. Replacement of a live last file retains its ID and increments its
 revision. Format retains the next ID of a mounted v2 catalog. Names use at most
 63 UTF-8 bytes, without ASCII control characters. Types: 1 RGB565, 2 RGB332;
-type 3 stores executable timelines with their editable source document. Unused entries and deleted/reserved extents
+type 3 stores executable timelines with their editable source document; type 4 stores the safe servo pose. Unused entries and deleted/reserved extents
 are allocation states, not content types. Unknown future types remain listable
 and byte-readable if their record format is compatible; image actions reject them.
 
@@ -162,7 +162,7 @@ V2 status header (32 bytes):
 | 20 | payload CRC:u32 when relevant |
 | 24, 28 | free tail bytes:u32, deleted-extent bytes:u32 |
 
-INFO adds four u32 values: data capacity, maximum records, type mask (14), layout
+INFO adds four u32 values: data capacity, maximum records, type mask (30), layout
 mask (3). LIST adds one 96-byte record, or no payload and next index FFFFFFFF at
 end. BEGIN/PLAN/RESERVE add a descriptor. READ adds up to 208 payload bytes.
 Downloads check generation, offsets, length and CRC before applying editor pixels.
@@ -216,7 +216,7 @@ not part of these software tests.
 
 Type 3 uses version 1, width/height/layout zero. Storage management, exact byte
 length, CRC32, name, allocation, DELETE/FORMAT and READ use the same v2 protocol
-as images. INFO type mask is 14 (bits 1, 2, 3). SHOW rejects timelines.
+as images. INFO type mask is 30 (bits 1, 2, 3, 4). SHOW rejects timelines.
 
 The little-endian payload is a 32-byte header, zero to 4096 16-byte events, then
 UTF-8 editor JSON. Header: magic `TML1` at 0, u16 version 1 at 4, u16 header size
@@ -245,3 +245,33 @@ read/list), recovery and OTA are blocked while the lease is held. STOP,
 disconnect, natural completion or execution fault releases it. Stop playback
 before managing files. No flash I/O or allocation occurs in the motion loop.
 See `servo/timeline_player.inc` and root `SERVO_SCHEDULING.md` for timing limits.
+
+## Safe pose files (type 4)
+
+Type 4 uses version 1, width/height/layout zero and exactly 40 payload bytes.
+Bytes 0..3 are ASCII `SFP1`, u16 version 1 at 4, u16 channel count 16 at 6,
+then 16 little-endian u16 pulse widths (channels 0..15) at 8. Each pulse must be
+500..2500 us. COMMIT validates the full format as well as the catalog CRC.
+The Web names this dedicated file `safe-pose.sfp`. SHOW rejects it.
+
+The highest-ID live, valid type-4 file is the active pose. Saving allocates a
+new file and waits for durable COMMIT before deleting earlier safe poses; an
+interrupted save retains the previous pose. This requires one free record and
+48 bytes of allocatable capacity in addition to the existing pose. No automatic
+formatting or overwriting of other files occurs. Existing unformatted or legacy
+storage must first be explicitly prepared through file management.
+
+Mount/recovery and completed catalog changes refresh a 32-byte validated RAM
+snapshot. BLE disconnect and `SAFE_POSE` only copy this snapshot, cancel motion
+and wake servoTask; no Flash access or I2C occurs in the disconnect callback.
+The RAM snapshot remains available during uploads, timeline playback and OTA.
+FORMAT/deleting the active file updates the snapshot; an OTA session retains
+the last known pose in RAM until reboot, but OTA erases the persistent file.
+After OTA/format the user must save a new safe pose. Image backups omit it.
+
+On disconnect the PWM gate closes before changing targets. servoTask writes all
+16 safe values, then enables PWM and keeps the motor supply enabled while
+holding that pose. A stale in-flight frame cannot reopen the gate; I2C failure
+keeps PWM disabled until a successful retry. Without a valid pose, disconnect
+retains the previous power-off behaviour. Boot loads the file but does not
+start motor power solely because the file exists.

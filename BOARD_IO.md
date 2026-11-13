@@ -83,7 +83,8 @@ PWM for diagnostics. A fresh connection restores the normal PWM request.
 Startup keeps EN1/EN2, DIAG_EN1/2 and OE low. A successful BLE connection sets
 the MPQ control pins high, then permits PWM if the PCA is ready. Disconnect
 clears OE first, then EN and DIAG_EN, with no I2C wait. A late PCA initialization,
-retry or queued manual OE write cannot override the disconnected state.
+retry or queued manual OE write cannot override the disconnected state, except
+for the validated safe-pose path described below.
 Normal and diagnostic PCA initialization both use the same gate. A normal PWM
 write failure also disables OE until the PCA initializes successfully again.
 
@@ -186,3 +187,15 @@ ARM checks verify the conversion including 3112 -> 7830, rounding and 12-bit
 boundaries. Web decode checks cover v1/v2, validity, frame lengths and offsets.
 FW and Web production builds passed; this calibration has not been flashed or
 verified against a new physical voltage measurement.
+
+### Saved safe pose exception
+
+When a valid type-4 safe-pose file exists, BLE disconnect still closes the PWM
+gate immediately, then servoTask writes that complete pose and re-enables the
+MPQ control pins and PWM to hold it. The board may therefore intentionally have
+EN/DIAG_EN/OE high after disconnect. `BoardIO_SetSafePoseActive` is the explicit
+exception to connection gating; only the servo worker enables it after a valid
+frame. A generation check rejects completion of an old in-flight frame.
+`SAFE_POSE` also overrides a diagnostic OE-disable request. I2C failure keeps
+PWM gated until recovery. With no valid pose the original off behaviour remains.
+The older `check_mpq_ble.py` off-state test assumes no safe-pose file is saved.

@@ -1,4 +1,5 @@
 #include "../servo/timeline_format.h"
+#include "../servo/safe_pose_format.h"
 /* Sequential file store v2; included by image_store.c after the v1 adapter.
  * All mutations run in displayTask. See FILE_STORE.md for persistence/wire rules. */
 #define FS_MAGIC 0x32534653UL
@@ -45,6 +46,35 @@ static uint8_t fs_request[232], fs_result[240], fs_mode, fs_upload=255, fs_name_
 static volatile bool fs_playback;
 static bool fs_initialized, fs_recover, fs_fault, fs_ota, fs_legacy_status;
 static volatile bool fs_pending, fs_disconnected;
+static uint16_t fs_safe_pose[SAFE_POSE_CHANNELS];
+static bool fs_safe_pose_valid;
+/* Select newest committed ID. Uploads always allocate a new file, so an
+ * interrupted replacement leaves the previous safe pose usable. */
+static void fs_refresh_safe_pose(void) {
+    uint16_t values[SAFE_POSE_CHANNELS];
+    uint16_t candidate[SAFE_POSE_CHANNELS];
+    uint32_t newest=0;
+    if(fs_mode==1 && !fs_fault && !fs_cat.formatting && !fs_cat.journal_page) {
+        for(unsigned i=0;i<fs_cat.count;i++) {
+            const FS_Record *r=&fs_cat.files[i];
+            if(r->state==FS_LIVE && r->type==SAFE_POSE_FILE_TYPE && r->version==1 &&
+               !r->width && !r->height && !r->layout && r->id>newest &&
+               r->length==SAFE_POSE_BYTES && crc32((const uint8_t *)r->offset,r->length)==r->crc &&
+               safe_pose_decode((const uint8_t *)r->offset,r->length,candidate)) {
+                newest=r->id;memcpy(values,candidate,sizeof(values));
+            }
+        }
+    }
+    uint32_t key=enter();
+    fs_safe_pose_valid=newest!=0;
+    if(newest) memcpy(fs_safe_pose,values,sizeof(values));
+    leave(key);
+}
+bool ImageStore_GetSafePose(uint16_t values[16]) {
+    uint32_t key=enter();bool valid=fs_safe_pose_valid;
+    if(valid) memcpy(values,fs_safe_pose,sizeof(fs_safe_pose));
+    leave(key);return valid;
+}
 static uint32_t fs_align(uint32_t n) { return (n+15U)&~15U; }
 static const FS_Catalog *fs_disk(uint32_t a) { return (const FS_Catalog *)a; }
 static bool fs_catalog_valid(uint32_t a) {
@@ -141,7 +171,7 @@ static bool fs_recover_catalog(void) {
     }
     fs_trim();
     bool ok=!changed || fs_save();
-    fs_recover=false;return ok;
+    fs_recover=false;fs_refresh_safe_pose();return ok;
 }
 static uint32_t fs_holes(void) {
     uint32_t n=0;
@@ -162,6 +192,7 @@ void ImageStore_Init(void) {
         fs_current=(!a || (b && fs_disk(FS_TABLE_B)->generation>fs_disk(IMAGE_STORE_BASE)->generation))?FS_TABLE_B:IMAGE_STORE_BASE;
         memcpy(&fs_cat,fs_disk(fs_current),sizeof(fs_cat));fs_mode=1;fs_recover=true;
     } else fs_mode=catalog?2:empty?0:3;
+    fs_refresh_safe_pose();
     fs_status_base(FS_INFO,0,0,0);fs_initialized=true;
 }
 static int fs_find(uint32_t id) {
@@ -186,7 +217,11 @@ static bool fs_valid_name(const char *name,uint8_t length) {
 static uint8_t fs_image_args(const uint8_t *p,FS_Record *r) {
     memset(r,0,sizeof(*r));r->type=p[1];r->length=get32(p+8);r->crc=get32(p+12);
     r->width=p[16];r->height=p[17];r->layout=p[18];r->version=p[19];
-    if((r->type!=1 && r->type!=2 && r->type!=3) || r->version!=1) return FS_VERSION;
+    if((r->type!=1 && r->type!=2 && r->type!=3 && r->type!=SAFE_POSE_FILE_TYPE) || r->version!=1) return FS_VERSION;
+    if(r->type==SAFE_POSE_FILE_TYPE) {
+        if(r->width || r->height || r->layout || r->length!=SAFE_POSE_BYTES) return FS_INVALID;
+        r->capacity=fs_align(r->length);return 0;
+    }
     if(r->type==3) {
         if(r->width || r->height || r->layout || r->length<34 || r->length>FS_CAPACITY) return FS_INVALID;
         r->capacity=fs_align(r->length);return 0;
@@ -288,7 +323,7 @@ void ImageStore_Process(void) {
     uint16_t payload=0;uint8_t response[208];
     if(fs_fault || fs_mode==3) error=FS_LOCKED;
     if(op==FS_INFO) {
-        error=0;put32(response,FS_CAPACITY);put32(response+4,FS_MAX_FILES);put32(response+8,14);put32(response+12,3);payload=16;
+        error=0;put32(response,FS_CAPACITY);put32(response+4,FS_MAX_FILES);put32(response+8,30);put32(response+12,3);payload=16;
     } else if(op==FS_FORMAT && !error) {
         if(get32(fs_request+8)!=FS_FORMAT_KEY) error=FS_INVALID;
         else {
@@ -341,6 +376,8 @@ void ImageStore_Process(void) {
             error=FS_CRC;if(!fs_abort_upload()) error=FS_IO;
         } else if(r->type==3 && !timeline_validate((const uint8_t *)r->offset,r->length)) {
             error=FS_INVALID;if(!fs_abort_upload()) error=FS_IO;
+        } else if(r->type==SAFE_POSE_FILE_TYPE && !safe_pose_decode((const uint8_t *)r->offset,r->length,NULL)) {
+            error=FS_INVALID;if(!fs_abort_upload()) error=FS_IO;
         } else {r->state=FS_LIVE;checksum=r->crc;fs_upload=255;if(!fs_save()) error=FS_IO;}
     } else if(!error && op==FS_ABORT) {if(!fs_abort_upload()) error=FS_IO;
     } else if(!error && op==FS_LIST) {
@@ -364,6 +401,8 @@ void ImageStore_Process(void) {
             } else error=FS_INVALID;
         }
     }
+    /* The durable file is authoritative even if disconnect loses the reply. */
+    if(!error && (op==FS_END || op==FS_DELETE || op==FS_FORMAT)) fs_refresh_safe_pose();
     if(fs_disconnected) {
         if(!fs_fault && fs_upload!=255 && !fs_abort_upload()) error=FS_IO;
         if(!error) error=FS_DISCONNECTED;

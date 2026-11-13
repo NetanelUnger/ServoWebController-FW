@@ -544,6 +544,12 @@ packetSize_t parser_ProcessOne(uint8_t *payload, packetSize_t req_len, uint8_t *
         BLE_TX_Stats((char *)res_payload,COMM_TEXT_RESPONSE_MAX_LEN);
         return (packetSize_t)strlen((char *)res_payload);
     }
+    if (!strcmp(command, COMM_CMD_SAFE_POSE)) {
+        if (memchr(payload, 0, req_len) != NULL || *args != '\0')
+            return comm_WriteResponseText(res_payload,"ERR SAFE_POSE BAD_ARGUMENTS\n");
+        return comm_WriteResponseText(res_payload,servo_EnterSafePose() ?
+            "OK SAFE_POSE APPLIED\n" : "OK SAFE_POSE MISSING\n");
+    }
     if (!strcmp(command, COMM_CMD_TIMELINE_PLAY)) {
         uint32_t id;
         if (memchr(payload, 0, req_len) != NULL || !comm_ParseTimelineId(args, &id))
@@ -564,6 +570,8 @@ packetSize_t parser_ProcessOne(uint8_t *payload, packetSize_t req_len, uint8_t *
         return (packetSize_t)strlen((char *)res_payload);
     }
     if (!strcmp(command, COMM_CMD_HELP)) {
+        if (!strcmp(args,"SAFE_POSE")) return comm_WriteResponseText(res_payload,
+            "OK HELP SAFE_POSE\nSAFE_POSE\nOK HELP END\n");
         if (!strcmp(args,"OTA")) return comm_WriteResponseText(res_payload,"OK HELP OTA\nVERSION\nOK HELP END\n");
         if (!strcmp(args,"TIMELINE")) return comm_WriteResponseText(res_payload,
             "OK HELP TIMELINE\nTIMELINE_PLAY <id>\nTIMELINE_STOP\nTIMELINE_STATUS\nOK HELP END\n");

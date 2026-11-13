@@ -9,6 +9,8 @@ static uint16_t written[16];
 static uint8_t blob[32+16*100+2];
 static uint32_t blob_size;
 static bool lease,cancel_acquire;
+static bool has_safe_pose, safe_power, pwm_ready, disconnect_during_frame;
+static uint16_t saved_pose[16];
 void *servoTaskHandle=(void *)1;
 TickType_t xTaskGetTickCount(void) {return clock_ms;}
 uint32_t TIMER_IF_GetTimerValue(void) {return clock_ms;}
@@ -16,10 +18,18 @@ uint32_t TIMER_IF_Convert_ms2Tick(uint32_t ms) {return ms;}
 uint32_t osThreadFlagsSet(void *t,uint32_t f) {(void)t;return f;}
 uint32_t osThreadFlagsWait(uint32_t f,uint32_t o,uint32_t ms) {(void)o;(void)ms;return f;}
 void osDelay(uint32_t ms) {(void)ms;}
-void BoardIO_SetPwmReady(uint8_t ready) {(void)ready;}
+void BoardIO_SetPwmReady(uint8_t ready) {pwm_ready=ready!=0;}
+void BoardIO_PrepareSafePose(void) {pwm_ready=false;}
+void BoardIO_SetSafePoseActive(uint8_t active) {safe_power=active!=0;}
+bool ImageStore_GetSafePose(uint16_t values[16]) {
+    if(has_safe_pose) memcpy(values,saved_pose,sizeof(saved_pose));
+    return has_safe_pose;
+}
 HAL_StatusTypeDef pca9685_Init(void) {return HAL_OK;}
 HAL_StatusTypeDef pca9685_SetServoPulseFrame(const uint16_t *frame) {
-    frames++;if(fail_frame)return HAL_ERROR;memcpy(written,frame,sizeof(written));return HAL_OK;
+    frames++;if(fail_frame)return HAL_ERROR;memcpy(written,frame,sizeof(written));
+    if(disconnect_during_frame) {disconnect_during_frame=false;servo_SetBleConnected(0);}
+    return HAL_OK;
 }
 bool ImageStore_AcquireTimeline(uint32_t id,const uint8_t **p,uint32_t *size) {
     if(id!=7 || lease || !timeline_validate(blob,blob_size))return false;
@@ -73,6 +83,28 @@ int main(void) {
     assert(written[15]==1500); /* simultaneous group not partially applied */
     reset();plan(1,100,0);event(0,0,100,2000,0,1);assert(timeline_validate(blob,blob_size));
     blob[43]=2;assert(!timeline_validate(blob,blob_size));
+    /* Safe pose cancels every motion owner, survives disconnect and blocks late commands. */
+    reset();for(unsigned ch=0;ch<16;ch++)saved_pose[ch]=(uint16_t)(600+100*ch);
+    has_safe_pose=true;assert(servo_StartDemo1()==HAL_OK);
+    servo_SetBleConnected(0);assert(!servos_controller.demo1_active&&!safe_power&&!pwm_ready);
+    assert(servo_SetServoImmediateValue(0,2500)==HAL_ERROR);
+    assert(servo_StartTimedMove(0,2500,100)==HAL_ERROR);
+    assert(servo_SetAllServoImmediateValues(saved_pose)==HAL_ERROR);
+    tick(1);assert(safe_power&&pwm_ready&&!memcmp(written,saved_pose,sizeof(written)));
+    tick(4000);assert(!memcmp(written,saved_pose,sizeof(written)));
+    reset();plan(1,100,0);event(0,0,100,2500,0,1);play();tick(25);
+    assert(servo_EnterSafePose());assert(!lease&&!timeline.active);tick(30);
+    assert(!memcmp(written,saved_pose,sizeof(written)));
+    reset();assert(servo_SetServoImmediateValue(0,2400)==HAL_OK);
+    disconnect_during_frame=true;tick(1);assert(!pwm_ready&&!safe_power);
+    tick(2);assert(pwm_ready&&safe_power&&!memcmp(written,saved_pose,sizeof(written)));
+    reset();servo_SetBleConnected(0);fail_frame=1;tick(1);assert(!pwm_ready&&!safe_power);
+    fail_frame=0;tick(2);assert(pwm_ready&&safe_power&&!memcmp(written,saved_pose,sizeof(written)));
+    reset();has_safe_pose=false;assert(!servo_EnterSafePose());servo_SetBleConnected(0);tick(1);assert(!safe_power);
+    has_safe_pose=true;tick(2);assert(safe_power&&!memcmp(written,saved_pose,sizeof(written)));
+    has_safe_pose=false;servo_Init();servo_SetBleConnected(0);has_safe_pose=true;tick(3);
+    assert(!safe_pose_requested); /* Merely loading a file at boot must not power motors. */
+    puts("PASS: safe pose, missing pose, disconnect, late commands, stale I2C frame, retry, demo/timeline cancellation");
     puts("PASS: parser, absolute ramp, repeat, wrap, cancellation, ownership, final failure, atomic budget");
     return 0;
 }

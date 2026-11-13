@@ -37,6 +37,9 @@ static TickType_t move_tick[SERVO_CHANNEL_COUNT];
 static uint32_t demo_tick;
 static uint16_t demo_value;
 static uint8_t ble_connected;
+static uint8_t safe_pose_requested;
+static uint8_t safe_pose_deferred;
+static uint32_t safe_pose_generation;
 static struct {
     const uint8_t *events;
     uint32_t id,count,next,duration,repeat,elapsed,max_late,last_tick;
@@ -125,9 +128,48 @@ static void servo_StopLocked(void)
 void servo_SetBleConnected(uint8_t connected)
 {
     taskENTER_CRITICAL();
+    uint8_t was_connected=ble_connected;
     ble_connected = connected != 0U;
-    if (!ble_connected) servo_StopLocked();
+    if (ble_connected) {
+        safe_pose_requested=0U;
+        safe_pose_deferred=0U;
+        BoardIO_SetSafePoseActive(0U);
+    } else if(was_connected) {
+        /* Recovery or an in-flight COMMIT may publish the first pose later. */
+        safe_pose_deferred=1U;
+        (void)servo_EnterSafePose();
+    } else {
+        servo_StopLocked(); /* Initial NUS setup is not a BLE disconnect. */
+    }
     taskEXIT_CRITICAL();
+}
+
+uint8_t servo_EnterSafePose(void)
+{
+    uint16_t values[SERVO_CHANNEL_COUNT];
+    taskENTER_CRITICAL();
+    servo_StopLocked();
+    uint8_t valid=ImageStore_GetSafePose(values);
+#if DISABLE_I2C_PCA9685
+    valid=0U;
+#endif
+    safe_pose_requested=valid;
+    ++safe_pose_generation;
+    BoardIO_SetSafePoseActive(0U);
+    if (valid) {
+        safe_pose_deferred=0U;
+        /* A pre-disconnect I2C snapshot must never re-enable stale outputs. */
+        BoardIO_PrepareSafePose();
+        for (uint8_t channel=0;channel<SERVO_CHANNEL_COUNT;channel++) {
+            servos_controller.servo[channel].current_value=values[channel];
+            servo_StopTimedMove(&servos_controller.servo[channel]);
+        }
+        dirty_channels=0xffffU;
+    }
+    taskEXIT_CRITICAL();
+    servo_Wake();
+    if(valid) servo_NotifyChange();
+    return valid;
 }
 
 void servo_Stop(void)
@@ -214,6 +256,9 @@ void servo_Init(void)
     servos_controller.pca9685_ready = 0U;
     servos_controller.demo1_active = 0U;
     ble_connected = 0U;
+    safe_pose_requested = 0U;
+    safe_pose_deferred = 0U;
+    safe_pose_generation = 0U;
     dirty_channels = 0xffffU;
 
     for (channel = 0U; channel < SERVO_CHANNEL_COUNT; channel++)
@@ -252,6 +297,10 @@ HAL_StatusTypeDef servo_SetServoImmediateValue(uint8_t channel, uint16_t value)
     servo = &servos_controller.servo[channel];
 
     taskENTER_CRITICAL();
+    if (!ble_connected) {
+        taskEXIT_CRITICAL();
+        return HAL_ERROR;
+    }
     if (timeline.active || timeline.loading) {
         taskEXIT_CRITICAL();
         return HAL_BUSY;
@@ -296,6 +345,10 @@ HAL_StatusTypeDef servo_SetAllServoImmediateValues(const uint16_t values[SERVO_C
     }
 
     taskENTER_CRITICAL();
+    if (!ble_connected) {
+        taskEXIT_CRITICAL();
+        return HAL_ERROR;
+    }
     if (timeline.active || timeline.loading) {
         taskEXIT_CRITICAL();
         return HAL_BUSY;
@@ -366,6 +419,10 @@ HAL_StatusTypeDef servo_StartTimedMove(uint8_t channel, uint16_t target_value, u
     clamped_target = servo_ClampPulseUs(target_value);
 
     taskENTER_CRITICAL();
+    if (!ble_connected) {
+        taskEXIT_CRITICAL();
+        return HAL_ERROR;
+    }
     if (timeline.active || timeline.loading) {
         taskEXIT_CRITICAL();
         return HAL_BUSY;
@@ -396,9 +453,15 @@ void servo_Task(void)
     uint16_t next_value;
     uint16_t frame[SERVO_CHANNEL_COUNT];
     uint8_t pending;
+    uint32_t frame_generation;
     volatile servo_state_t *servo;
 
     (void)osThreadFlagsWait(1U, osFlagsWaitAny, (timeline.active ? 1U : pdMS_TO_TICKS(SERVO_TASK_PERIOD_MS)));
+
+    taskENTER_CRITICAL();
+    if(safe_pose_deferred && !ble_connected && ImageStore_GetSafePose(frame))
+        (void)servo_EnterSafePose();
+    taskEXIT_CRITICAL();
 
     if (servos_controller.pca9685_ready == 0U)
     {
@@ -455,6 +518,7 @@ void servo_Task(void)
      * during the I2C transfer retain their dirty bits for the next frame. */
     taskENTER_CRITICAL();
     pending = dirty_channels != 0U;
+    frame_generation = safe_pose_generation;
     for (channel = 0U; channel < SERVO_CHANNEL_COUNT; channel++)
         frame[channel] = servos_controller.servo[channel].current_value;
     dirty_channels = 0U;
@@ -467,9 +531,12 @@ void servo_Task(void)
             if(timeline.active) {servo_StopLocked();timeline.state="FAULT";}
             taskEXIT_CRITICAL();
         } else {
-            /* Includes the first complete frame after initialization/recovery.
-             * BoardIO also checks BLE state: this cannot override disconnect. */
-            BoardIO_SetPwmReady(1U);
+            taskENTER_CRITICAL();
+            if(frame_generation==safe_pose_generation) {
+                if(safe_pose_requested) BoardIO_SetSafePoseActive(!ble_connected);
+                BoardIO_SetPwmReady(1U);
+            }
+            taskEXIT_CRITICAL();
         }
     }
 

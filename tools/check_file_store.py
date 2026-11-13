@@ -59,7 +59,7 @@ def verify_timelines(elf):
  payload=plan(((0,0,1500,0,0),(0,100,2000,0,1)),100,50)
  file=m.save(payload,0,0,type=3,name='timeline')
  assert m.read(file)==payload and m.read(image)==b'\x15'*16
- assert struct.unpack_from('<I',m.cmd(0x26),40)[0]==14
+ assert struct.unpack_from('<I',m.cmd(0x26),40)[0]==30
  m.cmd(0x22,file,error=0x89)
  assert m.call('ImageStore_AcquireTimeline',file,0x20017000,0x20017004)==1
  assert struct.unpack('<I',m.uc.mem_read(0x20017004,4))[0]==len(payload)
@@ -87,8 +87,50 @@ def verify_timelines(elf):
  m.cmd(0x26)
  print('PASS: timeline/image coexistence, round trip, validation, flash/OTA lease and CRC')
 
+def verify_safe_pose(elf):
+ m=Store(elf);m.format()
+ def pose(base):return b'SFP1'+struct.pack('<HH16H',1,16,*[base+i for i in range(16)])
+ def cached(device):
+  address=0x20017000
+  return bytes(device.uc.mem_read(address,32)) if device.call('ImageStore_GetSafePose',address) else None
+ assert cached(m) is None
+ old=pose(1000);first=m.save(old,0,0,type=4,name='safe-pose.sfp')
+ assert cached(m)==old[8:]
+ image=m.save(b'\x77'*16,4,4)
+ new=pose(1600);latest=m.save(new,0,0,type=4,name='safe-pose.sfp')
+ assert cached(m)==new[8:] and m.read(image)==b'\x77'*16
+ reboot=Store(elf,m.flash());assert cached(reboot)==new[8:]
+ # Losing power/disconnecting before COMMIT preserves the previous pose.
+ interrupted=m.begin(pose(1800),0,0,type=4)
+ m.data(pose(1800)[:16]);assert cached(m)==new[8:]
+ reboot=Store(elf,m.flash());assert cached(reboot)==new[8:]
+ m.call('ImageStore_Disconnect',1);m.call('ImageStore_Process')
+ assert cached(m)==new[8:]
+ # Bad payload with a matching CRC must still be rejected at COMMIT.
+ bad=bytearray(pose(1900));struct.pack_into('<H',bad,8,499)
+ rejected=m.begin(bytes(bad),0,0,type=4);m.data(bytes(bad));m.cmd(0x21,rejected,error=0x80)
+ assert cached(m)==new[8:]
+ # Delete oldest, reuse its earlier extent, select by ID rather than physical order.
+ m.cmd(0x23,first);replacement=m.save(pose(1700),0,0,type=4)
+ assert replacement>latest and cached(m)==pose(1700)[8:]
+ assert cached(Store(elf,m.flash()))==pose(1700)[8:]
+ m.cmd(0x23,replacement);assert cached(m)==new[8:]
+ assert m.call('ImageStore_ClaimOTA')==1
+ assert cached(m)==new[8:] # retain last known RAM pose during an OTA session
+ assert cached(Store(elf,m.flash())) is None
+ reboot.cmd(0x2a,args=(0x46534f4b,));assert cached(reboot) is None
+ # A queued COMMIT can finish after the disconnect event: publish its durable pose.
+ lost=Store(elf);lost.format();file=lost.begin(old,0,0,type=4);lost.data(old)
+ lost.seq+=1
+ assert lost.submit(struct.pack('<BBHI',0x21,0,lost.seq,file))==0
+ lost.call('ImageStore_Disconnect',1);lost.call('ImageStore_Process')
+ assert lost.status()[3]==0x88 and cached(lost)==old[8:]
+ assert cached(Store(elf,lost.flash()))==old[8:]
+ print('PASS: safe pose validation, newest ID, interruption, reconnect, reboot, deletion, format, lost COMMIT reply and OTA')
+
 def verify(elf):
  verify_timelines(elf)
+ verify_safe_pose(elf)
  m=Store(elf);assert m.cmd(0x26)[6]==0
  m.format();assert m.files()==[]
  a=bytes((i*13)&255 for i in range(31*17));b=bytes((i*7)&255 for i in range(33*19));c=b'\x96'*(23*21)

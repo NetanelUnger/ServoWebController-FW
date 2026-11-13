@@ -82,3 +82,13 @@ When changing TOF payload semantics, update:
 - `STM32_WPAN/App/tof*` if packet shape or characteristic behavior changes
 - Web `src/ble/BleProvider.tsx`
 - Web TOF UI/workflow consumers that decode or resize the map
+
+## Saved safe servo pose
+
+`servo/safe_pose_format.h` defines the type-4 file in the existing OTA file store.
+Storage caches the newest valid committed pose in RAM for callback-safe access.
+`SAFE_POSE` and BLE disconnect cancel all motion and queue this pose atomically.
+Only servoTask enables `BoardIO_SetSafePoseActive` after writing the full frame;
+this is the deliberate exception to disconnected PWM/power gating. Preserve the
+safe-pose generation check against stale I2C completion. Web saves a new file
+before deleting previous copies. OTA/format remove the persistent pose.

@@ -64,12 +64,14 @@ typedef void (*servo_ChangeCallback_t)(void);
  */
 extern void servo_Init(void);
 
-/** BLE lifecycle hook; disconnect cancels demo and timed moves without I2C. */
+/** BLE lifecycle hook; disconnect queues the saved safe pose and cancels motion without I2C. */
 extern void servo_SetBleConnected(uint8_t connected);
 /** Start all 16 channels at 500 us, toggling 500/2000 us every 2000 ms. */
 extern HAL_StatusTypeDef servo_StartDemo1(void);
 /** Cancel DEMO1 and timed moves, holding the last commanded pulse widths. */
 extern void servo_Stop(void);
+/* Cancel motion and queue the validated stored pose. Returns 0 if none exists. */
+extern uint8_t servo_EnterSafePose(void);
 /* PLAY returns accepted after CRC/plan validation. No completion implication. */
 extern const char *servo_TimelinePlay(uint32_t file_id);
 extern void servo_TimelineStatus(char *out,size_t capacity);
