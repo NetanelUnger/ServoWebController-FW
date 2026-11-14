@@ -542,7 +542,7 @@ packetSize_t parser_ProcessOne(uint8_t *payload, packetSize_t req_len, uint8_t *
     }
     if (!strcmp(command, COMM_CMD_WASM_INFO)) {
         if(*args || memchr(payload,0,req_len))return comm_WriteResponseText(res_payload,"ERR WASM_INFO BAD_ARGUMENTS\n");
-        return comm_WriteResponseText(res_payload,"OK WASM_INFO 1 2048 12288 20000 20\nOK WASM_INFO END\n");
+        return comm_WriteResponseText(res_payload,"OK WASM_INFO 2 2048 12288 20000 20\nOK WASM_INFO END\n");
     }
     if (!strcmp(command, COMM_CMD_WASM_FILE)) {
         uint32_t id;

@@ -8,4 +8,5 @@
  * No start/constructor, imported memory, populated table, WASI or unknown host
  * functions. The linker's one empty fixed table slot is accepted. */
 bool RobotWasm_Validate(const uint8_t *bytes, uint32_t length);
+bool RobotWasm_Inspect(const uint8_t *bytes, uint32_t length, uint8_t *abi);
 #endif

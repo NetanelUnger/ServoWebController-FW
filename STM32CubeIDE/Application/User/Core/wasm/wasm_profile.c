@@ -1,4 +1,5 @@
 #include "wasm_profile.h"
+#include "robot_imports.h"
 #include <string.h>
 typedef struct { const uint8_t *p,*end; bool ok; } Reader;
 typedef struct { uint8_t n, result, args[4]; } Signature;
@@ -20,10 +21,11 @@ static bool name(Reader *r,const char *s) {
     bool equal=n==strlen(s) && !memcmp(r->p,s,n);r->p+=n;return equal;
 }
 static bool numeric(uint8_t t) {return t>=0x7c && t<=0x7f;}
-bool RobotWasm_Validate(const uint8_t *bytes,uint32_t length) {
+bool RobotWasm_Inspect(const uint8_t *bytes,uint32_t length,uint8_t *abi) {
     if(!bytes || length<8 || length>ROBOT_WASM_MAX_BYTES || memcmp(bytes,"\0asm\1\0\0\0",8)) return false;
     Reader file={bytes+8,bytes+length,true};
-    Signature types[16]={0};uint8_t funcs[21]={0},gtype[16]={0},gmut[16]={0};int32_t globals[16]={0};
+    Signature types[16]={0};uint8_t funcs[48]={0},gtype[16]={0},gmut[16]={0};int32_t globals[16]={0};
+    uint8_t required_abi=1;
     uint32_t nt=0,nf=0,ni=0,ng=0,defined=0;uint8_t last=0;unsigned seen=0, exports=0;
     int32_t heap=-1,data_end=-1;
     while(file.p<file.end && file.ok) {
@@ -46,14 +48,15 @@ bool RobotWasm_Validate(const uint8_t *bytes,uint32_t length) {
                 if(n && !numeric(types[i].result)) return false;
             }break;
         case 2:
-            if(count>5)return false;
+            if(count>32)return false;
             ni=count;
             for(uint32_t i=0;i<count;i++) {
                 if(!name(&r,"robot"))return false;
                 Reader n=r;int arity=-1;
-                if(name(&n,"imu_word") || (n=r,name(&n,"tof_mm")) || (n=r,name(&n,"servo_get_us")))arity=1;
-                else if((n=r,name(&n,"servo_set_us")))arity=2;
-                else if((n=r,name(&n,"millis")))arity=0;
+                #define MATCH_IMPORT(symbol,fn,argc,version) \
+                    if(arity<0 && (n=r,name(&n,#symbol))) {arity=argc;if(version>required_abi)required_abi=version;}
+                ROBOT_IMPORTS(MATCH_IMPORT)
+                #undef MATCH_IMPORT
                 r=n;if(arity<0 || byte(&r)!=0)return false;
                 uint32_t t=leb(&r);if(t>=nt || types[t].n!=arity || types[t].result!=0x7f)return false;
                 for(int j=0;j<arity;j++)if(types[t].args[j]!=0x7f)return false;
@@ -62,7 +65,7 @@ bool RobotWasm_Validate(const uint8_t *bytes,uint32_t length) {
         case 3:
             if(count<1 || count>16)return false;
             defined=count;
-            for(uint32_t i=0;i<count;i++) {uint32_t t=leb(&r);if(t>=nt || nf>=21)return false;funcs[nf++]=(uint8_t)t;}break;
+            for(uint32_t i=0;i<count;i++) {uint32_t t=leb(&r);if(t>=nt || nf>=48)return false;funcs[nf++]=(uint8_t)t;}break;
         case 4:
             /* LLD emits one empty, fixed funcref slot even without function
              * pointers. Element segments remain forbidden, so it stays null. */
@@ -84,17 +87,24 @@ bool RobotWasm_Validate(const uint8_t *bytes,uint32_t length) {
                 if(byte(&r)!=0x0b)return false;
             }break;
         case 7:
-            if(count<3 || count>4)return false;
+            if(count<3 || count>6)return false;
             for(uint32_t i=0;i<count;i++) {
                 Reader n=r;unsigned flag=0;
                 if(name(&n,"step"))flag=1;
                 else if((n=r,name(&n,"__heap_base")))flag=2;
                 else if((n=r,name(&n,"__data_end")))flag=4;
                 else if((n=r,name(&n,"memory")))flag=8;
+                else if((n=r,name(&n,"init")))flag=16;
+                else if((n=r,name(&n,"robot_abi_v2")))flag=32;
                 r=n;if(!flag || (exports&flag))return false;exports|=flag;
                 uint8_t kind=byte(&r);uint32_t idx=leb(&r);
                 if(flag==1) {if(kind || idx<ni || idx>=nf)return false;Signature *t=&types[funcs[idx]];
                     if(t->n!=1 || t->args[0]!=0x7f || t->result!=0x7f)return false;}
+                else if(flag==16 || flag==32) {
+                    if(kind || idx<ni || idx>=nf)return false;
+                    Signature *t=&types[funcs[idx]];
+                    if(t->n || t->result!=(flag==16?0x7f:0))return false;
+                }
                 else if(flag==8) {if(kind!=2 || idx!=0)return false;}
                 else {if(kind!=3 || idx>=ng || gtype[idx]!=0x7f || gmut[idx])return false;
                     if(flag==2)heap=globals[idx];else data_end=globals[idx];}
@@ -120,6 +130,10 @@ bool RobotWasm_Validate(const uint8_t *bytes,uint32_t length) {
         }
         if(!r.ok || r.p!=r.end)return false;
     }
-    return file.ok && (exports&7)==7 && (seen&(1U<<5)) && (seen&(1U<<10)) &&
-           data_end>=0 && data_end<=1024 && heap>=data_end+1024 && heap<=2048;
+    bool valid=file.ok && (exports&7)==7 && (seen&(1U<<5)) && (seen&(1U<<10)) &&
+           data_end>=0 && data_end<=1024 && heap>=data_end+1024 && heap<=2048 &&
+           ((exports&32) || (required_abi==1 && !(exports&16)));
+    if(valid && abi)*abi=(exports&32)?2:1;
+    return valid;
 }
+bool RobotWasm_Validate(const uint8_t *bytes,uint32_t length) {return RobotWasm_Inspect(bytes,length,NULL);}

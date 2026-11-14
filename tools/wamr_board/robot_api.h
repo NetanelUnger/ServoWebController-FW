@@ -3,6 +3,8 @@
 #include <stdint.h>
 #define ROBOT_IMPORT(name) __attribute__((import_module("robot"), import_name(#name)))
 /* Prototype ABI 0, for the embedded qualification guest only.
+ * Uploaded ABI 2 programs use the canonical robot.h in companion Web
+ * public/wasm-compiler/sdk.js; see WAMR_BOARD.md for lifecycle and helpers.
  * All sensor reads refer to one snapshot captured before step(). Sensors must
  * already be enabled through BLE; samples older than 500 ms are unavailable. */
 /* Word index 0..11 in the existing 48-byte little-endian IMU packet. Zero when

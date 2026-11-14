@@ -1,5 +1,7 @@
 #include "robot_vm.h"
 #include "wasm_profile.h"
+#include "robot_imports.h"
+#include "robot_sensor_math.h"
 #include "display/image_store.h"
 #include "wasm_export.h"
 #include "app_freertos.h"
@@ -21,6 +23,12 @@ static uint8_t imu_snapshot[IMU_RAW_LENGTH];
 static uint16_t tof_snapshot[VL53L8CX_ZONE_COUNT];
 static uint8_t imu_valid, tof_valid;
 static uint32_t snapshot_tick;
+static uint8_t api_version;
+static volatile uint8_t sensor_requests;
+static uint32_t imu_enable_frame,tof_enable_frame,tof_age;
+static uint16_t filter_min,filter_max;
+static RobotTofStats tof_stats;
+static bool tof_stats_dirty;
 typedef enum { VM_IDLE, VM_QUEUED, VM_LOADING, VM_RUNNING,
                VM_DONE, VM_STOPPED, VM_TRAP, VM_ERROR } vm_state_t;
 static const char *const states[] = {
@@ -54,6 +62,12 @@ static void capture_sensors(void)
                 snapshot_tick - read_le32(imu_snapshot + 8) < 500U;
     tof_valid = g_vl53l8cx_runtime.ranging_active && g_vl53l8cx_runtime.frames &&
                 snapshot_tick - g_vl53l8cx_runtime.last_frame_tick_ms < 500U;
+    if(api_version>=2) {
+        imu_valid=imu_valid && (sensor_requests&2U) && read_le32(imu_snapshot+4)!=imu_enable_frame;
+        tof_valid=tof_valid && (sensor_requests&1U) && g_vl53l8cx_runtime.frames!=tof_enable_frame;
+    }
+    tof_age=snapshot_tick-g_vl53l8cx_runtime.last_frame_tick_ms;
+    tof_stats_dirty=true;
     vm.imu_frame = imu_valid ? read_le32(imu_snapshot + 4) : 0U;
     vm.tof_frame = tof_valid ? g_vl53l8cx_runtime.frames : 0U;
     taskEXIT_CRITICAL();
@@ -67,9 +81,72 @@ static int32_t native_imu_word(wasm_exec_env_t env, uint32_t index)
 static int32_t native_tof_mm(wasm_exec_env_t env, uint32_t index)
 {
     (void)env; ++vm.calls;
-    return !vm.stop && tof_valid && index < VL53L8CX_ZONE_COUNT &&
-           tof_snapshot[index] != VL53L8CX_DISTANCE_INVALID_MM ? tof_snapshot[index] : -1;
+    return RobotTof_Value(tof_snapshot,!vm.stop && tof_valid,index,filter_min,filter_max);
 }
+static int32_t request_sensor(uint32_t enabled,uint8_t bit) {
+    if(enabled>1 || !vm.file_id || api_version<2)return -1;
+    taskENTER_CRITICAL();
+    if(vm.stop) {taskEXIT_CRITICAL();return -2;}
+    if(!!(sensor_requests&bit)!=enabled) {
+        if(enabled)sensor_requests|=bit;else sensor_requests&=(uint8_t)~bit;
+        if(bit==1) {tof_valid=0;tof_stats_dirty=true;tof_enable_frame=g_vl53l8cx_runtime.frames;}
+        else {imu_valid=0;imu_enable_frame=g_imu.frames;}
+    }
+    if(bit==1)vl53l8cx_SetLocalDemand((uint8_t)enabled);else IMU_SetLocalDemand((uint8_t)enabled);
+    taskEXIT_CRITICAL();return 0;
+}
+static int32_t native_tof_enable(wasm_exec_env_t env,uint32_t enabled) {(void)env;++vm.calls;return request_sensor(enabled,1);}
+static int32_t native_imu_enable(wasm_exec_env_t env,uint32_t enabled) {(void)env;++vm.calls;return request_sensor(enabled,2);}
+static int32_t native_tof_set_range(wasm_exec_env_t env,uint32_t low,uint32_t high) {
+    (void)env;++vm.calls;
+    if(low>high || high>65534U)return -1;
+    if(vm.stop)return -2;
+    filter_min=(uint16_t)low;filter_max=(uint16_t)high;tof_stats_dirty=true;return 0;
+}
+static int32_t native_tof_at(wasm_exec_env_t env,uint32_t x,uint32_t y) {
+    if(x>=8 || y>=8) {(void)env;++vm.calls;return -1;}
+    return native_tof_mm(env,y*8+x);
+}
+static int32_t native_tof_read(wasm_exec_env_t env,uint32_t offset) {
+    ++vm.calls;
+    wasm_module_inst_t instance=wasm_runtime_get_module_inst(env);
+    /* Validate the complete destination before converting the guest offset.
+     * The module must provide 64 i32 cells (256 bytes), including on no-data. */
+    if(!wasm_runtime_validate_app_addr(instance,offset,64U*sizeof(int32_t)))return -1;
+    uint8_t *out=wasm_runtime_addr_app_to_native(instance,offset);
+    int32_t count=0;
+    for(uint32_t i=0;i<64;i++) {
+        int32_t value=RobotTof_Value(tof_snapshot,!vm.stop && tof_valid,i,filter_min,filter_max);
+        memcpy(out+i*sizeof(value),&value,sizeof(value));
+        if(value>=0)++count;
+    }
+    return count;
+}
+static int32_t native_tof_ready(wasm_exec_env_t env) {(void)env;++vm.calls;return !vm.stop && tof_valid;}
+static int32_t native_tof_frame_id(wasm_exec_env_t env) {(void)env;++vm.calls;return !vm.stop && tof_valid?(int32_t)vm.tof_frame:0;}
+static int32_t native_tof_age_ms(wasm_exec_env_t env) {(void)env;++vm.calls;return !vm.stop && tof_valid?(int32_t)tof_age:-1;}
+static RobotTofStats *stats(void) {
+    if(tof_stats_dirty || vm.stop) {
+        tof_stats=RobotTof_Reduce(tof_snapshot,!vm.stop && tof_valid,filter_min,filter_max);
+        tof_stats_dirty=false;
+    }
+    return &tof_stats;
+}
+#define TOF_STAT(name,field) static int32_t native_tof_##name(wasm_exec_env_t env) {(void)env;++vm.calls;return stats()->field;}
+TOF_STAT(min_mm,minimum)
+TOF_STAT(max_mm,maximum)
+TOF_STAT(mean_mm,mean)
+TOF_STAT(min_zone,min_zone)
+TOF_STAT(max_zone,max_zone)
+TOF_STAT(count,count)
+#undef TOF_STAT
+static int32_t native_imu_ready(wasm_exec_env_t env) {
+    (void)env;++vm.calls;return !vm.stop && imu_valid && imu_snapshot[0]==1 && (imu_snapshot[1]&3U)==3U;
+}
+static int32_t native_imu_frame_id(wasm_exec_env_t env) {(void)env;++vm.calls;return !vm.stop && imu_valid?(int32_t)vm.imu_frame:0;}
+static int32_t native_imu_age_ms(wasm_exec_env_t env) {(void)env;++vm.calls;return !vm.stop && imu_valid?(int32_t)(snapshot_tick-read_le32(imu_snapshot+8)):-1;}
+static int32_t native_imu_accel_mg(wasm_exec_env_t env,uint32_t axis) {(void)env;++vm.calls;return RobotImu_Axis(imu_snapshot,!vm.stop && imu_valid,axis,false);}
+static int32_t native_imu_gyro_mdps(wasm_exec_env_t env,uint32_t axis) {(void)env;++vm.calls;return RobotImu_Axis(imu_snapshot,!vm.stop && imu_valid,axis,true);}
 static int32_t native_millis(wasm_exec_env_t env)
 { (void)env; ++vm.calls; return (int32_t)snapshot_tick; }
 static int32_t native_servo_get(wasm_exec_env_t env, uint32_t channel)
@@ -95,11 +172,12 @@ static int32_t native_servo_set(wasm_exec_env_t env, uint32_t channel, uint32_t 
     return result;
 }
 static NativeSymbol imports[] = {
-    {"imu_word", native_imu_word, "(i)i", NULL},
-    {"tof_mm", native_tof_mm, "(i)i", NULL},
-    {"millis", native_millis, "()i", NULL},
-    {"servo_get_us", native_servo_get, "(i)i", NULL},
-    {"servo_set_us", native_servo_set, "(ii)i", NULL}
+    #define SIGNATURE_0 "()i"
+    #define SIGNATURE_1 "(i)i"
+    #define SIGNATURE_2 "(ii)i"
+    #define IMPORT(symbol,fn,argc,version) {#symbol,fn,SIGNATURE_##argc,NULL},
+    ROBOT_IMPORTS(IMPORT)
+    #undef IMPORT
 };
 void RobotVM_Init(uint8_t *native_stack_bottom)
 {
@@ -112,6 +190,7 @@ void RobotVM_RequestStop(void)
     if (vm.state >= VM_QUEUED && vm.state <= VM_RUNNING && !vm.stop) {
         vm.stop_tick = HAL_GetTick();
         vm.stop = 1U;
+        if(vm.file_id) {sensor_requests=0;IMU_SetLocalDemand(0);vl53l8cx_SetLocalDemand(0);}
     }
     taskEXIT_CRITICAL();
 }
@@ -161,6 +240,7 @@ static vm_state_t run_program(void)
     bool leased=false, motor_owner=false;
     mem_alloc_info_t mem = {0};
     vm_state_t outcome = VM_ERROR;
+    api_version=1;sensor_requests=0;filter_min=0;filter_max=65534;tof_stats_dirty=true;
     init.mem_alloc_type = Alloc_With_Pool;
     init.mem_alloc_option.pool.heap_buf = vm_pool;
     init.mem_alloc_option.pool.heap_size = sizeof(vm_pool);
@@ -175,7 +255,7 @@ static vm_state_t run_program(void)
     if(vm.file_id) {
         if(!ImageStore_AcquireProgram(vm.file_id,&source,&length)) {strcpy(last_error,"FILE_UNAVAILABLE");goto done;}
         leased=true;
-        if(!RobotWasm_Validate(source,length)) {strcpy(last_error,"UNSUPPORTED_WASM_PROFILE");goto done;}
+        if(!RobotWasm_Inspect(source,length,&api_version)) {strcpy(last_error,"UNSUPPORTED_WASM_PROFILE");goto done;}
     }
     bytes = wasm_runtime_malloc(length);
     if (!bytes) { strcpy(last_error, "module buffer allocation failed"); goto done; }
@@ -192,9 +272,22 @@ static vm_state_t run_program(void)
     if(vm.file_id) {
         taskENTER_CRITICAL();
         if(!vm.stop)motor_owner=servo_BeginLocalControl()==HAL_OK;
-        if(motor_owner) {IMU_SetLocalDemand(1);vl53l8cx_SetLocalDemand(1);}
+        /* Preserve the original lifecycle for already stored ABI-1 files. */
+        if(motor_owner && api_version==1) {IMU_SetLocalDemand(1);vl53l8cx_SetLocalDemand(1);}
         taskEXIT_CRITICAL();
         if(!motor_owner) {strcpy(last_error,"MOTION_BUSY_OR_DISCONNECTED");goto done;}
+    }
+    if(vm.file_id && api_version>=2) {
+        wasm_function_inst_t initialize=wasm_runtime_lookup_function(instance,"init");
+        if(initialize && !vm.stop) {
+            capture_sensors();uint32_t result[1]={0};
+            wasm_runtime_set_instruction_count_limit(exec,VM_INSTRUCTIONS_PER_STEP);
+            if(!wasm_runtime_call_wasm(exec,initialize,0,result)) {
+                const char *error=wasm_runtime_get_exception(instance);
+                snprintf(last_error,sizeof(last_error),"%s",error?error:"init failed");outcome=VM_TRAP;goto done;
+            }
+            if((int32_t)result[0]!=0) {snprintf(last_error,sizeof(last_error),"INIT_FAILED %ld",(long)(int32_t)result[0]);goto done;}
+        }
     }
     vm.state = VM_RUNNING;
     do {
@@ -226,7 +319,7 @@ static vm_state_t run_program(void)
     } while (!vm.stop);
 done:
     if(leased)ImageStore_ReleaseProgram();
-    if(motor_owner) {IMU_SetLocalDemand(0);vl53l8cx_SetLocalDemand(0);servo_EndLocalControl();}
+    if(motor_owner) {sensor_requests=0;IMU_SetLocalDemand(0);vl53l8cx_SetLocalDemand(0);servo_EndLocalControl();}
     if (wasm_runtime_get_mem_alloc_info(&mem)) vm.peak = mem.highmark_size;
     if (exec) wasm_runtime_destroy_exec_env(exec);
     if (instance) wasm_runtime_deinstantiate(instance);

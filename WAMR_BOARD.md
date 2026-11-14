@@ -234,3 +234,76 @@ and the RAM copy after file deletion. It deletes only its test IDs and verifies
 original hashes. `--winrt-shared` requests explicit shared GATT access when
 Windows otherwise hides custom services owned by another client. The separate
 disconnect test cycles Windows Bluetooth, interrupting all local Bluetooth links.
+
+## Sensor API, ABI 2 (2026-11-14)
+
+`WASM_INFO` now advertises ABI 2. `robot_imports.h` is the shared firmware import
+list used by both WAMR registration and preflight validation. The Web compiler
+adds the `robot_abi_v2` marker and optional weak `int32_t init(void)`. User init
+runs once per Run, under the same 20,000-instruction budget as step. Nonzero
+returns report `INIT_FAILED`; traps and STOP clean up without entering step.
+Old ABI 1 files still run with their original automatic sensor requests.
+
+ABI 2 starts with no sensor requests. `tof_enable(1)` / `imu_enable(1)` request
+sampling asynchronously; 0 releases the request. APIs return 0 accepted, -1
+invalid input or -2 stopped. Snapshot reads remain unavailable until a new
+producer frame arrives after enable. Disable invalidates this program's reads
+immediately; hardware transitions remain in the producer tasks. STOP releases
+demand immediately, independently of eventual VM cleanup. Independent BLE
+demand is preserved; raw IMU requests do not override BLE SFLP mode.
+
+The new native helpers are bounded, allocation-free, and use cached snapshots:
+
+- `tof_read(int32_t map[64])`: validate the full 256-byte guest destination,
+  copy raw mm or -1, return count. C array bounds inside linear memory remain
+  the caller's responsibility. Coordinates use `y*8+x`, matching the TOF view.
+- `tof_at(x,y)`, `tof_set_range(min,max)`: inclusive per-program range, default
+  0..65534; invalid ranges retain the old filter. No BLE encoding changes.
+- `tof_min_mm/max_mm/mean_mm/min_zone/max_zone/count`: shared cached 64-cell
+  reduction per snapshot/filter; count 0 when empty, others -1, first-index ties.
+- `imu_accel_mg(axis)`, `imu_gyro_mdps(axis)`: signed board-axis X/Y/Z integers,
+  1000 mg=1g, 1000 mdps=1 degree/s; INT32_MIN unavailable/wrong mode/invalid axis.
+- Both sensors expose readiness, frame ID and age. Freshness <500 ms; unavailable
+  ID=0, age=-1. IMU typed readiness requires raw mode; packet ID/age also work
+  with SFLP. Existing `imu_word`, `tof_mm`, time and servo imports remain.
+
+The detailed SDK and user examples are in companion Web `WAMR_CONSOLE.md` and
+`public/wasm-compiler/sdk.js`. Profile limits remain 2 KB module, 1 KB data and
+1 KB C stack, at most 16 defined functions (including init/marker). The import
+limit is now 32, with 24 known exact signatures; init and marker signatures are
+validated, and extended imports without the marker are rejected. No new task,
+heap allocation or larger VM pool was introduced.
+
+Verification artifacts are under `artifacts/sensor_api/`. All eight new compiled
+fixtures passed on the flashed board: default-off, one-shot init, TOF array and
+reducers versus C calculations, typed IMU versus raw data, disabling both,
+nonzero init failure, init instruction exhaustion and out-of-bounds destination.
+The prior uploaded ABI 1 suite also passed. Original files 6, 7, 18 and 31 were
+hashed before/after and preserved; temporary test IDs were removed. Native tests
+cover inclusive/empty/max-value maps, invalid axes/modes, export signatures,
+missing markers, truncation and mutation fuzz. All four editor examples compiled
+in Chromium's actual Worker (275/523/242/347 bytes), reusing all three cache
+entries. The full React app was not built under its repository's code-only rule.
+
+Reproduce hardware checks after compiling `tools/wamr_board/sensor_fixtures/*.c`
+with the companion compiler:
+
+```powershell
+.venv-ota/Scripts/python.exe tools/check_wasm_profile.py --modules artifacts/wasm_upload --abi2-modules artifacts/sensor_api
+.venv-ota/Scripts/python.exe tools/check_wasm_upload_hardware.py --run --winrt-shared --modules artifacts/wasm_upload --sensor-api-modules artifacts/sensor_api --output artifacts/sensor_api/hardware.json
+```
+
+ABI 2 TOF execution also stopped on real BLE loss (700 ms cleanup under
+higher-priority work). A subsequent SWD snapshot confirmed both producer states
+off and local requests cleared. Pool peak was 8952/12288 bytes for the larger
+self-check fixture; native VM stack untouched margin was 2608/4096 after the
+pointer-fault path. FreeRTOS free/minimum remains 3376/32000. Static RAM grew
+352 bytes (304 data, 48 BSS); libc capacity is 5528, committed 552, uncommitted
+4976. These measurements cover the exercised paths, not arbitrary programs.
+
+Readback verified 404820 programmed HEX bytes, the unchanged 24576-byte
+bootloader region, and all four original file hashes after all tests. BIN SHA-256:
+`18d53c90e7670f20dd7fbc0dfaa56cb6a3b3f7c41d9c9bb90610edf04880c19f`.
+Build completed with three pre-existing application warnings and two upstream
+WAMR native-stack-address diagnostics. The board was reset after SWD and left
+with the VM idle. No additional firmware heap/task/pool size changes were needed.

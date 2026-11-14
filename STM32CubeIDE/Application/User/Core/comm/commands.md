@@ -206,7 +206,7 @@ may be active; a second RUN returns `ERR WASM_RUN BUSY`. STOP, SAFE_POSE and rea
 BLE disconnect also revoke the VM. Poll STATUS for DONE/STOPPED/TRAP/ERROR.
 Built-in SENSORS requires the existing BLE modes/subscriptions.
 
-`WASM_INFO` returns `OK WASM_INFO 1 2048 12288 20000 20` followed by
+`WASM_INFO` returns `OK WASM_INFO 2 2048 12288 20000 20` followed by
 `OK WASM_INFO END`: ABI, maximum module bytes, pool size, instruction budget,
 and delay after each step. `WASM_FILE <id>` runs a live type-5 file from the
 existing file store; metadata is width/height/layout 0, version 1, length 8..2048.
@@ -216,7 +216,13 @@ The VM checks CRC, bounds and ABI, copies bytes into its existing pool under a
 short Flash lease, then releases it. Start functions are rejected. Uploaded
 `step(uint32_t now_ms)` repeats until stop/trap.
 
-Uploaded programs request IMU/TOF locally and acquire exclusive motor ownership.
+ABI 2 programs optionally export `int32_t init(void)`, called once before step.
+Return 0 to continue, otherwise ERROR `INIT_FAILED <value>`; init has the same
+instruction budget as step. Compiler-supplied `robot_abi_v2` identifies the new
+lifecycle. Sensor requests start disabled; `tof_enable(1)` / `imu_enable(1)`
+request them asynchronously, and 0 releases them. Readiness must be polled across
+steps. Existing ABI 1 files retain automatic sensor activation. All uploaded
+programs acquire exclusive motor ownership.
 BLE sensor modes take precedence; local sensing does not enable disabled BLE
 streams. Direct, all-channel, timed, demo and timeline motion commands are busy
 while the program owns motors. STOP/safe pose/disconnect revoke it atomically.

@@ -107,7 +107,8 @@ async def check(args, report):
 
         assert await nus('STOP')=='OK STOP'
         report['info'] = await nus('WASM_INFO', 'OK WASM_INFO END')
-        assert report['info'].startswith('OK WASM_INFO 1 2048 ')
+        assert re.match(r'OK WASM_INFO [12] 2048 ', report['info'])
+        if args.sensor_api_modules: assert report['info'].startswith('OK WASM_INFO 2 ')
         assert (await cmd(0x26))[6]==1, 'Requires existing v2 store; never formats'
         originals = {}
         for row in await files():
@@ -159,6 +160,37 @@ async def check(args, report):
             first = await status(); await asyncio.sleep(.2); second = await status()
             assert second['n']>first['n'] and second['state']=='RUNNING'
             report['delete_running_copy'] = second
+            if args.sensor_api_modules:
+                await nus('WASM_STOP'); await until({'STOPPED'})
+                report['sensor_api'] = {}
+                for name in ('idle','init_once','tof_helpers','imu_helpers','disable',
+                             'init_failure','init_loop','bad_read'):
+                    file_id = await save('SENSOR API '+name, (args.sensor_api_modules/(name+'.wasm')).read_bytes())
+                    assert await nus(f'WASM_FILE {file_id}')==f'OK WASM_FILE {file_id}'
+                    expected = {'ERROR'} if name=='init_failure' else {'TRAP'} if name in ('init_loop','bad_read') else {'RUNNING'}
+                    value = await until(expected)
+                    if expected=={'RUNNING'}:
+                        deadline=time.monotonic()+25
+                        # 0 is warmup, 1 is the guest's self-test success.
+                        while value['r']==0 and time.monotonic()<deadline:
+                            await asyncio.sleep(.2); value=await status()
+                        assert value['state']=='RUNNING' and value['r']==1, value
+                        await asyncio.sleep(.5); later=await status()
+                        assert later['state']=='RUNNING' and later['n']>value['n'] and later['r']==1, later
+                        value=later
+                        if name in ('idle','init_once','disable'): assert value['imu']==value['tof']==0
+                        if name=='tof_helpers': assert value['tof']>0 and value['imu']==0
+                        if name=='imu_helpers': assert value['imu']>0 and value['tof']==0
+                        await nus('WASM_STOP'); stopped=await until({'STOPPED'}); assert stopped['clean']==24
+                    else:
+                        assert value['clean']==24
+                        if name.startswith('init_'): assert value['n']==0
+                        if name=='init_failure': assert 'INIT_FAILED -7' in value['raw']
+                        if name=='init_loop': assert 'instruction limit exceeded' in value['raw']
+                        if name=='bad_read': assert 'out of bounds' in value['raw']
+                    report['sensor_api'][name]=value
+                    await cmd(0x23,file_id); created.remove(file_id)
+                    print('PASS sensor API:', name, value, flush=True)
         finally:
             await nus('STOP'); await until({'STOPPED','IDLE','TRAP','ERROR','DONE'})
             await cmd(0x27) # Ends only this connection's interrupted upload, if any.
@@ -180,6 +212,7 @@ def main():
     parser.add_argument('--winrt-shared', action='store_true', help='Use explicit shared service access when another Windows client owns GATT')
     parser.add_argument('--address', default='00:80:E1:2A:26:24')
     parser.add_argument('--modules', required=True, type=Path)
+    parser.add_argument('--sensor-api-modules', type=Path, help='Also test ABI 2 initialization, sensor helpers and traps')
     parser.add_argument('--output', required=True, type=Path)
     args = parser.parse_args()
     if not args.run: parser.error('--run is required')
