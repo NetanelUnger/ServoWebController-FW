@@ -20,12 +20,13 @@
 static uint64_t vm_pool[VM_POOL_BYTES / sizeof(uint64_t)];
 uint8_t *robot_native_stack_bottom;
 static uint8_t imu_snapshot[IMU_RAW_LENGTH];
+static uint8_t imu_motion_snapshot[IMU_MOTION_LENGTH];
 static uint16_t tof_snapshot[VL53L8CX_ZONE_COUNT];
 static uint8_t imu_valid, tof_valid;
 static uint32_t snapshot_tick;
 static uint8_t api_version;
 static volatile uint8_t sensor_requests;
-static uint32_t imu_enable_frame,tof_enable_frame,tof_age;
+static uint32_t tof_frame,tof_age;
 static uint16_t filter_min,filter_max;
 static RobotTofStats tof_stats;
 static bool tof_stats_dirty;
@@ -45,6 +46,11 @@ static volatile struct {
 } vm;
 static char last_error[48];
 
+/* Readiness of the cached hardware sample is separate from this program's
+ * demand. Joining an active sensor can expose that sample immediately. */
+static bool imu_available(void) {return !vm.stop && imu_valid && (api_version<2 || (sensor_requests&2U));}
+static bool tof_available(void) {return !vm.stop && tof_valid && (api_version<2 || (sensor_requests&1U));}
+
 static uint32_t read_le32(const uint8_t *p)
 {
     return (uint32_t)p[0] | (uint32_t)p[1] << 8 |
@@ -57,31 +63,29 @@ static void capture_sensors(void)
     taskENTER_CRITICAL();
     snapshot_tick = HAL_GetTick();
     memcpy(imu_snapshot, (const void *)g_imu.packet, sizeof(imu_snapshot));
+    memcpy(imu_motion_snapshot, (const void *)g_imu.motion, sizeof(imu_motion_snapshot));
     memcpy(tof_snapshot, (const void *)g_vl53l8cx_runtime.distance_mm, sizeof(tof_snapshot));
-    imu_valid = g_imu.running && (imu_snapshot[0] == 1U || imu_snapshot[0] == 2U) && read_le32(imu_snapshot + 4) &&
+    imu_valid = g_imu.running && g_imu.motion_valid && (imu_snapshot[0] == 1U || imu_snapshot[0] == 2U) && read_le32(imu_snapshot + 4) &&
                 snapshot_tick - read_le32(imu_snapshot + 8) < 500U;
     tof_valid = g_vl53l8cx_runtime.ranging_active && g_vl53l8cx_runtime.frames &&
                 snapshot_tick - g_vl53l8cx_runtime.last_frame_tick_ms < 500U;
-    if(api_version>=2) {
-        imu_valid=imu_valid && (sensor_requests&2U) && read_le32(imu_snapshot+4)!=imu_enable_frame;
-        tof_valid=tof_valid && (sensor_requests&1U) && g_vl53l8cx_runtime.frames!=tof_enable_frame;
-    }
+    tof_frame=g_vl53l8cx_runtime.frames;
     tof_age=snapshot_tick-g_vl53l8cx_runtime.last_frame_tick_ms;
     tof_stats_dirty=true;
-    vm.imu_frame = imu_valid ? read_le32(imu_snapshot + 4) : 0U;
-    vm.tof_frame = tof_valid ? g_vl53l8cx_runtime.frames : 0U;
+    vm.imu_frame = imu_available() ? read_le32(imu_snapshot + 4) : 0U;
+    vm.tof_frame = tof_available() ? tof_frame : 0U;
     taskEXIT_CRITICAL();
 }
 static int32_t native_imu_word(wasm_exec_env_t env, uint32_t index)
 {
     (void)env; ++vm.calls;
-    return !vm.stop && imu_valid && index < IMU_RAW_LENGTH / 4U ?
+    return imu_available() && index < IMU_RAW_LENGTH / 4U ?
            (int32_t)read_le32(imu_snapshot + index * 4U) : 0;
 }
 static int32_t native_tof_mm(wasm_exec_env_t env, uint32_t index)
 {
     (void)env; ++vm.calls;
-    return RobotTof_Value(tof_snapshot,!vm.stop && tof_valid,index,filter_min,filter_max);
+    return RobotTof_Value(tof_snapshot,tof_available(),index,filter_min,filter_max);
 }
 static int32_t request_sensor(uint32_t enabled,uint8_t bit) {
     if(enabled>1 || !vm.file_id || api_version<2)return -1;
@@ -89,8 +93,11 @@ static int32_t request_sensor(uint32_t enabled,uint8_t bit) {
     if(vm.stop) {taskEXIT_CRITICAL();return -2;}
     if(!!(sensor_requests&bit)!=enabled) {
         if(enabled)sensor_requests|=bit;else sensor_requests&=(uint8_t)~bit;
-        if(bit==1) {tof_valid=0;tof_stats_dirty=true;tof_enable_frame=g_vl53l8cx_runtime.frames;}
-        else {imu_valid=0;imu_enable_frame=g_imu.frames;}
+        /* Reuse this call's snapshot; repeated enables never restart sensing
+         * or force the program to wait for another frame. Cold/stale data stays
+         * unavailable until a later step captures a real, fresh sample. */
+        if(bit==1) {tof_stats_dirty=true;vm.tof_frame=tof_available()?tof_frame:0U;}
+        else vm.imu_frame=imu_available()?read_le32(imu_snapshot+4):0U;
     }
     if(bit==1)vl53l8cx_SetLocalDemand((uint8_t)enabled);else IMU_SetLocalDemand((uint8_t)enabled);
     taskEXIT_CRITICAL();return 0;
@@ -116,18 +123,18 @@ static int32_t native_tof_read(wasm_exec_env_t env,uint32_t offset) {
     uint8_t *out=wasm_runtime_addr_app_to_native(instance,offset);
     int32_t count=0;
     for(uint32_t i=0;i<64;i++) {
-        int32_t value=RobotTof_Value(tof_snapshot,!vm.stop && tof_valid,i,filter_min,filter_max);
+        int32_t value=RobotTof_Value(tof_snapshot,tof_available(),i,filter_min,filter_max);
         memcpy(out+i*sizeof(value),&value,sizeof(value));
         if(value>=0)++count;
     }
     return count;
 }
-static int32_t native_tof_ready(wasm_exec_env_t env) {(void)env;++vm.calls;return !vm.stop && tof_valid;}
-static int32_t native_tof_frame_id(wasm_exec_env_t env) {(void)env;++vm.calls;return !vm.stop && tof_valid?(int32_t)vm.tof_frame:0;}
-static int32_t native_tof_age_ms(wasm_exec_env_t env) {(void)env;++vm.calls;return !vm.stop && tof_valid?(int32_t)tof_age:-1;}
+static int32_t native_tof_ready(wasm_exec_env_t env) {(void)env;++vm.calls;return tof_available();}
+static int32_t native_tof_frame_id(wasm_exec_env_t env) {(void)env;++vm.calls;return tof_available()?(int32_t)vm.tof_frame:0;}
+static int32_t native_tof_age_ms(wasm_exec_env_t env) {(void)env;++vm.calls;return tof_available()?(int32_t)tof_age:-1;}
 static RobotTofStats *stats(void) {
     if(tof_stats_dirty || vm.stop) {
-        tof_stats=RobotTof_Reduce(tof_snapshot,!vm.stop && tof_valid,filter_min,filter_max);
+        tof_stats=RobotTof_Reduce(tof_snapshot,tof_available(),filter_min,filter_max);
         tof_stats_dirty=false;
     }
     return &tof_stats;
@@ -141,12 +148,12 @@ TOF_STAT(max_zone,max_zone)
 TOF_STAT(count,count)
 #undef TOF_STAT
 static int32_t native_imu_ready(wasm_exec_env_t env) {
-    (void)env;++vm.calls;return !vm.stop && imu_valid && imu_snapshot[0]==1 && (imu_snapshot[1]&3U)==3U;
+    (void)env;++vm.calls;return imu_available();
 }
-static int32_t native_imu_frame_id(wasm_exec_env_t env) {(void)env;++vm.calls;return !vm.stop && imu_valid?(int32_t)vm.imu_frame:0;}
-static int32_t native_imu_age_ms(wasm_exec_env_t env) {(void)env;++vm.calls;return !vm.stop && imu_valid?(int32_t)(snapshot_tick-read_le32(imu_snapshot+8)):-1;}
-static int32_t native_imu_accel_mg(wasm_exec_env_t env,uint32_t axis) {(void)env;++vm.calls;return RobotImu_Axis(imu_snapshot,!vm.stop && imu_valid,axis,false);}
-static int32_t native_imu_gyro_mdps(wasm_exec_env_t env,uint32_t axis) {(void)env;++vm.calls;return RobotImu_Axis(imu_snapshot,!vm.stop && imu_valid,axis,true);}
+static int32_t native_imu_frame_id(wasm_exec_env_t env) {(void)env;++vm.calls;return imu_available()?(int32_t)vm.imu_frame:0;}
+static int32_t native_imu_age_ms(wasm_exec_env_t env) {(void)env;++vm.calls;return imu_available()?(int32_t)(snapshot_tick-read_le32(imu_snapshot+8)):-1;}
+static int32_t native_imu_accel_mg(wasm_exec_env_t env,uint32_t axis) {(void)env;++vm.calls;return RobotImu_Axis(imu_motion_snapshot,imu_available(),axis,false);}
+static int32_t native_imu_gyro_mdps(wasm_exec_env_t env,uint32_t axis) {(void)env;++vm.calls;return RobotImu_Axis(imu_motion_snapshot,imu_available(),axis,true);}
 static int32_t native_millis(wasm_exec_env_t env)
 { (void)env; ++vm.calls; return (int32_t)snapshot_tick; }
 static int32_t native_servo_get(wasm_exec_env_t env, uint32_t channel)

@@ -21,13 +21,12 @@ static inline RobotTofStats RobotTof_Reduce(const uint16_t *map,bool ready,uint1
     if(s.count)s.mean=(int32_t)(sum/(uint32_t)s.count);
     return s;
 }
-static inline int32_t RobotImu_Axis(const uint8_t *packet,bool ready,uint32_t axis,bool gyro) {
-    if(!ready || packet[0]!=1 || (packet[1]&3U)!=3U || axis>=3)return INT32_MIN;
-    unsigned at=(gyro?22U:16U)+axis*2U;
-    int32_t raw=(int16_t)((uint16_t)packet[at] | (uint16_t)packet[at+1]<<8);
-    /* IMU task fixes +/-4g (0.122 mg/LSB), +/-2000 dps (70 mdps/LSB).
-     * Reject a future incompatible packet rather than applying stale scaling. */
-    if(packet[36]!=1 || packet[37]!=4)return INT32_MIN;
+/* IMU_Runtime.motion is independent of the versioned BLE packet layout.
+ * The producer fixes +/-4g (0.122 mg/LSB) and +/-2000 dps (70 mdps/LSB). */
+static inline int32_t RobotImu_Axis(const uint8_t *motion,bool ready,uint32_t axis,bool gyro) {
+    if(!ready || axis>=3)return INT32_MIN;
+    unsigned at=(gyro?6U:0U)+axis*2U;
+    int32_t raw=(int16_t)((uint16_t)motion[at] | (uint16_t)motion[at+1]<<8);
     return gyro?raw*70:raw*122/1000;
 }
 #endif

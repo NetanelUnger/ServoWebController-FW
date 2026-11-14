@@ -246,8 +246,11 @@ Old ABI 1 files still run with their original automatic sensor requests.
 
 ABI 2 starts with no sensor requests. `tof_enable(1)` / `imu_enable(1)` request
 sampling asynchronously; 0 releases the request. APIs return 0 accepted, -1
-invalid input or -2 stopped. Snapshot reads remain unavailable until a new
-producer frame arrives after enable. Disable invalidates this program's reads
+invalid input or -2 stopped. Enabling an already active sensor succeeds and
+reuses a fresh sample in the current snapshot, without restarting the sensor
+or waiting for another frame. Repeated enables preserve readiness. Cold or
+stale sensors remain unavailable until a fresh sample arrives in a later step.
+Disable invalidates this program's reads
 immediately; hardware transitions remain in the producer tasks. STOP releases
 demand immediately, independently of eventual VM cleanup. Independent BLE
 demand is preserved; raw IMU requests do not override BLE SFLP mode.
@@ -262,10 +265,20 @@ The new native helpers are bounded, allocation-free, and use cached snapshots:
 - `tof_min_mm/max_mm/mean_mm/min_zone/max_zone/count`: shared cached 64-cell
   reduction per snapshot/filter; count 0 when empty, others -1, first-index ties.
 - `imu_accel_mg(axis)`, `imu_gyro_mdps(axis)`: signed board-axis X/Y/Z integers,
-  1000 mg=1g, 1000 mdps=1 degree/s; INT32_MIN unavailable/wrong mode/invalid axis.
+  1000 mg=1g, 1000 mdps=1 degree/s; INT32_MIN unavailable/invalid axis.
 - Both sensors expose readiness, frame ID and age. Freshness <500 ms; unavailable
-  ID=0, age=-1. IMU typed readiness requires raw mode; packet ID/age also work
-  with SFLP. Existing `imu_word`, `tof_mm`, time and servo imports remain.
+  ID=0, age=-1. IMU typed reads work with both RAW and BLE-selected SFLP. The
+  producer retains 12 bytes of raw acceleration/gyro alongside the versioned
+  packet, published atomically after successful reads. Mode transitions and
+  read errors invalidate that sample. BLE SFLP packets and `imu_word` keep their
+  existing layout. `tof_mm`, time and servo imports remain.
+
+`tools/check_shared_sensor_api.py` executes the built firmware ELF on ARM/Unicorn
+with mocked sensor-register, BLE and RTOS boundaries. It covers active TOF/SFLP
+reuse, repeated enables, coherent per-step snapshots, board-axis units, legacy
+ABI-1 access, independent BLE demand, stale/cold data, mode transitions, read
+errors and STOP. This is not an on-board timing test. The shared-motion fix adds
+32 bytes of static RAM relative to the initial ABI-2 firmware; no heap changes.
 
 The detailed SDK and user examples are in companion Web `WAMR_CONSOLE.md` and
 `public/wasm-compiler/sdk.js`. Profile limits remain 2 KB module, 1 KB data and

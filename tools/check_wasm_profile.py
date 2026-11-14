@@ -59,11 +59,12 @@ int main(int argc,char **argv) {
     assert(RobotTof_Reduce(map,true,101,199).count==0);
     for(unsigned i=0;i<64;i++)map[i]=65534;
     stats=RobotTof_Reduce(map,true,0,65534);assert(stats.count==64 && stats.mean==65534 && stats.max_zone==0);
-    uint8_t packet[48]={0};packet[0]=1;packet[1]=3;packet[36]=1;packet[37]=4;
-    packet[16]=0xe8;packet[17]=3;packet[22]=0x18;packet[23]=0xfc;
-    assert(RobotImu_Axis(packet,true,0,false)==122 && RobotImu_Axis(packet,true,0,true)==-70000);
-    assert(RobotImu_Axis(packet,false,0,false)==INT32_MIN && RobotImu_Axis(packet,true,3,false)==INT32_MIN);
-    packet[0]=2;assert(RobotImu_Axis(packet,true,0,false)==INT32_MIN);
+    uint8_t motion[12]={0};motion[0]=0xe8;motion[1]=3;motion[6]=0x18;motion[7]=0xfc;
+    assert(RobotImu_Axis(motion,true,0,false)==122 && RobotImu_Axis(motion,true,0,true)==-70000);
+    assert(RobotImu_Axis(motion,false,0,false)==INT32_MIN && RobotImu_Axis(motion,true,3,false)==INT32_MIN);
+    motion[9]=0x80;motion[10]=0xff;motion[11]=0x7f;
+    assert(RobotImu_Axis(motion,true,1,true)==-2293760 && RobotImu_Axis(motion,true,2,true)==2293690);
+    assert(RobotImu_Axis(motion,true,1,false)==0);
     assert(!RobotWasm_Validate(NULL,8));
     for(int i=1;i<argc;i+=2) {
         FILE *file=fopen(argv[i+1],"rb");assert(file);

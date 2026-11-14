@@ -67,9 +67,14 @@ static int configure(uint8_t mode)
     }
     return r;
 }
-static void publish(uint8_t *p)
+static void publish(uint8_t *p, const uint8_t *motion)
 {
+    /* Publish the raw axes and BLE packet together, after all I2C reads. */
+    taskENTER_CRITICAL();
     memcpy((void *)g_imu.packet,p,IMU_RAW_LENGTH);
+    if(motion)memcpy((void *)g_imu.motion,motion,IMU_MOTION_LENGTH);
+    g_imu.motion_valid=motion!=NULL;
+    taskEXIT_CRITICAL();
     /* Local VM demand updates the RAM snapshot without enabling a BLE stream
      * that the client turned off. Control/status replies still reach clients. */
     if ((p[0]==3U || IMU_BLE_Mode()!=0U) && IMU_BLE_Publish(p)) ++g_imu.tx_drops;
@@ -82,7 +87,7 @@ static void status_event(uint8_t status, uint8_t requested, uint32_t id)
     put32(p+4,id); put32(p+8,HAL_GetTick());
     put32(p+40,g_imu.errors); put32(p+44,g_imu.tx_drops);
     IMU_BLE_Applied(p[3]);
-    publish(p);
+    publish(p,NULL);
 }
 
 static volatile uint8_t local_demand;
@@ -115,6 +120,7 @@ void IMU_Step(void)
         g_imu.ready=1;
     }
     if (mode != g_imu.running) {
+        g_imu.motion_valid=0;
         if (configure(mode)) goto failed;
         g_imu.running=mode;
         samples_after=HAL_GetTick()+(mode==2 ? 1000U : 250U);
@@ -143,6 +149,8 @@ void IMU_Step(void)
     put32(p+4,++g_imu.frames); put32(p+8,HAL_GetTick()); put32(p+12,timestamp);
     put_board_vector(p+16, acc);
     put_board_vector(p+22, gyro);
+    uint8_t motion[IMU_MOTION_LENGTH];
+    memcpy(motion,p+16,sizeof(motion));
     put_board_vector(p+28, hg);
     put16(p+34,temp);
     p[36]=1; p[37]=4; p[38]=4; p[39]=6; /* ST FS enum: 4g, 2000dps, 320g; UI ODR 120Hz. */
@@ -158,10 +166,11 @@ void IMU_Step(void)
         put_board_vector(p+30, bias);
         p[36]=3; p[37]=p[38]=p[39]=0; /* SFLP ODR enum: 120Hz. */
     }
-    publish(p);
+    publish(p,motion);
     return;
 failed:
     ++g_imu.errors;
+    g_imu.motion_valid=0;
     (void)configure(0);
     /* Retry reset/configuration; never label failed reads as fresh data. */
     g_imu.ready=0; g_imu.running=0;

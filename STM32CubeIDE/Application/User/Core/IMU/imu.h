@@ -2,6 +2,7 @@
 #define NATILAB_IMU_H
 #include <stdint.h>
 #define IMU_RAW_LENGTH 48U
+#define IMU_MOTION_LENGTH 12U /* Board-axis accel + gyro, six little-endian int16 counts. */
 /* Service 91bad4a0; RAW 91bad4a1; suffix b950-4226-aa2b-4ede9fa42f59. */
 void IMU_BLE_Init(void);
 void IMU_BLE_Disconnected(uint16_t handle);
@@ -16,6 +17,9 @@ typedef struct {
     uint32_t frames, errors, tx_drops;
     uint8_t ready, running, whoami, address;
     uint8_t packet[IMU_RAW_LENGTH];
+    /* Same sample as packet, also retained when BLE encodes SFLP instead.
+     * Fixed +/-4g (0.122 mg/LSB) and +/-2000 dps (70 mdps/LSB). */
+    uint8_t motion[IMU_MOTION_LENGTH], motion_valid;
 } IMU_Runtime;
 extern volatile IMU_Runtime g_imu;
 #endif
