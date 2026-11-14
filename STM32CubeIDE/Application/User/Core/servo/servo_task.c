@@ -117,8 +117,28 @@ static void servo_ApplyDemoValue(void)
     dirty_channels = 0xffffU;
 }
 
+static void (*local_stop_callback)(void);
+static uint8_t local_control;
+HAL_StatusTypeDef servo_BeginLocalControl(void) {
+    taskENTER_CRITICAL();
+    if(!ble_connected || !servos_controller.pca9685_ready || local_control ||
+       timeline.active || timeline.loading || servos_controller.demo1_active) {taskEXIT_CRITICAL();return HAL_BUSY;}
+    for(unsigned ch=0;ch<SERVO_CHANNEL_COUNT;ch++)servo_StopTimedMove(&servos_controller.servo[ch]);
+    local_control=1;taskEXIT_CRITICAL();return HAL_OK;
+}
+void servo_EndLocalControl(void) {
+    taskENTER_CRITICAL();local_control=0;taskEXIT_CRITICAL();
+}
+void servo_RegisterStopCallback(void (*callback)(void))
+{
+    taskENTER_CRITICAL();
+    local_stop_callback = callback;
+    taskEXIT_CRITICAL();
+}
 static void servo_StopLocked(void)
 {
+    if (local_stop_callback) local_stop_callback();
+    local_control=0;
     timeline_StopLocked("STOPPED");
     servos_controller.demo1_active = 0U;
     for (uint8_t channel = 0U; channel < SERVO_CHANNEL_COUNT; channel++)
@@ -190,7 +210,7 @@ HAL_StatusTypeDef servo_StartDemo1(void)
         taskEXIT_CRITICAL();
         return HAL_ERROR;
     }
-    if (timeline.active || timeline.loading) {
+    if (local_control || timeline.active || timeline.loading) {
         taskEXIT_CRITICAL();
         return HAL_BUSY;
     }
@@ -279,7 +299,7 @@ void servo_RegisterChangeCallback(servo_ChangeCallback_t callback)
     taskEXIT_CRITICAL();
 }
 
-HAL_StatusTypeDef servo_SetServoImmediateValue(uint8_t channel, uint16_t value)
+static HAL_StatusTypeDef servo_SetValue(uint8_t channel, uint16_t value,uint8_t from_local)
 {
 #if DISABLE_I2C_PCA9685
     return HAL_ERROR;
@@ -297,6 +317,7 @@ HAL_StatusTypeDef servo_SetServoImmediateValue(uint8_t channel, uint16_t value)
     servo = &servos_controller.servo[channel];
 
     taskENTER_CRITICAL();
+    if(local_control!=from_local) {taskEXIT_CRITICAL();return HAL_BUSY;}
     if (!ble_connected) {
         taskEXIT_CRITICAL();
         return HAL_ERROR;
@@ -324,6 +345,8 @@ HAL_StatusTypeDef servo_SetServoImmediateValue(uint8_t channel, uint16_t value)
     return HAL_OK;
 }
 
+HAL_StatusTypeDef servo_SetServoImmediateValue(uint8_t channel,uint16_t value) {return servo_SetValue(channel,value,0);}
+HAL_StatusTypeDef servo_SetLocalValue(uint8_t channel,uint16_t value) {return servo_SetValue(channel,value,1);}
 HAL_StatusTypeDef servo_SetAllServoImmediateValues(const uint16_t values[SERVO_CHANNEL_COUNT])
 {
 #if DISABLE_I2C_PCA9685
@@ -349,7 +372,7 @@ HAL_StatusTypeDef servo_SetAllServoImmediateValues(const uint16_t values[SERVO_C
         taskEXIT_CRITICAL();
         return HAL_ERROR;
     }
-    if (timeline.active || timeline.loading) {
+    if (local_control || timeline.active || timeline.loading) {
         taskEXIT_CRITICAL();
         return HAL_BUSY;
     }
@@ -423,7 +446,7 @@ HAL_StatusTypeDef servo_StartTimedMove(uint8_t channel, uint16_t target_value, u
         taskEXIT_CRITICAL();
         return HAL_ERROR;
     }
-    if (timeline.active || timeline.loading) {
+    if (local_control || timeline.active || timeline.loading) {
         taskEXIT_CRITICAL();
         return HAL_BUSY;
     }

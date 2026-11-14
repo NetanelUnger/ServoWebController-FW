@@ -7,7 +7,7 @@ const char *servo_TimelinePlay(uint32_t id) {
     return "DISABLED";
 #endif
     taskENTER_CRITICAL();
-    if(timeline.active || timeline.loading || servos_controller.demo1_active) {
+    if(local_control || timeline.active || timeline.loading || servos_controller.demo1_active) {
         taskEXIT_CRITICAL();return "BUSY";
     }
     if(!ble_connected || !servos_controller.pca9685_ready) {

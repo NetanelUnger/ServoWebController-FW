@@ -36,7 +36,7 @@ distinguish migrated files from legacy slots); reuse of a deleted/reserved exten
 gets a new ID. Replacement of a live last file retains its ID and increments its
 revision. Format retains the next ID of a mounted v2 catalog. Names use at most
 63 UTF-8 bytes, without ASCII control characters. Types: 1 RGB565, 2 RGB332;
-type 3 stores executable timelines with their editable source document; type 4 stores the safe servo pose. Unused entries and deleted/reserved extents
+type 3 stores executable timelines with their editable source document; type 4 stores the safe servo pose; type 5 stores restricted Wasm programs. Unused entries and deleted/reserved extents
 are allocation states, not content types. Unknown future types remain listable
 and byte-readable if their record format is compatible; image actions reject them.
 
@@ -162,7 +162,7 @@ V2 status header (32 bytes):
 | 20 | payload CRC:u32 when relevant |
 | 24, 28 | free tail bytes:u32, deleted-extent bytes:u32 |
 
-INFO adds four u32 values: data capacity, maximum records, type mask (30), layout
+INFO adds four u32 values: data capacity, maximum records, type mask (62), layout
 mask (3). LIST adds one 96-byte record, or no payload and next index FFFFFFFF at
 end. BEGIN/PLAN/RESERVE add a descriptor. READ adds up to 208 payload bytes.
 Downloads check generation, offsets, length and CRC before applying editor pixels.
@@ -216,7 +216,7 @@ not part of these software tests.
 
 Type 3 uses version 1, width/height/layout zero. Storage management, exact byte
 length, CRC32, name, allocation, DELETE/FORMAT and READ use the same v2 protocol
-as images. INFO type mask is 30 (bits 1, 2, 3, 4). SHOW rejects timelines.
+as images. INFO type mask is 62 (bits 1, 2, 3, 4, 5). SHOW rejects timelines.
 
 The little-endian payload is a 32-byte header, zero to 4096 16-byte events, then
 UTF-8 editor JSON. Header: magic `TML1` at 0, u16 version 1 at 4, u16 header size
@@ -275,3 +275,13 @@ holding that pose. A stale in-flight frame cannot reopen the gate; I2C failure
 keeps PWM disabled until a successful retry. Without a valid pose, disconnect
 retains the previous power-off behaviour. Boot loads the file but does not
 start motor power solely because the file exists.
+
+## Wasm programs (type 5)
+
+Version 1 metadata uses zero width, height and layout, with payload 8..2048 bytes.
+Programs use existing BEGIN/DATA/COMMIT, CRC, listing, reading and deletion; SHOW
+rejects them. COMMIT checks storage integrity; the VM checks the module profile
+and executable validity before running. `ImageStore_AcquireProgram` takes a
+short exclusive lease for CRC/copy. `ImageStore_ReleaseTimeline` cannot release
+this lease. The VM releases it after copying into its existing runtime pool.
+See `../wasm/wasm_profile.h`, `../comm/commands.md` and root `WAMR_BOARD.md`.

@@ -23,6 +23,7 @@ RTOS objects that matter for application work:
 
 - `i2cMutexHandle`: protects the shared I2C3 bus used by PCA9685 and VL53L5CX.
 - `displayTaskHandle` / `displayMutexHandle`: static, below-normal display owner and drawing/manual GPIO lock. Stop via `Display_Stop()`, never suspend it mid-transfer. No watchdog bit: it may intentionally wait forever.
+- `wasmTaskHandle`: experimental static Low-priority WAMR owner, 4-KiB native stack plus a separate 12-KiB runtime pool. Hand-maintained in USER CODE like the other app tasks (no IOC task-list entry). Cancel through `RobotVM_RequestStop`, never task deletion. See `WAMR_BOARD.md` for the deliberately restricted guest and hardware evidence.
 - `commRxQueueHandle` and `commTxQueueHandle`: statically copied RX/reply items with session ownership; no heap pointers. `commTask` only parses RX.
 - `bleTxTaskHandle` / `bleTxEventHandle`: sole notification/indication owner with event-driven completion/pool waits; see root `BLE_TRANSPORT.md`.
 - `commEventHandle`: wakes `commTask` for NUS RX work.

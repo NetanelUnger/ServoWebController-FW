@@ -13,6 +13,7 @@
 #include "log_module.h"
 
 #include "comm_interface.h"
+#include "wasm/robot_vm.h"
 #include "board_io.h"
 #include "tof_app.h"
 #include "PCA9685/pca9685.h"
@@ -539,6 +540,35 @@ packetSize_t parser_ProcessOne(uint8_t *payload, packetSize_t req_len, uint8_t *
             "OK VERSION\nVER=%.16s\nVER+=%s\nIMAGE=%08lX\nSIZE=%lu\nOTA=2\nOK VERSION END",
             FIRMWARE_VERSION,strlen(FIRMWARE_VERSION)>16?FIRMWARE_VERSION+16:"",(unsigned long)crc,(unsigned long)n);
     }
+    if (!strcmp(command, COMM_CMD_WASM_INFO)) {
+        if(*args || memchr(payload,0,req_len))return comm_WriteResponseText(res_payload,"ERR WASM_INFO BAD_ARGUMENTS\n");
+        return comm_WriteResponseText(res_payload,"OK WASM_INFO 1 2048 12288 20000 20\nOK WASM_INFO END\n");
+    }
+    if (!strcmp(command, COMM_CMD_WASM_FILE)) {
+        uint32_t id;
+        if(memchr(payload,0,req_len) || !comm_ParseTimelineId(args,&id))return comm_WriteResponseText(res_payload,"ERR WASM_FILE BAD_ARGUMENTS\n");
+        const char *error=RobotVM_StartFile(id);
+        if(error)return (packetSize_t)snprintf((char *)res_payload,COMM_TEXT_RESPONSE_MAX_LEN,"ERR WASM_FILE %s\n",error);
+        return (packetSize_t)snprintf((char *)res_payload,COMM_TEXT_RESPONSE_MAX_LEN,"OK WASM_FILE %lu\n",(unsigned long)id);
+    }
+    if (!strcmp(command, COMM_CMD_WASM_RUN)) {
+        if (memchr(payload, 0, req_len) != NULL)
+            return comm_WriteResponseText(res_payload, "ERR WASM_RUN BAD_ARGUMENTS\n");
+        const char *error = RobotVM_Start(args);
+        if (error) return (packetSize_t)snprintf((char *)res_payload, COMM_TEXT_RESPONSE_MAX_LEN,
+                                               "ERR WASM_RUN %s\n", error);
+        return comm_WriteResponseText(res_payload, "OK WASM_RUN\n");
+    }
+    if (!strcmp(command, COMM_CMD_WASM_STOP) || !strcmp(command, COMM_CMD_WASM_STATUS)) {
+        if (*args || memchr(payload, 0, req_len) != NULL)
+            return comm_WriteResponseText(res_payload, "ERR WASM BAD_ARGUMENTS\n");
+        if (!strcmp(command, COMM_CMD_WASM_STOP)) {
+            RobotVM_RequestStop();
+            return comm_WriteResponseText(res_payload, "OK WASM_STOP\n");
+        }
+        RobotVM_Status((char *)res_payload, COMM_TEXT_RESPONSE_MAX_LEN);
+        return (packetSize_t)strlen((char *)res_payload);
+    }
     if (!strcmp(command,"BLE_STATS")) {
         if (*args != '\0') return comm_WriteResponseText(res_payload,"- BAD ARGUMENTS");
         BLE_TX_Stats((char *)res_payload,COMM_TEXT_RESPONSE_MAX_LEN);
@@ -570,6 +600,8 @@ packetSize_t parser_ProcessOne(uint8_t *payload, packetSize_t req_len, uint8_t *
         return (packetSize_t)strlen((char *)res_payload);
     }
     if (!strcmp(command, COMM_CMD_HELP)) {
+        if (!strcmp(args,"WASM")) return comm_WriteResponseText(res_payload,
+            "OK HELP WASM\nWASM_INFO\nWASM_FILE <id>\nWASM_RUN <program>\nMATH SENSORS FLOAT\nLOOP OOB HOLD\nBAD_CHANNEL BAD_PULSE\nWASM_STOP\nWASM_STATUS\nOK HELP END\n");
         if (!strcmp(args,"SAFE_POSE")) return comm_WriteResponseText(res_payload,
             "OK HELP SAFE_POSE\nSAFE_POSE\nOK HELP END\n");
         if (!strcmp(args,"OTA")) return comm_WriteResponseText(res_payload,"OK HELP OTA\nVERSION\nOK HELP END\n");

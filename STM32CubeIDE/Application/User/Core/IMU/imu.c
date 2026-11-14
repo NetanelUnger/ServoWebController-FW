@@ -70,24 +70,30 @@ static int configure(uint8_t mode)
 static void publish(uint8_t *p)
 {
     memcpy((void *)g_imu.packet,p,IMU_RAW_LENGTH);
-    if (IMU_BLE_Publish(p)) ++g_imu.tx_drops;
+    /* Local VM demand updates the RAM snapshot without enabling a BLE stream
+     * that the client turned off. Control/status replies still reach clients. */
+    if ((p[0]==3U || IMU_BLE_Mode()!=0U) && IMU_BLE_Publish(p)) ++g_imu.tx_drops;
 }
 static void status_event(uint8_t status, uint8_t requested, uint32_t id)
 {
     uint8_t p[IMU_RAW_LENGTH]={0};
-    p[0]=3; p[1]=status; p[2]=requested; p[3]=g_imu.running;
+    p[0]=3; p[1]=status; p[2]=requested;
+    p[3]=g_imu.running==requested ? requested : 0U;
     put32(p+4,id); put32(p+8,HAL_GetTick());
     put32(p+40,g_imu.errors); put32(p+44,g_imu.tx_drops);
-    IMU_BLE_Applied(g_imu.running);
+    IMU_BLE_Applied(p[3]);
     publish(p);
 }
 
+static volatile uint8_t local_demand;
+void IMU_SetLocalDemand(uint8_t enabled) {local_demand=enabled!=0;}
 void IMU_Step(void)
 {
 #if DISABLE_I2C_IMU
     return;
 #endif
-    const uint8_t mode = IMU_BLE_Mode();
+    const uint8_t ble_mode = IMU_BLE_Mode();
+    const uint8_t mode = ble_mode ? ble_mode : (local_demand ? 1U : 0U);
     const uint32_t request = IMU_BLE_RequestId();
     if (!mode && !g_imu.ready) {
         if (request != handled_request) { status_event(0,0,request); handled_request=request; }
@@ -115,7 +121,7 @@ void IMU_Step(void)
         discard_first=1;
     }
     if (request != handled_request) {
-        status_event(0,mode,request); handled_request=request;
+        status_event(0,ble_mode,request); handled_request=request;
     }
     if (!mode) return;
     if ((int32_t)(HAL_GetTick()-samples_after)<0) return;
@@ -159,6 +165,6 @@ failed:
     (void)configure(0);
     /* Retry reset/configuration; never label failed reads as fresh data. */
     g_imu.ready=0; g_imu.running=0;
-    status_event(2,mode,request);
+    status_event(2,ble_mode,request);
     retry_at=HAL_GetTick()+1000U;
 }

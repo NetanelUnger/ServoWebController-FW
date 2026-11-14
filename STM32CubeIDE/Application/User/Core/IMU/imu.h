@@ -11,6 +11,7 @@ uint32_t IMU_BLE_RequestId(void);
 void IMU_BLE_Applied(uint8_t mode);
 uint8_t IMU_BLE_Publish(const uint8_t *data);
 void IMU_Step(void); /* Called by defaultTask; never from BLE callbacks. */
+void IMU_SetLocalDemand(uint8_t enabled);
 typedef struct {
     uint32_t frames, errors, tx_drops;
     uint8_t ready, running, whoami, address;

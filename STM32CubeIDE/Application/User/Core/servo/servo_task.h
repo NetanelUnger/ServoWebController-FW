@@ -86,6 +86,12 @@ extern void servo_Task(void);
  * @param callback Function to call after a servo value change, or NULL to unregister.
  */
 extern void servo_RegisterChangeCallback(servo_ChangeCallback_t callback);
+/* Runs inside the servo critical section: must not wait, allocate, access I2C
+ * or call servo APIs. Used to revoke a local command producer on STOP/safe pose. */
+extern void servo_RegisterStopCallback(void (*callback)(void));
+HAL_StatusTypeDef servo_BeginLocalControl(void);
+void servo_EndLocalControl(void);
+HAL_StatusTypeDef servo_SetLocalValue(uint8_t channel,uint16_t value);
 
 /**
  * @brief Queue a servo pulse for the high-priority worker and cancel any timed move.

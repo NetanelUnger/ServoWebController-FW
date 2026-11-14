@@ -1,5 +1,8 @@
 # RAM budget and hardware validation
 
+This describes the RAM-only checkpoint pushed as `ac8e374`. For the subsequent
+experimental interpreter's additional reservations, see [WAMR_BOARD.md](WAMR_BOARD.md).
+
 Measured on NL802915 / STM32WBA5MMGH, 2026-11-14. Baseline is main `eea53fd`
 (including the Cortex-M33 FPU context fix).
 Evidence, backups and the exact baseline/optimized ELF, HEX and map files are in

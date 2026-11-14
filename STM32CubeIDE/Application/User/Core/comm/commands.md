@@ -187,3 +187,37 @@ See `../display/FILE_STORE.md` for the file format, OTA lifetime and save orderi
 
 The NUS TX owner strips LF and sends each reply line as one notification. Web
 accepts complete notification payloads as well as newline-delimited demo replies.
+
+## Experimental on-board WebAssembly
+
+`HELP WASM` lists the qualification commands on the WAMR branch:
+
+- `WASM_RUN MATH`: one-shot integer/float/double result, expected 3700.
+- `WASM_RUN SENSORS`: repeat sensor snapshots every 20 ms plus execution time.
+- `WASM_RUN FLOAT`: repeat a float/double self-check, expected 496768 each step.
+- `WASM_RUN LOOP` / `WASM_RUN OOB`: intentional instruction-budget/bounds traps.
+- `WASM_RUN HOLD`: resubmit CH0's current target through the real servo API.
+- `WASM_RUN BAD_CHANNEL` / `WASM_RUN BAD_PULSE`: verify actuator rejection.
+- `WASM_STOP`: request cooperative cancellation; `OK` acknowledges the request.
+- `WASM_STATUS`: multiline counters/state, terminated by a line containing `END`.
+
+RUN returns `OK WASM_RUN` on queue acceptance, not completion. Only one program
+may be active; a second RUN returns `ERR WASM_RUN BUSY`. STOP, SAFE_POSE and real
+BLE disconnect also revoke the VM. Poll STATUS for DONE/STOPPED/TRAP/ERROR.
+Built-in SENSORS requires the existing BLE modes/subscriptions.
+
+`WASM_INFO` returns `OK WASM_INFO 1 2048 12288 20000 20` followed by
+`OK WASM_INFO END`: ABI, maximum module bytes, pool size, instruction budget,
+and delay after each step. `WASM_FILE <id>` runs a live type-5 file from the
+existing file store; metadata is width/height/layout 0, version 1, length 8..2048.
+`OK WASM_FILE <id>` acknowledges queueing only. STATUS includes `id=<id>` (zero
+for built-in fixtures), and reports ERROR if the file/profile/load is rejected.
+The VM checks CRC, bounds and ABI, copies bytes into its existing pool under a
+short Flash lease, then releases it. Start functions are rejected. Uploaded
+`step(uint32_t now_ms)` repeats until stop/trap.
+
+Uploaded programs request IMU/TOF locally and acquire exclusive motor ownership.
+BLE sensor modes take precedence; local sensing does not enable disabled BLE
+streams. Direct, all-channel, timed, demo and timeline motion commands are busy
+while the program owns motors. STOP/safe pose/disconnect revoke it atomically.
+See root `WAMR_BOARD.md`; the companion Web C page and console use this protocol.

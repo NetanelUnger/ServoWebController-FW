@@ -53,7 +53,28 @@ static void reset(void) {
 }
 static void play(void) {assert(timeline_validate(blob,blob_size));assert(servo_TimelinePlay(7)==NULL);assert(lease);}
 static void tick(uint32_t ms) {clock_ms=ms;servo_Task();}
+static unsigned local_stops;
+static void on_local_stop(void) { ++local_stops; }
 int main(void) {
+    reset();servo_RegisterStopCallback(on_local_stop);
+    unsigned before=local_stops;servo_Stop();assert(local_stops==before+1);
+    before=local_stops;(void)servo_EnterSafePose();assert(local_stops==before+1);
+    before=local_stops;servo_SetBleConnected(0);assert(local_stops==before+1);
+    servo_RegisterStopCallback(NULL);
+    reset();assert(servo_BeginLocalControl()==HAL_OK);
+    assert(servo_BeginLocalControl()==HAL_BUSY);
+    assert(servo_SetServoImmediateValue(0,1500)==HAL_BUSY);
+    assert(servo_StartTimedMove(0,1500,100)==HAL_BUSY);
+    assert(servo_StartDemo1()==HAL_BUSY);
+    assert(servo_SetAllServoImmediateValues(written)==HAL_BUSY);
+    plan(0,0,0);assert(servo_TimelinePlay(7)!=NULL&&!lease);
+    assert(servo_SetLocalValue(0,1500)==HAL_OK);
+    servo_Stop();assert(servo_SetLocalValue(0,1500)==HAL_BUSY);
+    assert(servo_SetServoImmediateValue(0,1500)==HAL_OK);
+    assert(servo_BeginLocalControl()==HAL_OK);servo_SetBleConnected(0);
+    assert(servo_SetLocalValue(0,1500)!=HAL_OK);
+    assert(servo_BeginLocalControl()!=HAL_OK);
+    reset();assert(servo_StartDemo1()==HAL_OK);assert(servo_BeginLocalControl()==HAL_BUSY);
     uint32_t id;
     assert(comm_ParseTimelineId("4294967295",&id)&&id==UINT32_MAX);
     const char *bad[]={"0","-1","+1","0x10","4294967296","999999999999999999999","7 x","7,8",""};

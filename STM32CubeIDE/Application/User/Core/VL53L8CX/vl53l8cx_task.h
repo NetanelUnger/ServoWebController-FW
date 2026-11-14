@@ -35,6 +35,7 @@ extern volatile vl53l8cx_runtime_t g_vl53l8cx_runtime;
 /* SWD bring-up control. Zero by default: range only for BLE subscribers. */
 
 void vl53l8cx_TaskInit(void);
+void vl53l8cx_SetLocalDemand(uint8_t enabled);
 void vl53l8cx_Task(void);
 void vl53l8cx_GetDistanceEncodingRange(uint16_t *pMinMm, uint16_t *pMaxMm);
 uint8_t vl53l8cx_SetDistanceEncodingRange(uint16_t min_mm, uint16_t max_mm);

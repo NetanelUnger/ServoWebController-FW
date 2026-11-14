@@ -24,6 +24,7 @@
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
+#include "wasm/robot_vm.h"
 #include "ota_app.h"
 #include "main.h"
 #include "app_ble.h"
@@ -65,6 +66,13 @@ typedef StaticEventGroup_t osStaticEventGroupDef_t;
 
 /* Private variables ---------------------------------------------------------*/
 /* USER CODE BEGIN Variables */
+osThreadId_t wasmTaskHandle;
+static uint32_t wasmTaskBuffer[APP_WASM_STACK_WORDS] __attribute__((aligned(8)));
+static osStaticThreadDef_t wasmTaskBlock;
+static const osThreadAttr_t wasmTask_attributes = {
+  .name = "wasmTask", .stack_mem = wasmTaskBuffer, .stack_size = sizeof(wasmTaskBuffer),
+  .cb_mem = &wasmTaskBlock, .cb_size = sizeof(wasmTaskBlock), .priority = osPriorityLow
+};
 
 volatile uint32_t s_threadWatchdogFlags = WATCHDOG_ALL_FLAGS;
 /* Static display worker: lower priority than BLE/commands, no watchdog bit
@@ -331,6 +339,9 @@ void MX_FREERTOS_Init(void) {
 #endif
 
   /* USER CODE BEGIN RTOS_THREADS */
+  RobotVM_Init((uint8_t *)wasmTaskBuffer);
+  wasmTaskHandle = osThreadNew(RobotVM_Task, NULL, &wasmTask_attributes);
+  if (!wasmTaskHandle) Error_Handler();
   bleTxTaskHandle=osThreadNew(BLE_TX_Task,NULL,&bleTxTask_attributes);
   if (!bleTxTaskHandle) Error_Handler();
 #if ENABLE_DISPLAY

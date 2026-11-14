@@ -59,6 +59,8 @@ extern volatile uint32_t s_threadWatchdogFlags;
 #define APP_BLE_TX_STACK_WORDS   768U
 #define APP_TOF_STACK_WORDS      1024U
 #define APP_DISPLAY_STACK_WORDS  512U
+#define APP_WASM_STACK_WORDS     1024U
+extern osThreadId_t wasmTaskHandle;
 /* USER CODE END EC */
 
 /* Private define ------------------------------------------------------------*/

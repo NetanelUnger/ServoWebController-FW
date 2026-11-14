@@ -15,6 +15,8 @@ bool ImageStore_ClaimOTA(void);
  * safe during STOP/disconnect. All store requests and OTA are busy while held. */
 bool ImageStore_AcquireTimeline(uint32_t id,const uint8_t **payload,uint32_t *length);
 void ImageStore_ReleaseTimeline(void);
+bool ImageStore_AcquireProgram(uint32_t id,const uint8_t **payload,uint32_t *length);
+void ImageStore_ReleaseProgram(void);
 /* Validated RAM snapshot; callback safe, no Flash access or storage lease. */
 bool ImageStore_GetSafePose(uint16_t values[16]);
 uint16_t ImageStore_RowLeft(uint16_t y);

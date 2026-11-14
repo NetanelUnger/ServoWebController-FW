@@ -49,6 +49,8 @@ static int32_t vl53l8cx_GetTick(void);
 static int32_t vl53l8cx_WriteReg(uint16_t Address, uint16_t Register, uint8_t *pData, uint16_t Size);
 static int32_t vl53l8cx_ReadReg(uint16_t Address, uint16_t Register, uint8_t *pData, uint16_t Size);
 
+static volatile uint8_t local_demand;
+void vl53l8cx_SetLocalDemand(uint8_t enabled) {local_demand=enabled!=0;}
 void vl53l8cx_TaskInit(void)
 {
     (void)memset((void *)&g_vl53l8cx_runtime, 0, sizeof(g_vl53l8cx_runtime));
@@ -68,8 +70,8 @@ void vl53l8cx_Task(void)
 #endif
     int32_t status;
 
-    if (TOF_APP_GetMode() == 0U ||
-        (TOF_APP_GetMode() != 3U && TOF_APP_IsNotificationEnabled() == 0U))
+    if (!local_demand && (TOF_APP_GetMode() == 0U ||
+        (TOF_APP_GetMode() != 3U && TOF_APP_IsNotificationEnabled() == 0U)))
     {
         if (g_vl53l8cx_runtime.ranging_active != 0U)
         {
@@ -157,7 +159,8 @@ void vl53l8cx_Task(void)
         ++g_vl53l8cx_runtime.frames;
         taskEXIT_CRITICAL();
 
-        (void)TOF_APP_NotifyDistanceMap(ble_payload, (uint8_t)sizeof(ble_payload));
+        if (TOF_APP_GetMode()!=0U)
+            (void)TOF_APP_NotifyDistanceMap(ble_payload, (uint8_t)sizeof(ble_payload));
         if (TOF_APP_GetMode() == 3U) (void)Display_DrawDepthMap(distance_mm);
     }
     else if (status != VL53L8CX_TIMEOUT)

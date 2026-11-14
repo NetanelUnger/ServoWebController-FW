@@ -1,5 +1,6 @@
 #include "../servo/timeline_format.h"
 #include "../servo/safe_pose_format.h"
+#include "../wasm/wasm_profile.h"
 /* Sequential file store v2; included by image_store.c after the v1 adapter.
  * All mutations run in displayTask. See FILE_STORE.md for persistence/wire rules. */
 #define FS_MAGIC 0x32534653UL
@@ -43,7 +44,7 @@ static FS_Catalog fs_cat;
 static uint32_t fs_current, fs_received;
 static uint16_t fs_owner=NO_CONNECTION, fs_request_size, fs_result_size=32;
 static uint8_t fs_request[232], fs_result[240], fs_mode, fs_upload=255, fs_name_size;
-static volatile bool fs_playback;
+static volatile uint8_t fs_playback; /* 0 none, 1 timeline, 2 Wasm copy lease */
 static bool fs_initialized, fs_recover, fs_fault, fs_ota, fs_legacy_status;
 static volatile bool fs_pending, fs_disconnected;
 static uint16_t fs_safe_pose[SAFE_POSE_CHANNELS];
@@ -217,7 +218,11 @@ static bool fs_valid_name(const char *name,uint8_t length) {
 static uint8_t fs_image_args(const uint8_t *p,FS_Record *r) {
     memset(r,0,sizeof(*r));r->type=p[1];r->length=get32(p+8);r->crc=get32(p+12);
     r->width=p[16];r->height=p[17];r->layout=p[18];r->version=p[19];
-    if((r->type!=1 && r->type!=2 && r->type!=3 && r->type!=SAFE_POSE_FILE_TYPE) || r->version!=1) return FS_VERSION;
+    if((r->type!=1 && r->type!=2 && r->type!=3 && r->type!=SAFE_POSE_FILE_TYPE && r->type!=ROBOT_WASM_FILE_TYPE) || r->version!=1) return FS_VERSION;
+    if(r->type==ROBOT_WASM_FILE_TYPE) {
+        if(r->width || r->height || r->layout || r->length<8 || r->length>ROBOT_WASM_MAX_BYTES)return FS_INVALID;
+        r->capacity=fs_align(r->length);return 0;
+    }
     if(r->type==SAFE_POSE_FILE_TYPE) {
         if(r->width || r->height || r->layout || r->length!=SAFE_POSE_BYTES) return FS_INVALID;
         r->capacity=fs_align(r->length);return 0;
@@ -323,7 +328,7 @@ void ImageStore_Process(void) {
     uint16_t payload=0;uint8_t response[208];
     if(fs_fault || fs_mode==3) error=FS_LOCKED;
     if(op==FS_INFO) {
-        error=0;put32(response,FS_CAPACITY);put32(response+4,FS_MAX_FILES);put32(response+8,30);put32(response+12,3);payload=16;
+        error=0;put32(response,FS_CAPACITY);put32(response+4,FS_MAX_FILES);put32(response+8,62);put32(response+12,3);payload=16;
     } else if(op==FS_FORMAT && !error) {
         if(get32(fs_request+8)!=FS_FORMAT_KEY) error=FS_INVALID;
         else {
@@ -442,5 +447,17 @@ bool ImageStore_AcquireTimeline(uint32_t id,const uint8_t **payload,uint32_t *le
     *payload=p;*length=r.length;return true;
 }
 void ImageStore_ReleaseTimeline(void) {
-    uint32_t key=enter();fs_playback=false;leave(key);
+    uint32_t key=enter();if(fs_playback==1)fs_playback=0;leave(key);
+}
+bool ImageStore_AcquireProgram(uint32_t id,const uint8_t **payload,uint32_t *length) {
+    ImageStore_Init();uint32_t key=enter();
+    if(fs_playback || fs_pending || fs_upload!=255 || fs_recover || fs_fault || fs_ota || pending || uploading || fs_mode!=1) {leave(key);return false;}
+    int index=fs_find(id);
+    if(index<0 || fs_cat.files[index].state!=FS_LIVE || fs_cat.files[index].type!=ROBOT_WASM_FILE_TYPE || fs_cat.files[index].version!=1) {leave(key);return false;}
+    FS_Record r=fs_cat.files[index];fs_playback=2;leave(key);
+    if(r.length>ROBOT_WASM_MAX_BYTES || crc32((const uint8_t *)r.offset,r.length)!=r.crc) {ImageStore_ReleaseProgram();return false;}
+    *payload=(const uint8_t *)r.offset;*length=r.length;return true;
+}
+void ImageStore_ReleaseProgram(void) {
+    uint32_t key=enter();if(fs_playback==2)fs_playback=0;leave(key);
 }

@@ -22,6 +22,11 @@
 
 /** @brief Connectivity check command. */
 #define COMM_CMD_PING "PING"
+#define COMM_CMD_WASM_RUN "WASM_RUN"
+#define COMM_CMD_WASM_FILE "WASM_FILE"
+#define COMM_CMD_WASM_INFO "WASM_INFO"
+#define COMM_CMD_WASM_STOP "WASM_STOP"
+#define COMM_CMD_WASM_STATUS "WASM_STATUS"
 #define COMM_CMD_VERSION "VERSION"
 /** All-channel repeating PWM test and motion cancellation. */
 #define COMM_CMD_DEMO1 "DEMO1"

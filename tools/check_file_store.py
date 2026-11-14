@@ -59,7 +59,7 @@ def verify_timelines(elf):
  payload=plan(((0,0,1500,0,0),(0,100,2000,0,1)),100,50)
  file=m.save(payload,0,0,type=3,name='timeline')
  assert m.read(file)==payload and m.read(image)==b'\x15'*16
- assert struct.unpack_from('<I',m.cmd(0x26),40)[0]==30
+ assert struct.unpack_from('<I',m.cmd(0x26),40)[0]==62
  m.cmd(0x22,file,error=0x89)
  assert m.call('ImageStore_AcquireTimeline',file,0x20017000,0x20017004)==1
  assert struct.unpack('<I',m.uc.mem_read(0x20017004,4))[0]==len(payload)
@@ -128,7 +128,31 @@ def verify_safe_pose(elf):
  assert cached(Store(elf,lost.flash()))==old[8:]
  print('PASS: safe pose validation, newest ID, interruption, reconnect, reboot, deletion, format, lost COMMIT reply and OTA')
 
+def verify_programs(elf):
+ m=Store(elf);m.format()
+ image=m.save(b'\x15'*16,4,4)
+ payload=b'\0asm\1\0\0\0' # Bytecode preflight belongs to VM at run, not COMMIT.
+ program=m.save(payload,0,0,type=5,name='program.wasm')
+ assert m.read(program)==payload
+ assert m.call('ImageStore_AcquireProgram',program,0x20017000,0x20017004)==1
+ assert struct.unpack('<I',m.uc.mem_read(0x20017004,4))[0]==len(payload)
+ m.call('ImageStore_ReleaseTimeline') # Wrong owner cannot unlock the program copy.
+ assert m.call('ImageStore_ClaimOTA')==0
+ assert m.submit(struct.pack('<BBHI',0x23,0,99,program))==0x81
+ m.call('ImageStore_ReleaseProgram')
+ assert m.read(image)==b'\x15'*16
+ reboot=Store(elf,m.flash());assert reboot.read(program)==payload
+ assert reboot.call('ImageStore_AcquireProgram',image,0x20017000,0x20017004)==0
+ for data,w,h in ((b'1'*2049,0,0),(b'1'*7,0,0),(payload,1,0),(payload,0,1)):
+  m.begin(data,w,h,type=5,error=0x80)
+ descriptor=next(f for f in m.files() if f['id']==program)
+ m.uc.mem_write(descriptor['offset'],b'\xff')
+ assert m.call('ImageStore_AcquireProgram',program,0x20017000,0x20017004)==0
+ m.cmd(0x26) # CRC rejection releases its own lease.
+ print('PASS: Wasm/image coexistence, size/metadata bounds, exclusive copy lease, CRC and reboot')
+
 def verify(elf):
+ verify_programs(elf)
  verify_timelines(elf)
  verify_safe_pose(elf)
  m=Store(elf);assert m.cmd(0x26)[6]==0
