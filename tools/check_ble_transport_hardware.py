@@ -2,7 +2,8 @@
 
 Moves channels 0..9 through the known 1050..1450 us reproduction envelope.
 Requires exclusive access to NL802915, installed bleak, and explicit --run.
-No firmware flashing, reset, persistent settings, or browser state is touched.
+No firmware flashing, reset, or persistent settings are changed. --cycle-radio
+briefly interrupts all Windows Bluetooth links, including any browser connection.
 Original 16-channel values and IMU mode are restored, with STOP in cleanup.
 The load plan derives from a 50-event browser document configured for a 1300 ms
 repeat. This harness always submits its first 20 events: one initial snapshot
@@ -467,6 +468,12 @@ async def run(args, report):
         session = None
         client = None
         report['phases'].append(dict(name='intentional_disconnect', abandoned_request='HELP'))
+        if args.cycle_radio:
+            # Windows can retain the physical ACL link after GATT disposal.
+            # Explicit radio loss proves the firmware handles a real disconnect.
+            from ble_radio_cycle import cycle_bluetooth
+            await cycle_bluetooth()
+            report['phases'].append(dict(name='intentional_bluetooth_radio_loss', seconds=6))
         device = await find_board(args.address, args.name)
         report['phases'].append(dict(name='fresh_advertisement_without_reset', result='passed'))
         client = BleakClient(device, winrt={'use_cached_services': False})
@@ -626,6 +633,8 @@ def main():
     parser.add_argument('--firmware-elf', type=Path, default=ROOT / 'STM32CubeIDE/Debug/BleServoController.elf')
     parser.add_argument('--output', type=Path, help='New JSON evidence path (refuses to overwrite)')
     parser.add_argument('--run', action='store_true', help='Explicitly permit hardware connection and motion')
+    parser.add_argument('--cycle-radio', action='store_true',
+                        help='Windows only: interrupt ALL Bluetooth links for six seconds before reconnect testing')
     parser.add_argument('--self-test', action='store_true', help='Offline checks only; no Bleak import')
     args = parser.parse_args()
     if args.self_test:

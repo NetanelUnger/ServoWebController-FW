@@ -72,7 +72,7 @@ volatile uint32_t s_threadWatchdogFlags = WATCHDOG_ALL_FLAGS;
 osThreadId_t displayTaskHandle;
 osMutexId_t displayMutexHandle;
 #if ENABLE_DISPLAY
-uint32_t displayTaskBuffer[512];
+uint32_t displayTaskBuffer[APP_DISPLAY_STACK_WORDS];
 osStaticThreadDef_t displayTaskBlock;
 const osThreadAttr_t displayTask_attributes = {
   .name = "displayTask",
@@ -91,7 +91,7 @@ const osMutexAttr_t displayMutex_attributes = {
 };
 #endif
 osThreadId_t vl53l8cxTaskHandle;
-uint32_t vl53l8cxTaskBuffer[ 2048 ];
+uint32_t vl53l8cxTaskBuffer[APP_TOF_STACK_WORDS];
 osStaticThreadDef_t vl53l8cxTaskBlock;
 const osThreadAttr_t vl53l8cxTask_attributes = {
   .name = "vl53l8cxTask",
@@ -103,7 +103,7 @@ const osThreadAttr_t vl53l8cxTask_attributes = {
 };
 
 osThreadId_t bleTxTaskHandle;
-uint32_t bleTxTaskBuffer[1024];
+uint32_t bleTxTaskBuffer[APP_BLE_TX_STACK_WORDS];
 osStaticThreadDef_t bleTxTaskBlock;
 const osThreadAttr_t bleTxTask_attributes = {
   .name="bleTxTask", .stack_mem=bleTxTaskBuffer, .stack_size=sizeof(bleTxTaskBuffer),
@@ -117,7 +117,7 @@ const osEventFlagsAttr_t bleTxEvent_attributes = {
 /* USER CODE END Variables */
 /* Definitions for defaultTask */
 osThreadId_t defaultTaskHandle;
-uint32_t defaultTaskBuffer[ 1536 ];
+uint32_t defaultTaskBuffer[APP_DEFAULT_STACK_WORDS];
 osStaticThreadDef_t defaultTaskBlocTask;
 const osThreadAttr_t defaultTask_attributes = {
   .name = "defaultTask",
@@ -129,7 +129,7 @@ const osThreadAttr_t defaultTask_attributes = {
 };
 /* Definitions for commTask */
 osThreadId_t commTaskHandle;
-uint32_t commTaskBuffer[ 2048 ];
+uint32_t commTaskBuffer[APP_COMM_STACK_WORDS];
 osStaticThreadDef_t commTaskBlock;
 const osThreadAttr_t commTask_attributes = {
   .name = "commTask",
@@ -141,7 +141,7 @@ const osThreadAttr_t commTask_attributes = {
 };
 /* Definitions for servoTask */
 osThreadId_t servoTaskHandle;
-uint32_t servoTaskBuffer[ 1024 ];
+uint32_t servoTaskBuffer[APP_SERVO_STACK_WORDS];
 osStaticThreadDef_t servoTaskBlock;
 const osThreadAttr_t servoTask_attributes = {
   .name = "servoTask",

@@ -50,7 +50,15 @@ extern volatile uint32_t s_threadWatchdogFlags;
 
 /* Exported constants --------------------------------------------------------*/
 /* USER CODE BEGIN EC */
-
+/* Stack depths in 32-bit words, not bytes. Keep generous headroom above the
+ * hardware watermarks; see RAM_BUDGET.md before changing these budgets.
+ * These hand-maintained application tasks have no CubeMX task-list entries. */
+#define APP_DEFAULT_STACK_WORDS  768U
+#define APP_COMM_STACK_WORDS     1024U
+#define APP_SERVO_STACK_WORDS    512U
+#define APP_BLE_TX_STACK_WORDS   768U
+#define APP_TOF_STACK_WORDS      1024U
+#define APP_DISPLAY_STACK_WORDS  512U
 /* USER CODE END EC */
 
 /* Private define ------------------------------------------------------------*/
