@@ -473,6 +473,16 @@ for the exact format, bounds, repeat behavior and physical timing limitations.
 
 ## Local OTA v2
 
+For ST-LINK programming on this PC, double-click `flash_board.cmd` in the
+repository root with one board connected. It programs the adjacent
+`bootloader.hex`, then the latest existing
+`STM32CubeIDE/Debug/BleServoController.hex`, verifies both and resets the board.
+It does not build: build the application first when source changes should be
+included. The window stays open to show success or errors. STM32CubeIDE 2.2.0
+is expected at `C:\ST\STM32CubeIDE_2.2.0\STM32CubeIDE`.
+The bundled bootloader HEX was exported from this repository's Release ELF;
+regenerate it after bootloader changes (GNU `arm-none-eabi-objcopy -O ihex`).
+
 Run `build_ota.bat` to build the firmware and bootloader and print the full path
 of the validated `.ota.bin` upload package. Install both images initially with
 `tools/flash.ps1`, then use Web **Tools → Firmware update**, or
